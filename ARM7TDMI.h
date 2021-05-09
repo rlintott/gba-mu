@@ -175,35 +175,9 @@ private:
         uint8_t N : 1;          // N - Sign Flag       (0=Not Signed, 1=Signed)               
     };
 
-    enum AluOperationType {
-        LOGICAL,
-        ARITHMETIC,
-        COMPARISON,
-    };
-
     struct AluShiftResult {
         uint32_t op2;
         uint8_t carry;
-    };
-
-    // helper table to map alu operations to type
-    std::array<AluOperationType, 16> aluOperationTypeTable = {
-        LOGICAL, 
-        LOGICAL,
-        ARITHMETIC,
-        ARITHMETIC,
-        ARITHMETIC,
-        ARITHMETIC,
-        ARITHMETIC,
-        ARITHMETIC,
-        COMPARISON,
-        COMPARISON,
-        COMPARISON,
-        COMPARISON,
-        LOGICAL,
-        LOGICAL,
-        LOGICAL,
-        LOGICAL
     };
 
     enum Mode {
@@ -223,12 +197,12 @@ private:
         UNDEFINED_OPCODE
     };
 
-    ProgramStatusRegister cpsr = {0,0,0,0,0,0,0,0,0,0};
-    ProgramStatusRegister SPSR_fiq = {0,0,0,0,0,0,0,0,0,0};
-    ProgramStatusRegister SPSR_svc = {0,0,0,0,0,0,0,0,0,0};
-    ProgramStatusRegister SPSR_abt = {0,0,0,0,0,0,0,0,0,0};
-    ProgramStatusRegister SPSR_irq = {0,0,0,0,0,0,0,0,0,0};
-    ProgramStatusRegister SPSR_und = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister cpsr =        {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_fiq =    {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_svc =    {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_abt =    {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_irq =    {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_und =    {0,0,0,0,0,0,0,0,0,0};
 
 
     // struct representing the number of cycles an operation will take
@@ -253,6 +227,12 @@ private:
     AsmOpcodeType getAsmOpcodeType(uint32_t instruction);
 
     Cycles AND(uint32_t instruction);
+    Cycles EOR(uint32_t instruction);
+    Cycles ORR(uint32_t instruction);
+    Cycles MOV(uint32_t instruction);
+    Cycles BIC(uint32_t instruction);
+    Cycles MVN(uint32_t instruction);
+
     Cycles UNDEF(uint32_t instruction);
 
     uint32_t aluShiftLsl(uint32_t value, uint8_t shift);
@@ -260,8 +240,6 @@ private:
     uint32_t aluShiftAsr(uint32_t value, uint8_t shift);
     uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     uint32_t aluShiftRrx(uint32_t value, uint8_t shift);
-
-    AluOperationType getAluOperationType(uint32_t instruction);
 
 
 public:
@@ -286,8 +264,6 @@ public:
 
     // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
-
-    void aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2, uint8_t cycles);
 
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister getModeSpsr();

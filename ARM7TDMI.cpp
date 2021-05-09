@@ -24,6 +24,7 @@ void ARM7TDMI::executeInstructionCycle() {
     // uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
     uint32_t rawInstruction = 0;
 
+
     if(cpsr.T) { // check state bit, is CPU in ARM state?
         Instruction instruction = decodeInstruction(rawInstruction);
 
@@ -32,6 +33,9 @@ void ARM7TDMI::executeInstructionCycle() {
     }
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+// TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
+// TODO: cycle calculation
 
 ARM7TDMI::Cycles ARM7TDMI::AND(uint32_t instruction) {
     AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
@@ -39,8 +43,19 @@ ARM7TDMI::Cycles ARM7TDMI::AND(uint32_t instruction) {
     uint8_t rd = (instruction & 0x0000F000) >> 12;
     uint8_t rn = (instruction & 0x000F0000) >> 16;
 
-    /* ~~~~~~~~~~~ the operation ~~~~~~~~~~~~` */
-    uint32_t result = getRegister(rn) & shiftResult.op2;
+    /*
+        When using R15 as operand (Rm or Rn), the returned value depends 
+        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
+    */
+    uint32_t result;
+    if(rn != PC_REGISTER) {
+        result = getRegister(rn) & shiftResult.op2;
+    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
+        result = (getRegister(rn) + 12) & shiftResult.op2;
+    } else {
+        result = (getRegister(rn) + 8) & shiftResult.op2;
+    }
+
     setRegister(rd, result);
     
     /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
@@ -56,6 +71,150 @@ ARM7TDMI::Cycles ARM7TDMI::AND(uint32_t instruction) {
 
     return {};
 }
+
+ARM7TDMI::Cycles ARM7TDMI::EOR(uint32_t instruction) {
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+
+    uint8_t rd = (instruction & 0x0000F000) >> 12;
+    uint8_t rn = (instruction & 0x000F0000) >> 16;
+
+    /*
+        When using R15 as operand (Rm or Rn), the returned value depends 
+        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
+    */
+    uint32_t result;
+    if(rn != PC_REGISTER) {
+        result = getRegister(rn) | shiftResult.op2;
+    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
+        result = (getRegister(rn) + 12) | shiftResult.op2;
+    } else {
+        result = (getRegister(rn) + 8) | shiftResult.op2;
+    }
+
+    setRegister(rd, result);
+    
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ORR(uint32_t instruction) {
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+
+    uint8_t rd = (instruction & 0x0000F000) >> 12;
+    uint8_t rn = (instruction & 0x000F0000) >> 16;
+
+    /*
+        When using R15 as operand (Rm or Rn), the returned value depends 
+        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
+    */
+    uint32_t result;
+    if(rn != PC_REGISTER) {
+        result = getRegister(rn) ^ shiftResult.op2;
+    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
+        result = (getRegister(rn) + 12) ^ shiftResult.op2;
+    } else {
+        result = (getRegister(rn) + 8) ^ shiftResult.op2;
+    }
+
+    setRegister(rd, result);
+    
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::MOV(uint32_t instruction) {
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+
+    uint8_t rd = (instruction & 0x0000F000) >> 12;
+    uint32_t result = shiftResult.op2;
+    setRegister(rd, result);
+    
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::BIC(uint32_t instruction) {
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+
+    uint8_t rd = (instruction & 0x0000F000) >> 12;
+    uint8_t rn = (instruction & 0x000F0000) >> 16;
+
+    /*
+        When using R15 as operand (Rm or Rn), the returned value depends 
+        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
+    */
+    uint32_t result;
+    if(rn != PC_REGISTER) {
+        result = getRegister(rn) & (!shiftResult.op2);
+    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
+        result = (getRegister(rn) + 12) & (!shiftResult.op2);
+    } else {
+        result = (getRegister(rn) + 8) & (!shiftResult.op2);
+    }
+
+    setRegister(rd, result);
+    
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::MVN(uint32_t instruction) {
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+
+    uint8_t rd = (instruction & 0x0000F000) >> 12;
+    uint32_t result = !shiftResult.op2;
+    setRegister(rd, result);
+    
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
+    return {};
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ / ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
 ARM7TDMI::Cycles ARM7TDMI::UNDEF(uint32_t instruction) {
@@ -108,7 +267,7 @@ ARM7TDMI::Instruction ARM7TDMI::decodeInstruction(uint32_t rawInstruction) {
 
 // Comment documentation sourced from the ARM7TDMI Data Sheet. 
 ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r) {
-    if(i) { // shifting immediate value as 2nd operand
+    if(i) { // shifted immediate value as 2nd operand
         /*
             The immediate operand rotate field is a 4 bit unsigned integer 
             which specifies a shift operation on the 8 bit immediate value. 
@@ -126,17 +285,28 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         return {op2, carry};
     }
 
-    /* ~~~~~~~~~ else: shifting register value as 2nd operand ~~~~~~~~~~ */
+    /* ~~~~~~~~~ else: shifted register value as 2nd operand ~~~~~~~~~~ */
     uint8_t shiftType = (instruction & 0x00000060) >> 5U;
     uint32_t op2;
-    uint32_t rm = r ? getRegister(instruction & 0x0000000F) : getRegister(instruction & 0x0000000F);
+    uint8_t rmIndex = instruction & 0x0000000F;
+    uint32_t rm = getRegister(rmIndex);
+    // see comment in opcode functions for explanation why we're doing this
+    if(rmIndex != PC_REGISTER) {
+        // do nothing
+    } else if(!i && r) {
+        rm += 12;
+    } else {
+        rm += 8;
+    }
+
     uint32_t shiftAmount;
     uint8_t carry;
 
-    if(r) { // register as second operand
-        uint8_t rs = (instruction & 0x00000F00) >> 8U;
-        shiftAmount = getRegister(rs) & 0x000000FF;
-    } else { // immediate as second operand
+    if(r) { // register as shift amount
+        uint8_t rsIndex = (instruction & 0x00000F00) >> 8U;
+        assert(rsIndex != 15);
+        shiftAmount = getRegister(rsIndex) & 0x000000FF;
+    } else { // immediate as shift amount
         shiftAmount = instruction & 0x00000F80 >> 7U;
     }
 
@@ -253,30 +423,6 @@ uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
     assert (shift < 32U);
     uint32_t rrxMask = cpsr.C;
     return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
-}
-
-
-void ARM7TDMI::aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2, uint8_t rd) {
-    if(rd != PC_REGISTER) {
-        if(opType == LOGICAL) {
-            // dont need to update C flag, already updated it in ARM7TDMI::aluShift
-            cpsr.Z = (result == 0);
-            cpsr.N = (result >> 31);
-        } else if(opType == ARITHMETIC) {
-            cpsr.Z = (result == 0);
-            cpsr.N = (result >> 31);
-        } else { // opType == COMPARISON
-            
-
-        }
-    }
-
-}
-
-
-ARM7TDMI::AluOperationType ARM7TDMI::getAluOperationType(uint32_t instruction) {
-    uint8_t opcode = (instruction & 0x01E00000) >> 21;
-    return aluOperationTypeTable[opcode];
 }
 
 
