@@ -132,7 +132,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
     uint32_t rm = r ? getRegister(instruction & 0x0000000F) : getRegister(instruction & 0x0000000F);
     uint32_t shiftAmount;
     uint8_t carry;
-    bool immOpIsZero = r ? false : shiftAmount == 0;
 
     if(r) { // register as second operand
         uint8_t rs = (instruction & 0x00000F00) >> 8U;
@@ -140,6 +139,8 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
     } else { // immediate as second operand
         shiftAmount = instruction & 0x00000F80 >> 7U;
     }
+
+    bool immOpIsZero = r ? false : shiftAmount == 0;
 
     if(shiftType == 0) {  // Logical Shift Left
         /*
