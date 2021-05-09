@@ -199,7 +199,7 @@ public:
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of R14_irq
     void setRegister(uint8_t index, uint32_t value);
 
-    // shifts the second operand according to ALU logic. NOTE: This function may modify cpsr.C (carry) flag
+    // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
     void aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2, uint8_t cycles);
