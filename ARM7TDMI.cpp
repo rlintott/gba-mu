@@ -104,7 +104,7 @@ ARM7TDMI::AsmOpcodeType ARM7TDMI::getAsmOpcodeType(uint32_t instruction) {
 ARM7TDMI::Instruction ARM7TDMI::decodeInstruction(uint32_t rawInstruction) {
 }
 
-
+// Comment documentation sourced from the ARM7TDMI Data Sheet. 
 ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r) {
     if(i) { // shifting immediate value as 2nd operand
         /*
