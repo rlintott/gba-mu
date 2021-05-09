@@ -19,7 +19,7 @@ ARM7TDMI::~ARM7TDMI() {
 
 void ARM7TDMI::executeInstructionCycle() {
     // read from program counter
-    // uint32_t rawInstruction = bus->read(registers[15]);
+    // uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
     uint32_t rawInstruction = 0;
 
     if(cpsr.T) { // check state bit, is CPU in ARM state?
@@ -32,17 +32,26 @@ void ARM7TDMI::executeInstructionCycle() {
 
 
 ARM7TDMI::Cycles ARM7TDMI::AND(uint32_t instruction) {
-    uint32_t op2 = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
 
     uint8_t rd = (instruction & 0x0000F000) >> 12;
     uint8_t rn = (instruction & 0x000F0000) >> 16;
 
-    uint32_t result = getRegister(rn) & op2;
+    /* ~~~~~~~~~~~ the operation ~~~~~~~~~~~~` */
+    uint32_t result = getRegister(rn) & shiftResult.op2;
     setRegister(rd, result);
     
-    AluOperationType opType = getAluOperationType(instruction);
+    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr.C = shiftResult.carry;
+        cpsr.Z = (result == 0);
+        cpsr.N = (result >> 31);
+    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+        cpsr = getModeSpsr();
+    } else { // flags not affected
+        
+    }
 
-    // updateCpsrFlags(opType, result, op2);
     return {};
 }
 
@@ -93,6 +102,197 @@ ARM7TDMI::AsmOpcodeType ARM7TDMI::getAsmOpcodeType(uint32_t instruction) {
 
 
 ARM7TDMI::Instruction ARM7TDMI::decodeInstruction(uint32_t rawInstruction) {
+}
+
+
+ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r) {
+    if(i) { // shifting immediate value as 2nd operand
+        /*
+            The immediate operand rotate field is a 4 bit unsigned integer 
+            which specifies a shift operation on the 8 bit immediate value. 
+            This value is zero extended to 32 bits, and then subject to a 
+            rotate right by twice the value in the rotate field.
+        */
+        uint32_t rm = instruction & 0x000000FF;
+        uint8_t is = (instruction & 0x00000F00) >> 7U;
+        uint32_t op2 = aluShiftRor(rm, is);
+        uint8_t carry;
+        // carry out bit is the least significant discarded bit of rm
+        if(is > 0) {
+            carry = (rm >> (is - 1)); 
+        }
+        return {op2, carry};
+    }
+
+    /* ~~~~~~~~~ else: shifting register value as 2nd operand ~~~~~~~~~~ */
+    uint8_t shiftType = (instruction & 0x00000060) >> 5U;
+    uint32_t op2;
+    uint32_t rm = r ? getRegister(instruction & 0x0000000F) : getRegister(instruction & 0x0000000F);
+    uint32_t shiftAmount;
+    uint8_t carry;
+    bool immOpIsZero = r ? false : shiftAmount == 0;
+
+    if(r) { // register as second operand
+        uint8_t rs = (instruction & 0x00000F00) >> 8U;
+        shiftAmount = getRegister(rs) & 0x000000FF;
+    } else { // immediate as second operand
+        shiftAmount = instruction & 0x00000F80 >> 7U;
+    }
+
+    if(shiftType == 0) {  // Logical Shift Left
+        /*
+            A logical shift left (LSL) takes the contents of
+            Rm and moves each bit by the specified amount 
+            to a more significant position. The least significant 
+            bits of the result are filled with zeros, and the high bits 
+            of Rm which do not map into the result are discarded, except 
+            that the least significant discarded bit becomes the shifter
+            carry output which may be latched into the C bit of the CPSR 
+            when the ALU operation is in the logical class
+        */
+        if(!immOpIsZero) {
+            op2 = aluShiftLsl(rm, shiftAmount);
+            carry = (rm >> (32 - shiftAmount)) & 1;
+        } else { // no op performed, carry flag stays the same
+            op2 = rm;
+            carry = cpsr.C;
+        }
+    }
+    else if(shiftType == 1) { // Logical Shift Right
+        /*
+            A logical shift right (LSR) is similar, but the contents 
+            of Rm are moved to less significant positions in the result    
+        */
+        if(!immOpIsZero) {
+            op2 = aluShiftLsr(rm, shiftAmount);
+            carry = (rm >> (shiftAmount - 1)) & 1;
+        } else {
+            /*
+                The form of the shift field which might be expected to 
+                correspond to LSR #0 is used to encode LSR #32, which has a 
+                zero result with bit 31 of Rm as the carry output
+            */
+            op2 = 0;
+            carry = rm >> 31;
+        }
+    }
+    else if(shiftType == 2) { // Arithmetic Shift Right
+        /*
+            An arithmetic shift right (ASR) is similar to logical shift right, 
+            except that the high bits are filled with bit 31 of Rm instead of zeros. 
+            This preserves the sign in 2's complement notation
+        */
+        if(!immOpIsZero) {
+            op2 = aluShiftAsr(rm, shiftAmount);
+            carry = rm >> 31;
+        } else {
+            /*
+                The form of the shift field which might be expected to give ASR #0 
+                is used to encode ASR #32. Bit 31 of Rm is again used as the carry output, 
+                and each bit of operand 2 is also equal to bit 31 of Rm. 
+            */
+            op2 = aluShiftAsr(rm, 32);
+            carry = rm >> 31;
+        }
+    }
+    else { // Rotating Shift
+        /*
+            Rotate right (ROR) operations reuse the bits which “overshoot” 
+            in a logical shift right operation by reintroducing them at the
+            high end of the result, in place of the zeros used to fill the high 
+            end in logical right operation
+        */
+        if(!immOpIsZero) {
+            op2 = aluShiftRor(rm, shiftAmount);
+            carry = (rm >> (shiftAmount - 1)) & 1;
+        } else {
+            /*
+                The form of the shift field which might be expected to give ROR #0 
+                is used to encode a special function of the barrel shifter, 
+                rotate right extended (RRX). This is a rotate right by one bit position 
+                of the 33 bit quantity formed by appending the CPSR C flag to the most 
+                significant end of the contents of Rm as shown
+            */
+            op2 = rm >> 1;
+            op2 = op2 | (((uint32_t)cpsr.C) << 31);
+            carry = rm & 1;
+        }
+    }
+
+    return {op2, carry};
+}
+
+
+uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
+    return value << shift;
+}
+
+
+uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
+    return value >> shift;
+}
+
+
+uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
+    // assuming that the compiler implements arithmetic right shift on signed ints 
+    // TODO: make more portable
+    return (uint32_t)(((int32_t)value) >> shift);
+}
+
+
+uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
+    assert (shift < 32U);
+    return (value >> shift) | (value << (-shift & 31U));
+}
+
+
+uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
+    assert (shift < 32U);
+    uint32_t rrxMask = cpsr.C;
+    return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
+}
+
+
+void ARM7TDMI::aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2, uint8_t rd) {
+    if(rd != PC_REGISTER) {
+        if(opType == LOGICAL) {
+            // dont need to update C flag, already updated it in ARM7TDMI::aluShift
+            cpsr.Z = (result == 0);
+            cpsr.N = (result >> 31);
+        } else if(opType == ARITHMETIC) {
+            cpsr.Z = (result == 0);
+            cpsr.N = (result >> 31);
+        } else { // opType == COMPARISON
+            
+
+        }
+    }
+
+}
+
+
+ARM7TDMI::AluOperationType ARM7TDMI::getAluOperationType(uint32_t instruction) {
+    uint8_t opcode = (instruction & 0x01E00000) >> 21;
+    return aluOperationTypeTable[opcode];
+}
+
+
+ARM7TDMI::ProgramStatusRegister ARM7TDMI::getModeSpsr() {
+    if(cpsr.Mode == USER) {
+        return cpsr;
+    } else if(cpsr.Mode == FIQ) {
+        return SPSR_fiq;
+    } else if(cpsr.Mode == IRQ) {
+        return SPSR_irq;
+    } else if(cpsr.Mode == SUPERVISOR) {
+        return SPSR_svc;
+    } else if(cpsr.Mode == ABORT) {
+        return SPSR_abt;
+    } else if(cpsr.Mode == UNDEFINED) {
+        return SPSR_und;
+    } else {
+        return cpsr;
+    }
 }
 
 
@@ -178,112 +378,4 @@ void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
         }        
     } else {
     }
-}
-
-
-uint32_t ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r) {
-    if(i) { // immediate shift
-
-        uint8_t op2 = instruction & 0x000000FF;
-        uint8_t is = (instruction & 0x00000F00) >> 8U;
-        op2 = aluShiftRor(op2, is);
-        cpsr.C = (op2 >> 7U); 
-        return op2;
-    }
-
-    // else: register shift
-
-    uint8_t shiftType = (instruction & 0x00000060) >> 5U;
-    uint32_t op2;
-    uint32_t shiftAmount;
-    bool special = false;
-    bool updateCpsr = true;
-
-    if(r) { // register as second operand
-
-        op2 = getRegister(instruction & 0x0000000F);
-        uint8_t rs = (instruction & 0x00000F00) >> 8U;
-        shiftAmount = getRegister(rs) & 0x000000FF;
-    } else { // immediate as second operand
-
-        op2 = getRegister(instruction & 0x0000000F);
-        shiftAmount = instruction & 0x00000F80 >> 7U;
-        special = shiftAmount == 0;
-    }
-
-    if(shiftType == 0) {  // Logical Shift Left
-        if(!special) {
-            op2 = aluShiftLsl(op2, shiftAmount);
-        } else { // no op performed, no need to chage carry flag
-            updateCpsr = false;
-        }
-    }
-    else if(shiftType == 1) { // Logical Shift Right
-        if(!special) {
-            op2 = aluShiftLsr(op2, shiftAmount);
-        } else {
-            op2 = aluShiftLsr(op2, 32);
-        }
-    }
-    else if(shiftType == 2) { // Arithmetic Shift Right
-        if(!special) {
-            op2 = aluShiftAsr(op2, shiftAmount);
-        } else {
-            op2 = aluShiftAsr(op2, 32);
-        }
-    }
-    else { // Rotating Shift
-        if(!special) {
-            op2 = aluShiftRor(op2, shiftAmount);
-        } else {
-            op2 = aluShiftRrx(op2, 1U);
-            updateCpsr = false;
-            // no need to change carry flag
-        }
-    }
-    if((instruction & 0x00100000) && updateCpsr) {
-        cpsr.C = (op2 & 0x80000000) >> 31U;
-    }
-
-    return op2;
-}
-
-
-uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
-    return value << shift;
-}
-
-
-uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
-    return value >> shift;
-}
-
-
-uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
-    // assuming that the compiler implements arithmetic right shift on signed ints 
-    // TODO: make more portable
-    return (uint32_t)(((int32_t)value) >> shift);
-}
-
-
-uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
-    assert (shift<32U);
-    return (value>>shift) | (value<<(-shift&31U));
-}
-
-
-uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
-    assert (shift<32U);
-    uint32_t rrxMask = cpsr.C;
-    return ((value>>shift) | (value<<(-shift&31U))) | (rrxMask << 31U);
-}
-
-
-void ARM7TDMI::aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2) {
-}
-
-
-ARM7TDMI::AluOperationType ARM7TDMI::getAluOperationType(uint32_t instruction) {
-    uint8_t opcode = (instruction & 0x01E00000) >> 21;
-    return aluOperationTypeTable[opcode];
 }

@@ -71,8 +71,13 @@ private:
         0x0,
     };
 
-    // struct representing current program status register (CPSR)
-    struct CPSR {
+    // 
+    static const uint8_t PC_REGISTER = 15; 
+    static const uint8_t LINK_REGISTER = 14; 
+    static const uint8_t SP_REGISTER = 13; 
+
+    // struct representing program status register (xPSR)
+    struct ProgramStatusRegister {
         uint8_t Mode : 5;        //  M4-M0 - Mode Bits
         uint8_t T : 1;          // T - State Bit       (0=ARM, 1=THUMB) - Do not change manually!
         uint8_t F : 1;          // F - FIQ disable     (0=Enable, 1=Disable)    
@@ -89,6 +94,11 @@ private:
         LOGICAL,
         ARITHMETIC,
         COMPARISON,
+    };
+
+    struct AluShiftResult {
+        uint32_t op2;
+        uint8_t carry;
     };
 
     // helper table to map alu operations to type
@@ -128,12 +138,12 @@ private:
         UNDEFINED_OPCODE
     };
 
-    CPSR cpsr = {0,0,0,0,0,0,0,0,0,0};
-    CPSR SPSR_fiq = {0,0,0,0,0,0,0,0,0,0};
-    CPSR SPSR_svc = {0,0,0,0,0,0,0,0,0,0};
-    CPSR SPSR_abt = {0,0,0,0,0,0,0,0,0,0};
-    CPSR SPSR_irq = {0,0,0,0,0,0,0,0,0,0};
-    CPSR SPSR_und = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister cpsr = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_fiq = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_svc = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_abt = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_irq = {0,0,0,0,0,0,0,0,0,0};
+    ProgramStatusRegister SPSR_und = {0,0,0,0,0,0,0,0,0,0};
 
 
     // struct representing the number of cycles an operation will take
@@ -168,6 +178,7 @@ private:
 
     AluOperationType getAluOperationType(uint32_t instruction);
 
+
 public:
 
     void executeInstructionCycle();
@@ -188,9 +199,12 @@ public:
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of R14_irq
     void setRegister(uint8_t index, uint32_t value);
 
-    // shifts the second operand according to ALU logic. NOTE: This function may modify cpsr.C flag
-    uint32_t aluShift(uint32_t instruction, bool i, bool r);
+    // shifts the second operand according to ALU logic. NOTE: This function may modify cpsr.C (carry) flag
+    AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
-    void aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2);
+    void aluUpdateCpsrFlags(AluOperationType opType, uint32_t result, uint32_t op2, uint8_t cycles);
+
+    // returns the SPSR for the CPU's current mode
+    ProgramStatusRegister getModeSpsr();
 
 };
