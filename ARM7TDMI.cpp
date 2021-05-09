@@ -2,6 +2,7 @@
 #include "Bus.h"
 #include <bit>
 #include <bitset>
+#include <iostream>
 
 
 ARM7TDMI::ARM7TDMI() {
@@ -18,6 +19,7 @@ ARM7TDMI::~ARM7TDMI() {
 
 
 void ARM7TDMI::executeInstructionCycle() {
+
     // read from program counter
     // uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
     uint32_t rawInstruction = 0;
@@ -297,85 +299,38 @@ ARM7TDMI::ProgramStatusRegister ARM7TDMI::getModeSpsr() {
 
 
 uint32_t ARM7TDMI::getRegister(uint8_t index) {
-    if(0 <= index && index < 8) {
-        return registers[index];
-    } 
-
     if(cpsr.Mode == USER) {
         return registers[index];
     } else if(cpsr.Mode == FIQ) {
-        if(7 < index && index < 15) {
-            return fiqRegisters[index];
-        } else {
-            return registers[index];
-        }
+        return *(fiqRegisters[index]);
     } else if(cpsr.Mode == IRQ) {
-        if(12 < index && index < 15) {
-            return irqRegisters[index];
-        } else {
-            return registers[index];
-        }
+        return *(irqRegisters[index]);
     } else if(cpsr.Mode == SUPERVISOR) {
-        if(12 < index && index < 15) {
-            return svcRegisters[index];
-        } else {
-            return registers[index];
-        }       
+        return *(svcRegisters[index]);
     } else if(cpsr.Mode == ABORT) {
-        if(12 < index && index < 15) {
-            return abtRegisters[index];
-        } else {
-            return registers[index];
-        }        
+        return *(abtRegisters[index]);
     } else if(cpsr.Mode == UNDEFINED) {
-        if(12 < index && index < 15) {
-            return undRegisters[index];
-        } else {
-            return registers[index];
-        }        
+        return *(undRegisters[index]);
     } else {
-        return 0;
+        return registers[index];
     }
 }
 
 
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
-    if(0 <= index && index < 8) {
-        registers[index] = value;
-    } 
-
     if(cpsr.Mode == USER) {
         registers[index] = value;
     } else if(cpsr.Mode == FIQ) {
-        if(7 < index && index < 15) {
-            fiqRegisters[index] = value;
-        } else {
-            registers[index] = value;
-        }
+        *(fiqRegisters[index]) = value;
     } else if(cpsr.Mode == IRQ) {
-        if(12 < index && index < 15) {
-            irqRegisters[index] = value;
-        } else {
-            registers[index] = value;
-        }
+        *(irqRegisters[index]) = value;
     } else if(cpsr.Mode == SUPERVISOR) {
-        if(12 < index && index < 15) {
-            svcRegisters[index] = value;
-        } else {
-            registers[index] = value;
-        }       
+        *(svcRegisters[index]) = value;
     } else if(cpsr.Mode == ABORT) {
-        if(12 < index && index < 15) {
-            abtRegisters[index] = value;
-        } else {
-            registers[index] = value;
-        }        
+        *(abtRegisters[index]) = value;
     } else if(cpsr.Mode == UNDEFINED) {
-        if(12 < index && index < 15) {
-            undRegisters[index] = value;
-        } else {
-            registers[index] = value;
-        }        
+        *(undRegisters[index]) = value;
     } else {
+        registers[index] = value;
     }
 }

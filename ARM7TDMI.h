@@ -18,57 +18,142 @@ private:
 
     // general purpose registers 
     std::array<uint32_t, 16> registers = {
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,    // stack pointer
-        0x0,    // link register
+        0x1,
+        0x2,
+        0x3,
+        0x4,
+        0x5,
+        0x6,
+        0x7,
+        0x8,
+        0x9,
+        0xA,
+        0xB,
+        0xC,
+        0xD,
+        0xE,    // stack pointer
+        0xF,    // link register
         0x0     // program counter
     };
 
+    uint32_t r8_fiq = 69;
+    uint32_t r9_fiq = 0x0;
+    uint32_t r10_fiq = 0x0;
+    uint32_t r11_fiq = 0x0;
+    uint32_t r12_fiq = 0x0;
+    uint32_t r13_fiq = 0x0;
+    uint32_t r14_fiq = 0x0;
+
     //  8 - 14 "banked" registers for mode FIQ
-    std::array<uint32_t, 7> fiqRegisters = {
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0
+    std::array<uint32_t*, 16> fiqRegisters = {
+        registers.data() + (0),
+        registers.data() + (1),
+        registers.data() + (2),
+        registers.data() + (3),
+        registers.data() + (4),
+        registers.data() + (5),
+        registers.data() + (6),
+        registers.data() + (7),
+        &r8_fiq,
+        &r9_fiq,
+        &r10_fiq,
+        &r11_fiq,
+        &r12_fiq,
+        &r13_fiq,
+        &r14_fiq,
+        registers.data() + (15)
     };
+
+    uint32_t r13_irq = 0x0;
+    uint32_t r14_irq = 0x0;
 
     //  13 - 14 "banked" registers for mode IRQ
-    std::array<uint32_t, 2> irqRegisters = {
-        0x0,
-        0x0,
+    std::array<uint32_t*, 16> irqRegisters = {
+        registers.data() + (0),
+        registers.data() + (1),
+        registers.data() + (2),
+        registers.data() + (3),
+        registers.data() + (4),
+        registers.data() + (5),
+        registers.data() + (6),
+        registers.data() + (7),
+        registers.data() + (8),
+        registers.data() + (9),
+        registers.data() + (10),
+        registers.data() + (11),
+        registers.data() + (12),
+        &r13_fiq,
+        &r14_fiq,
+        registers.data() + (15)
     };
+
+    uint32_t r13_svc = 0x0;
+    uint32_t r14_svc = 0x0;
 
     //  13 - 14 "banked" registers for mode SVC
-    std::array<uint32_t, 2> svcRegisters = {
-        0x0,
-        0x0,
+    std::array<uint32_t*, 16> svcRegisters = {
+        registers.data() + (0),
+        registers.data() + (1),
+        registers.data() + (2),
+        registers.data() + (3),
+        registers.data() + (4),
+        registers.data() + (5),
+        registers.data() + (6),
+        registers.data() + (7),
+        registers.data() + (8),
+        registers.data() + (9),
+        registers.data() + (10),
+        registers.data() + (11),
+        registers.data() + (12),
+        &r13_svc,
+        &r14_svc,
+        registers.data() + (15)
     };
+
+    uint32_t r13_abt = 0x0;
+    uint32_t r14_abt = 0x0;
 
     //  13 - 14 "banked" registers for mode ABT
-    std::array<uint32_t, 2> abtRegisters = {
-        0x0,
-        0x0,
+     std::array<uint32_t*, 16> abtRegisters = {
+        registers.data() + (0),
+        registers.data() + (1),
+        registers.data() + (2),
+        registers.data() + (3),
+        registers.data() + (4),
+        registers.data() + (5),
+        registers.data() + (6),
+        registers.data() + (7),
+        registers.data() + (8),
+        registers.data() + (9),
+        registers.data() + (10),
+        registers.data() + (11),
+        registers.data() + (12),
+        &r13_abt,
+        &r14_abt,
+        registers.data() + (15)
     };
 
+    uint32_t r13_und = 0x0;
+    uint32_t r14_und = 0x0;
+
     //  13 - 14 "banked" registers for mode UND
-    std::array<uint32_t, 2> undRegisters = {
-        0x0,
-        0x0,
+     std::array<uint32_t*, 16> undRegisters = {
+        registers.data() + (0),
+        registers.data() + (1),
+        registers.data() + (2),
+        registers.data() + (3),
+        registers.data() + (4),
+        registers.data() + (5),
+        registers.data() + (6),
+        registers.data() + (7),
+        registers.data() + (8),
+        registers.data() + (9),
+        registers.data() + (10),
+        registers.data() + (11),
+        registers.data() + (12),
+        &r13_und,
+        &r14_und,
+        registers.data() + (15)
     };
 
     // 
