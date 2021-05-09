@@ -186,7 +186,6 @@ uint32_t ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r) {
 
         uint8_t op2 = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 8U;
-        // TODO: this implementation only works with clang. make it more portable 
         op2 = aluShiftRor(op2, is);
         cpsr.C = (op2 >> 7U); 
         return op2;
