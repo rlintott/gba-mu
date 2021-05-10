@@ -232,6 +232,16 @@ private:
     Cycles MOV(uint32_t instruction);
     Cycles BIC(uint32_t instruction);
     Cycles MVN(uint32_t instruction);
+    Cycles ADD(uint32_t instruction);
+    Cycles ADC(uint32_t instruction);
+    Cycles SUB(uint32_t instruction);
+    Cycles SBC(uint32_t instruction);
+    Cycles RSC(uint32_t instruction);
+    Cycles RSB(uint32_t instruction);
+    Cycles TST(uint32_t instruction);
+    Cycles TEQ(uint32_t instruction);
+    Cycles CMP(uint32_t instruction);
+    Cycles CMN(uint32_t instruction);
 
     Cycles UNDEF(uint32_t instruction);
 
