@@ -6,10 +6,9 @@
 
 
 ARM7TDMI::ARM7TDMI() {
-    dataProccessingOpcodes = {  
-        {"AND", &ARM7TDMI::AND}, 
-    };
-    undefinedOpcode = {"UNDEFINED", &ARM7TDMI::UNDEF};
+    cpsr.Mode = SUPERVISOR;
+    cpsr.T = 0; // set to ARM state
+    setRegister(PC_REGISTER, BOOT_LOCATION);
 }
 
 
@@ -17,23 +16,27 @@ ARM7TDMI::~ARM7TDMI() {
 }
 
 
-void ARM7TDMI::executeInstructionCycle() {
+void ARM7TDMI::step() {
     // read from program counter
-    // uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
-    uint32_t rawInstruction = 0;
-
+    uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
 
     if(cpsr.T) { // check state bit, is CPU in ARM state?
-        Instruction instruction = decodeInstruction(rawInstruction);
+        Cycles cycles = executeInstruction(rawInstruction);
 
     } else { // THUMB state
 
     }
 }
 
+
+void ARM7TDMI::connectBus(Bus* bus) {
+    this->bus = bus;
+}
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 // TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
+// TODO: REFACTOR, there is lots of duplicated code, will be horrible to debug
 
 ARM7TDMI::Cycles ARM7TDMI::SUB(uint32_t instruction) {
     AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
@@ -562,22 +565,17 @@ ARM7TDMI::Cycles ARM7TDMI::CMP(uint32_t instruction) {
 
     // When using R15 as operand (Rm or Rn), the returned value depends 
     // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    uint32_t op2;
+    // because of pipelining
     uint32_t rnValue;
     if(rn != PC_REGISTER) {
         rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
         rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     } else {
         rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     }
+    uint32_t op2 = shiftResult.op2;
+    uint32_t result = rnValue - op2;
     
     // updating CPSR flags
     if(rd != PC_REGISTER && (instruction & 0x00100000)) {
@@ -608,22 +606,17 @@ ARM7TDMI::Cycles ARM7TDMI::CMN(uint32_t instruction) {
 
     // When using R15 as operand (Rm or Rn), the returned value depends 
     // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    uint32_t op2;
     uint32_t rnValue;
     if(rn != PC_REGISTER) {
         rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
     } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
         rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
     } else {
         rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
     }
+    uint32_t op2 = shiftResult.op2;
+    uint32_t result = rnValue + op2;
+
     
     // updating CPSR flags 
     if(rd != PC_REGISTER && (instruction & 0x00100000)) {
@@ -659,44 +652,50 @@ ARM7TDMI::Cycles ARM7TDMI::UNDEF(uint32_t instruction) {
 ARM Binary Opcode Format
     |..3 ..................2 ..................1 ..................0|
     |1_0_9_8_7_6_5_4_3_2_1_0_9_8_7_6_5_4_3_2_1_0_9_8_7_6_5_4_3_2_1_0|
-    |_Cond__|0_0_0|__Op__|S|__Rn___|__Rd___|__Shift__|Typ|0|__Rm___| DataProc
+    |_Cond__|0_0_0|___Op__|S|__Rn___|__Rd___|__Shift__|Typ|0|__Rm___| DataProc
     |_Cond__|0_0_0|___Op__|S|__Rn___|__Rd___|__Rs___|0|Typ|1|__Rm___| DataProc
     |_Cond__|0_0_1|___Op__|S|__Rn___|__Rd___|_Shift_|___Immediate___| DataProc
-    |_Cond__|0_0_1_1_0_0_1_0_0_0_0_0_1_1_1_1_0_0_0_0|_____Hint______| ARM11:Hint
     |_Cond__|0_0_1_1_0|P|1|0|_Field_|__Rd___|_Shift_|___Immediate___| PSR Imm
     |_Cond__|0_0_0_1_0|P|L|0|_Field_|__Rd___|0_0_0_0|0_0_0_0|__Rm___| PSR Reg
     |_Cond__|0_0_0_1_0_0_1_0_1_1_1_1_1_1_1_1_1_1_1_1|0_0|L|1|__Rn___| BX,BLX
-    |1_1_1_0|0_0_0_1_0_0_1_0|_____immediate_________|0_1_1_1|_immed_| ARM9:BKPT
-    |_Cond__|0_0_0_1_0_1_1_0_1_1_1_1|__Rd___|1_1_1_1|0_0_0_1|__Rm___| ARM9:CLZ
-    |_Cond__|0_0_0_1_0|Op_|0|__Rn___|__Rd___|0_0_0_0|0_1_0_1|__Rm___| ARM9:QALU
     |_Cond__|0_0_0_0_0_0|A|S|__Rd___|__Rn___|__Rs___|1_0_0_1|__Rm___| Multiply
-    |_Cond__|0_0_0_0_0_1_0_0|_RdHi__|_RdLo__|__Rs___|1_0_0_1|__Rm___| ARM11:UMAAL
     |_Cond__|0_0_0_0_1|U|A|S|_RdHi__|_RdLo__|__Rs___|1_0_0_1|__Rm___| MulLong
     |_Cond__|0_0_0_1_0|Op_|0|Rd/RdHi|Rn/RdLo|__Rs___|1|y|x|0|__Rm___| MulHalfARM9
-    |_Cond__|0_0_0_1_0|B|0_0|__Rn___|__Rd___|0_0_0_0|1_0_0_1|__Rm___| TransSwp12
-    |_Cond__|0_0_0_1_1|_Op__|__Rn___|__Rd___|1_1_1_1|1_0_0_1|__Rm___| ARM11:LDREX
     |_Cond__|0_0_0|P|U|0|W|L|__Rn___|__Rd___|0_0_0_0|1|S|H|1|__Rm___| TransReg10
     |_Cond__|0_0_0|P|U|1|W|L|__Rn___|__Rd___|OffsetH|1|S|H|1|OffsetL| TransImm10
     |_Cond__|0_1_0|P|U|B|W|L|__Rn___|__Rd___|_________Offset________| TransImm9
     |_Cond__|0_1_1|P|U|B|W|L|__Rn___|__Rd___|__Shift__|Typ|0|__Rm___| TransReg9
     |_Cond__|0_1_1|________________xxx____________________|1|__xxx__| Undefined
-    |_Cond__|0_1_1|Op_|x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x_x|1|x_x_x_x| ARM11:Media
-    |1_1_1_1_0_1_0_1_0_1_1_1_1_1_1_1_1_1_1_1_0_0_0_0_0_0_0_1_1_1_1_1| ARM11:CLREX
     |_Cond__|1_0_0|P|U|S|W|L|__Rn___|__________Register_List________| BlockTrans
     |_Cond__|1_0_1|L|___________________Offset______________________| B,BL,BLX
-    |_Cond__|1_1_0|P|U|N|W|L|__Rn___|__CRd__|__CP#__|____Offset_____| CoDataTrans
-    |_Cond__|1_1_0_0_0_1_0|L|__Rn___|__Rd___|__CP#__|_CPopc_|__CRm__| CoRR ARM9
-    |_Cond__|1_1_1_0|_CPopc_|__CRn__|__CRd__|__CP#__|_CP__|0|__CRm__| CoDataOp
-    |_Cond__|1_1_1_0|CPopc|L|__CRn__|__Rd___|__CP#__|_CP__|1|__CRm__| CoRegTrans
-    |_Cond__|1_1_1_1|_____________Ignored_by_Processor______________| SWI
+    |_Cond__|1_1_1_1|_____________Ignored_by_Processor______________| SWI           
 */  
-ARM7TDMI::AsmOpcodeType ARM7TDMI::getAsmOpcodeType(uint32_t instruction) {
-    // IMPORTANT: parse from highest to lowest specificity
+
+// TODO: find a way to write a decoder that is as FAST and SIMPLE as possible
+ARM7TDMI::Cycles ARM7TDMI::executeInstruction(uint32_t instruction) {
+    // highest possible specificity to lowest specifity
+    switch(instruction & 0x010E00000) {
+        case 0x0:
+        case 0x1:
+        case 0x2:
+        case 0x3:
+        case 0x4: 
+        case 0x5:
+        case 0x6:
+        case 0x7:
+        case 0x8: 
+        case 0x9: 
+        case 0xA:
+        case 0xB:
+        case 0xC:
+        case 0xD:
+        case 0xE:
+        case 0xF:
+            break;
+    }
+    return {};
 }
 
-
-ARM7TDMI::Instruction ARM7TDMI::decodeInstruction(uint32_t rawInstruction) {
-}
 
 // Comment documentation sourced from the ARM7TDMI Data Sheet. 
 // TODO: potential optimization (?) only return carry bit and just shift the op2 in the instruction itself
@@ -710,7 +709,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         */
         uint32_t rm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
-        uint32_t op2 = aluShiftRor(rm, is);
+        uint32_t op2 = aluShiftRor(rm, is % 32);
         uint8_t carry;
         // carry out bit is the least significant discarded bit of rm
         if(is > 0) {
@@ -810,7 +809,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
             end in logical right operation
         */
         if(!immOpIsZero) {
-            op2 = aluShiftRor(rm, shiftAmount);
+            op2 = aluShiftRor(rm, shiftAmount % 32);
             carry = (rm >> (shiftAmount - 1)) & 1;
         } else {
             /*
@@ -830,6 +829,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
 }
 
 
+// TODO: make sure all these shift functions are correct
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
     return value << shift;
 }

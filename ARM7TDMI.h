@@ -156,10 +156,10 @@ private:
         registers.data() + (15)
     };
 
-    // 
     static const uint8_t PC_REGISTER = 15; 
     static const uint8_t LINK_REGISTER = 14; 
     static const uint8_t SP_REGISTER = 13; 
+    static const uint32_t BOOT_LOCATION = 0x0;
 
     // struct representing program status register (xPSR)
     struct ProgramStatusRegister {
@@ -171,7 +171,7 @@ private:
         uint8_t Q : 1;          // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and up only)
         uint8_t V : 1;          // V - Overflow Flag   (0=No Overflow, 1=Overflow)  
         uint8_t C : 1;          // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
-        uint8_t Z : 1;          //Z - Zero Flag       (0=Not Zero, 1=Zero)   
+        uint8_t Z : 1;          // Z - Zero Flag       (0=Not Zero, 1=Zero)   
         uint8_t N : 1;          // N - Sign Flag       (0=Not Signed, 1=Signed)               
     };
 
@@ -254,7 +254,7 @@ private:
 
 public:
 
-    void executeInstructionCycle();
+    void step();
 
     void clock();
 
@@ -264,7 +264,7 @@ public:
     void undefinedInstruction();
     void reset();
 
-    Instruction decodeInstruction(uint32_t rawInstruction);
+    Cycles executeInstruction(uint32_t rawInstruction);
 
     // accounts for modes, ex in IRQ mode, getting register 14 will return value of R14_irq
     uint32_t getRegister(uint8_t index);
@@ -277,5 +277,8 @@ public:
 
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister getModeSpsr();
+
+    // dependency injection
+    void connectBus(Bus* bus);
 
 };
