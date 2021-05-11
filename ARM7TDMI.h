@@ -136,8 +136,9 @@ private:
     uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     uint32_t aluShiftRrx(uint32_t value, uint8_t shift);
 
-    Cycles executeAluInstruction(uint32_t instruction);
-    Cycles executeAluInstructionOperation(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
+    Cycles execAluInstruction(uint32_t instruction);
+    Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
+    Cycles execMultiplyInstruction(uint32_t instruction);
 
     bool aluSetsZeroBit(uint32_t value);
     bool aluSetsSignBit(uint32_t value);
@@ -149,6 +150,14 @@ private:
     bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
     bool aluSubWithCarrySetsCarryBit(uint64_t result);
     bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+
+    uint8_t getRd(uint32_t instruction);
+    uint8_t getRn(uint32_t instruction);
+    uint8_t getRs(uint32_t instruction);
+    uint8_t getRm(uint32_t instruction);
+    uint8_t getOpcode(uint32_t instruction);
+
+    bool sFlagSet(uint32_t instruction);
 
     enum AluOpcode {
         AND = 0x0,

@@ -90,12 +90,12 @@ void ARM7TDMI::switchToMode(Mode mode) {
 // TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
 
-ARM7TDMI::Cycles ARM7TDMI::executeAluInstruction(uint32_t instruction) {
+ARM7TDMI::Cycles ARM7TDMI::execAluInstruction(uint32_t instruction) {
     // shift op2
     AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-    uint8_t opcode = instruction & 0x01E00000 >> 21;
+    uint8_t rd = getRd(instruction);
+    uint8_t rn = getRn(instruction);
+    uint8_t opcode = getOpcode(instruction);
 
     uint32_t rnValue;
     // if rn == pc regiser, have to add to it to account for pipelining / prefetching
@@ -108,14 +108,14 @@ ARM7TDMI::Cycles ARM7TDMI::executeAluInstruction(uint32_t instruction) {
     }
     uint32_t op2 = shiftResult.op2;
 
-    executeAluInstructionOperation(opcode, rd, getRegister(rn), op2);
+    execAluOpcode(opcode, rd, getRegister(rn), op2);
 
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
+    if(rd != PC_REGISTER && sFlagSet(instruction)) {
         cpsr.C = carryBit;
         cpsr.Z = overflowBit;
         cpsr.N = signBit;
         cpsr.V = overflowBit;
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
+    } else if(rd == PC_REGISTER && sFlagSet(instruction)) {
         cpsr = getModeSpsr();
     } else { } // flags not affected, not allowed in CMP
 }
@@ -139,7 +139,7 @@ ARM7TDMI::Cycles ARM7TDMI::executeAluInstruction(uint32_t instruction) {
     E: BIC{cond}{S} Rd,Rn,Op2    ;bit clear         Rd = Rn AND NOT Op2
     F: MVN{cond}{S} Rd,Op2       ;not               Rd = NOT Op2
 */
-ARM7TDMI::Cycles ARM7TDMI::executeAluInstructionOperation(uint8_t opcode, uint32_t rd, uint32_t rnVal, uint32_t op2) {
+ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t rnVal, uint32_t op2) {
     switch(opcode) {
         case AND: { // AND
             uint32_t result = rnVal & op2;
@@ -254,6 +254,42 @@ ARM7TDMI::Cycles ARM7TDMI::executeAluInstructionOperation(uint8_t opcode, uint32
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END OF ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+/* ~~~~~~~~~~~ Multiply and Multiply-Accumulate (MUL, MLA) Operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+
+ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
+    uint8_t opcode = getOpcode(instruction);
+    uint8_t rd = getRd(instruction);
+    uint8_t rm = getRm(instruction);
+    uint8_t rs = getRs(instruction);
+
+    assert(rd != rm && (rd != PC_REGISTER && 
+                        rm != PC_REGISTER &&
+                        rs != PC_REGISTER));
+
+    uint64_t result;
+    switch(opcode) {
+        case 0: {// MUL 
+            result = getRegister(rm) * getRegister(rs);
+        }
+        case 1: {// MLA
+            uint8_t rn = getRn(instruction);
+            assert(rn != PC_REGISTER);
+            result = getRegister(rm) * getRegister(rs) + getRegister(rn);
+        }
+    }   
+    
+    setRegister(rd, (uint32_t)result);
+
+    if(sFlagSet(instruction)) {
+        cpsr.Z = aluSetsZeroBit((uint32_t)result);
+        cpsr.N = aluSetsSignBit((uint32_t)result);
+        cpsr.C = 0;  
+    }
+}
+
+
+/* ~~~~~~~~~~~ End of Multiply and Multiply-Accumulate (MUL, MLA) Operations ~~~~~~~~~~~~~~~~~~~~*/
 
 
 ARM7TDMI::Cycles ARM7TDMI::UNDEF(uint32_t instruction) {
@@ -320,7 +356,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
             This value is zero extended to 32 bits, and then subject to a 
             rotate right by twice the value in the rotate field.
         */
-        uint32_t rm = instruction & 0x000000FF;
+        uint32_t rm = getRm(instruction);
         uint8_t is = (instruction & 0x00000F00) >> 7U;
         uint32_t op2 = aluShiftRor(rm, is % 32);
         // carry out bit is the least significant discarded bit of rm
@@ -440,6 +476,8 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
 }
 
 
+// TODO would probably be better to make all these small utility functions inline or something rather than class methods? a slight optimization
+
 // TODO: make sure all these shift functions are correct
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
     return value << shift;
@@ -546,3 +584,33 @@ bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, ui
              // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) && !(result & 0x80000000)) || never happens
             (!((rnValue + (~op2)) & 0x80000000) && !(cpsr.C & 0x80000000) && (result & 0x80000000));
 }
+
+uint8_t ARM7TDMI::getRd(uint32_t instruction) {
+    return (instruction & 0x0000F000) >> 12;
+}
+
+
+uint8_t ARM7TDMI::getRn(uint32_t instruction) {
+    return (instruction & 0x000F0000) >> 16;
+}
+
+
+uint8_t ARM7TDMI::getRm(uint32_t instruction) {
+    return (instruction & 0x0000000F);
+}
+
+
+uint8_t ARM7TDMI::getRs(uint32_t instruction) {
+    return (instruction & 0x00000F00) >> 8;
+}
+
+
+uint8_t ARM7TDMI::getOpcode(uint32_t instruction) {
+    return (instruction & 0x01E00000) >> 21;
+}
+
+bool ARM7TDMI::sFlagSet(uint32_t instruction) {
+    return (instruction & 0x00100000);
+}
+
+
