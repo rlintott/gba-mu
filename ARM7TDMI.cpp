@@ -33,611 +33,170 @@ void ARM7TDMI::connectBus(Bus* bus) {
     this->bus = bus;
 }
 
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 // TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
-// TODO: REFACTOR, there is lots of duplicated code, will be horrible to debug
 
-ARM7TDMI::Cycles ARM7TDMI::SUB(uint32_t instruction) {
+ARM7TDMI::Cycles ARM7TDMI::executeAluInstruction(uint32_t instruction) {
     AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
     uint8_t rd = (instruction & 0x0000F000) >> 12;
     uint8_t rn = (instruction & 0x000F0000) >> 16;
+    uint8_t opcode = instruction & 0x01E00000 >> 21;
 
-    /*
-        When using R15 as operand (Rm or Rn), the returned value depends 
-        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    */
-    uint32_t result;
-    uint32_t op2;
     uint32_t rnValue;
     if(rn != PC_REGISTER) {
         rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
         rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     } else {
         rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue - op2;
     }
+    uint32_t op2 = shiftResult.op2;
 
-    setRegister(rd, result);
-    
-    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
+    executeAluInstructionOperation(opcode, rd, getRegister(rn), op2);
+
     if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        // For a subtraction, including the comparison instruction CMP,
-        // C is set to 0 if the subtraction produced a borrow 
-        // (that is, an unsigned underflow), and to 1 otherwise.
-        // source: https://developer.arm.com/documentation/dui0801/a/Condition-Codes/Carry-flag
-        cpsr.C = !(rnValue < op2);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // *OVERFLOW* 0 1 1 (subtracting a negative is the same as adding a positive)
-        // *OVERFLOW* 1 0 0 (subtracting a positive is the same as adding a negative)
-        cpsr.V = (!(rnValue & 0x80000000) && (op2 & 0x80000000) && (result & 0x80000000)) || 
-                 ((rnValue & 0x80000000) && !(op2 & 0x80000000) && !(result & 0x80000000));
+        cpsr.C = carryBit;
+        cpsr.Z = overflowBit;
+        cpsr.N = signBit;
+        cpsr.V = overflowBit;
     } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
         cpsr = getModeSpsr();
-    } else { // flags not affected
-        
-    }
-
-    return {};
+    } else { } // flags not affected, not allowed in CMP
 }
 
 
-ARM7TDMI::Cycles ARM7TDMI::ADD(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    /*
-        When using R15 as operand (Rm or Rn), the returned value depends 
-        on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    */
-    uint32_t result;
-    uint32_t op2;
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
-    } else {
-        rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue + op2;
-    }
-
-    setRegister(rd, result);
-    
-    /* ~~~~~~~~~~~ updating CPSR flags ~~~~~~~~~~~~` */
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        // For an addition, including the comparison instruction CMN, 
-        // C is set to 1 if the addition produced a carry (that is, an unsigned overflow),
-        // and to 0 otherwise. source: https://developer.arm.com/documentation/dui0801/a/Condition-Codes/Carry-flag
-        //cpsr.C = ((int32_t)(0xFFFFFFFF + op2)) < 0); 
-        cpsr.C = (0xFFFFFFFF - op2) < rnValue;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // *OVERFLOW* 1 1 -> 0
-        // *OVERFLOW* 0 0 -> 1
-        cpsr.V = ((rnValue & 0x80000000) && (op2 & 0x80000000) && !(result & 0x80000000)) || 
-                 (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && (result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { // flags not affected
-        
-    }
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::ADC(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint64_t result; // temporary 64 bit result for ease of calculating carry bit
-    uint32_t op2;
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue + op2 + cpsr.C;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue + op2 + cpsr.C;
-    } else {
-        rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue + op2 + cpsr.C;
-    }
-
-    setRegister(rd, (uint32_t)result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        // if unsigned int overflow, then result carried
-        cpsr.C = (result >> 32);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // if a + b overflowed OR (a + b) + c overflowed, then result overflowed
-        cpsr.V = ((rnValue & 0x80000000) && (op2 & 0x80000000) && !((rnValue + op2) & 0x80000000)) || 
-                 (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && ((rnValue + op2) & 0x80000000)) || 
-                 // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) && !(((uint32_t)result) & 0x80000000)) ||  never happens
-                 (!((rnValue + op2) & 0x80000000) && !(cpsr.C & 0x80000000) && (((uint32_t)result) & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::SBC(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint64_t result; // temporary 64 bit result for ease of calculating carry bit
-    uint32_t op2;
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = rnValue + (~op2) + cpsr.C;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = rnValue + (~op2) + cpsr.C;
-    } else {
-        rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = rnValue + (~op2) + cpsr.C;
-    }
-
-    setRegister(rd, (uint32_t)result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = !(result >> 32);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // if a + b overflowed OR (a + b) + c overflowed, then result overflowed
-        cpsr.V = ((rnValue & 0x80000000) && ((~op2) & 0x80000000) && !((rnValue + (~op2)) & 0x80000000)) || 
-                 (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) && ((rnValue + (~op2)) & 0x80000000)) || 
-                 // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) && !(result & 0x80000000)) || never happens
-                 (!((rnValue + (~op2)) & 0x80000000) && !(cpsr.C & 0x80000000) && ((uint32_t)result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::RSC(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint64_t result; // temporary 64 bit result for ease of calculating carry bit
-    uint32_t op2;
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = op2 + (~rnValue) + cpsr.C;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = op2 + (~rnValue) + cpsr.C;
-    } else {
-        rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = op2 + (~rnValue) + cpsr.C;
-    }
-
-    setRegister(rd, (uint32_t)result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = !(result >> 32);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // if a + b overflowed OR (a + b) + c overflowed, then result overflowed
-        cpsr.V = ((op2 & 0x80000000) && ((~rnValue) & 0x80000000) && !((op2 + (~rnValue)) & 0x80000000)) || 
-                 (!(op2 & 0x80000000) && !((~rnValue) & 0x80000000) && ((op2 + (~rnValue)) & 0x80000000)) || 
-                 // (((op2 + (~rnValue)) & 0x80000000) && (cpsr.C & 0x80000000) && !(result & 0x80000000)) || never happens
-                 (!((op2 + (~rnValue)) & 0x80000000) && !(cpsr.C & 0x80000000) && ((uint32_t)result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::RSB(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    uint32_t op2;
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-        op2 = shiftResult.op2;
-        result = op2 - rnValue;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-        op2 = shiftResult.op2;
-        result = op2 - rnValue;
-    } else {
-        rnValue = getRegister(rn) + 8;
-        op2 = shiftResult.op2;
-        result = op2 - rnValue;
-    }
-
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = !(op2 < rnValue);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        cpsr.V = (!(op2 & 0x80000000) && (rnValue & 0x80000000) && (result & 0x80000000)) || 
-                 ((op2 & 0x80000000) && !(rnValue & 0x80000000) && !(result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::AND(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) & shiftResult.op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) & shiftResult.op2;
-    } else {
-        result = (getRegister(rn) + 8) & shiftResult.op2;
-    }
-
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::EOR(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) ^ shiftResult.op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) ^ shiftResult.op2;
-    } else {
-        result = (getRegister(rn) + 8) ^ shiftResult.op2;
-    }
-
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::ORR(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) | shiftResult.op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) | shiftResult.op2;
-    } else {
-        result = (getRegister(rn) + 8) | shiftResult.op2;
-    }
-
-    setRegister(rd, result);
-    
-    // updating CPSR flags 
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::MOV(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint32_t result = shiftResult.op2;
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else {} // flags not affected
-
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::BIC(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) & (~shiftResult.op2);
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) & (~shiftResult.op2);
-    } else {
-        result = (getRegister(rn) + 8) & (~shiftResult.op2);
-    }
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { // flags not affected
-        
-    }
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::MVN(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint32_t result = ~shiftResult.op2;
-    setRegister(rd, result);
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { // flags not affected
-        
-    }
-    return {};
-}
-
-
-/* 
-    TODO: IF S=1, with unused Rd bits=1111b, {P} opcodes (CMPP/CMNP/TSTP/TEQP):
-    R15=result  ;modify PSR bits in R15, ARMv2 and below only.
-    In user mode only N,Z,C,V bits of R15 can be changed.
-    In other modes additionally I,F,M1,M0 can be changed.
-    The PC bits in R15 are left unchanged in all modes.
+/*
+    0: AND{cond}{S} Rd,Rn,Op2    ;AND logical       Rd = Rn AND Op2
+    1: EOR{cond}{S} Rd,Rn,Op2    ;XOR logical       Rd = Rn XOR Op2
+    2: SUB{cond}{S} Rd,Rn,Op2 ;* ;subtract          Rd = Rn-Op2
+    3: RSB{cond}{S} Rd,Rn,Op2 ;* ;subtract reversed Rd = Op2-Rn
+    4: ADD{cond}{S} Rd,Rn,Op2 ;* ;add               Rd = Rn+Op2
+    5: ADC{cond}{S} Rd,Rn,Op2 ;* ;add with carry    Rd = Rn+Op2+Cy
+    6: SBC{cond}{S} Rd,Rn,Op2 ;* ;sub with carry    Rd = Rn-Op2+Cy-1
+    7: RSC{cond}{S} Rd,Rn,Op2 ;* ;sub cy. reversed  Rd = Op2-Rn+Cy-1
+    8: TST{cond}{P}    Rn,Op2    ;test            Void = Rn AND Op2
+    9: TEQ{cond}{P}    Rn,Op2    ;test exclusive  Void = Rn XOR Op2
+    A: CMP{cond}{P}    Rn,Op2 ;* ;compare         Void = Rn-Op2
+    B: CMN{cond}{P}    Rn,Op2 ;* ;compare neg.    Void = Rn+Op2
+    C: ORR{cond}{S} Rd,Rn,Op2    ;OR logical        Rd = Rn OR Op2
+    D: MOV{cond}{S} Rd,Op2       ;move              Rd = Op2
+    E: BIC{cond}{S} Rd,Rn,Op2    ;bit clear         Rd = Rn AND NOT Op2
+    F: MVN{cond}{S} Rd,Op2       ;not               Rd = NOT Op2
 */
-ARM7TDMI::Cycles ARM7TDMI::TST(uint32_t instruction) {
-    // shifting operand 2
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) & shiftResult.op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) & shiftResult.op2;
-    } else {
-        result = (getRegister(rn) + 8) & shiftResult.op2;
+ARM7TDMI::Cycles ARM7TDMI::executeAluInstructionOperation(uint8_t opcode, uint32_t rd, uint32_t rnVal, uint32_t op2) {
+    switch(opcode) {
+        case AND: { // AND
+            uint32_t result = rnVal & op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case EOR: { // EOR
+            uint32_t result = rnVal ^ op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case SUB: { // SUB
+            uint32_t result = rnVal - op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+            carryBit = aluSubtractSetsCarryBit(rnVal, op2);
+            overflowBit = aluSubtractSetsOverflowBit(rnVal, op2, result);
+        }
+        case RSB: { // RSB
+            uint32_t result = op2 - rnVal;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+            carryBit = aluSubtractSetsCarryBit(op2, rnVal);
+            overflowBit = aluSubtractSetsOverflowBit(op2, rnVal, result);
+        }
+        case ADD: { // ADD
+            uint32_t result = rnVal + op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+            carryBit = aluAddSetsCarryBit(rnVal, op2);
+            overflowBit = aluAddSetsOverflowBit(rnVal, op2, result);
+        } 
+        case ADC: { // ADC
+            uint64_t result = (uint64_t)(rnVal + op2 + cpsr.C);
+            setRegister(rd, (uint32_t)result);
+            zeroBit = aluSetsZeroBit((uint32_t)result);
+            signBit = aluSetsSignBit((uint32_t)result);
+            carryBit = aluAddWithCarrySetsCarryBit(result);
+            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result);
+        }
+        case SBC: { // SBC
+            uint64_t result = rnVal + (~op2) + cpsr.C;
+            setRegister(rd, (uint32_t)result);
+            zeroBit = aluSetsZeroBit((uint32_t)result);
+            signBit = aluSetsSignBit((uint32_t)result);
+            carryBit = aluSubWithCarrySetsCarryBit(result);
+            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result);
+        }
+        case RSC: { // RSC
+            uint64_t result = op2 + (~rnVal) + cpsr.C;
+            setRegister(rd, (uint32_t)result);
+            zeroBit = aluSetsZeroBit((uint32_t)result);
+            signBit = aluSetsSignBit((uint32_t)result);
+            carryBit = aluSubWithCarrySetsCarryBit(result);
+            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result);
+        }
+        case TST: { // TST
+            uint32_t result = rnVal & op2;
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case TEQ: { // TEQ
+            uint32_t result = rnVal ^ op2;
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case CMP: { // CMP
+            uint32_t result = rnVal - op2;
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+            carryBit = aluSubtractSetsCarryBit(rnVal, op2);
+            overflowBit = aluSubtractSetsOverflowBit(rnVal, op2, result);
+        }
+        case CMN: { // CMN
+            uint32_t result = rnVal + op2;
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+            carryBit = aluAddSetsCarryBit(rnVal, op2);
+            overflowBit = aluAddSetsOverflowBit(rnVal, op2, result);
+        }
+        case ORR: { // ORR
+            uint32_t result = rnVal | op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case MOV: { // MOV
+            uint32_t result = op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case BIC: { // BIC
+            uint32_t result = rnVal & (~op2);
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
+        case MVN: { // MVN
+            uint32_t result = ~op2;
+            setRegister(rd, result);
+            zeroBit = aluSetsZeroBit(result);
+            signBit = aluSetsSignBit(result);
+        }
     }
-    
-    // updating CPSR flags 
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { assert(false); } // flags not affected (not allowed in TST)  
-    
-    return {};
 }
-
-
-ARM7TDMI::Cycles ARM7TDMI::TEQ(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t result;
-    if(rn != PC_REGISTER) {
-        result = getRegister(rn) ^ shiftResult.op2;
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        result = (getRegister(rn) + 12) ^ shiftResult.op2;
-    } else {
-        result = (getRegister(rn) + 8) ^ shiftResult.op2;
-    }
-    
-    // updating CPSR flags 
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr.C = shiftResult.carry;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { assert(false); } // flags not affected, not allowed in comparison ops
-        
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::CMP(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    // because of pipelining
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-    } else {
-        rnValue = getRegister(rn) + 8;
-    }
-    uint32_t op2 = shiftResult.op2;
-    uint32_t result = rnValue - op2;
-    
-    // updating CPSR flags
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        // For a subtraction, including the comparison instruction CMP,
-        // C is set to 0 if the subtraction produced a borrow 
-        // (that is, an unsigned underflow), and to 1 otherwise.
-        // source: https://developer.arm.com/documentation/dui0801/a/Condition-Codes/Carry-flag
-        cpsr.C = !(rnValue < op2);
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // *OVERFLOW* 0 1 1 (subtracting a negative is the same as adding a positive)
-        // *OVERFLOW* 1 0 0 (subtracting a positive is the same as adding a negative)
-        cpsr.V = (!(rnValue & 0x80000000) && (op2 & 0x80000000) && (result & 0x80000000)) || 
-                 ((rnValue & 0x80000000) && !(op2 & 0x80000000) && !(result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { assert(false); }// flags not affected, not allowed in CMP
-        
-    return {};
-}
-
-
-ARM7TDMI::Cycles ARM7TDMI::CMN(uint32_t instruction) {
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
-
-    uint8_t rd = (instruction & 0x0000F000) >> 12;
-    uint8_t rn = (instruction & 0x000F0000) >> 16;
-
-    // When using R15 as operand (Rm or Rn), the returned value depends 
-    // on the instruction: PC+12 if I=0,R=1 (shift by register), otherwise PC+8 (shift by immediate).
-    uint32_t rnValue;
-    if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
-    } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
-    } else {
-        rnValue = getRegister(rn) + 8;
-    }
-    uint32_t op2 = shiftResult.op2;
-    uint32_t result = rnValue + op2;
-
-    
-    // updating CPSR flags 
-    if(rd != PC_REGISTER && (instruction & 0x00100000)) {
-        // For an addition, including the comparison instruction CMN, 
-        // C is set to 1 if the addition produced a carry (that is, an unsigned overflow),
-        // and to 0 otherwise. source: https://developer.arm.com/documentation/dui0801/a/Condition-Codes/Carry-flag
-        //cpsr.C = ((int32_t)(0xFFFFFFFF + op2)) < 0); 
-        cpsr.C = (0xFFFFFFFF - op2) < rnValue;
-        cpsr.Z = (result == 0);
-        cpsr.N = (result >> 31);
-        // *OVERFLOW* 1 1 -> 0
-        // *OVERFLOW* 0 0 -> 1
-        cpsr.V = ((rnValue & 0x80000000) && (op2 & 0x80000000) && !(result & 0x80000000)) || 
-                 (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && (result & 0x80000000));
-    } else if(rd == PC_REGISTER && (instruction & 0x00100000)) {
-        cpsr = getModeSpsr();
-    } else { assert(false); } // flags not affected, not allowed in CMN
-
-    return {};
-}
-
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END OF ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -710,12 +269,11 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         uint32_t rm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
         uint32_t op2 = aluShiftRor(rm, is % 32);
-        uint8_t carry;
         // carry out bit is the least significant discarded bit of rm
         if(is > 0) {
-            carry = (rm >> (is - 1)); 
+            carryBit = (rm >> (is - 1)); 
         }
-        return {op2, carry};
+        return {op2, carryBit};
     }
 
     /* ~~~~~~~~~ else: shifted register value as 2nd operand ~~~~~~~~~~ */
@@ -733,7 +291,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
     }
 
     uint32_t shiftAmount;
-    uint8_t carry;
 
     if(r) { // register as shift amount
         uint8_t rsIndex = (instruction & 0x00000F00) >> 8U;
@@ -758,10 +315,10 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         */
         if(!immOpIsZero) {
             op2 = aluShiftLsl(rm, shiftAmount);
-            carry = (rm >> (32 - shiftAmount)) & 1;
+            carryBit = (rm >> (32 - shiftAmount)) & 1;
         } else { // no op performed, carry flag stays the same
             op2 = rm;
-            carry = cpsr.C;
+            carryBit = cpsr.C;
         }
     }
     else if(shiftType == 1) { // Logical Shift Right
@@ -771,7 +328,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         */
         if(!immOpIsZero) {
             op2 = aluShiftLsr(rm, shiftAmount);
-            carry = (rm >> (shiftAmount - 1)) & 1;
+            carryBit = (rm >> (shiftAmount - 1)) & 1;
         } else {
             /*
                 The form of the shift field which might be expected to 
@@ -779,7 +336,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
                 zero result with bit 31 of Rm as the carry output
             */
             op2 = 0;
-            carry = rm >> 31;
+            carryBit = rm >> 31;
         }
     }
     else if(shiftType == 2) { // Arithmetic Shift Right
@@ -790,7 +347,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         */
         if(!immOpIsZero) {
             op2 = aluShiftAsr(rm, shiftAmount);
-            carry = rm >> 31;
+            carryBit = rm >> 31;
         } else {
             /*
                 The form of the shift field which might be expected to give ASR #0 
@@ -798,7 +355,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
                 and each bit of operand 2 is also equal to bit 31 of Rm. 
             */
             op2 = aluShiftAsr(rm, 32);
-            carry = rm >> 31;
+            carryBit = rm >> 31;
         }
     }
     else { // Rotating Shift
@@ -810,7 +367,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
         */
         if(!immOpIsZero) {
             op2 = aluShiftRor(rm, shiftAmount % 32);
-            carry = (rm >> (shiftAmount - 1)) & 1;
+            carryBit = (rm >> (shiftAmount - 1)) & 1;
         } else {
             /*
                 The form of the shift field which might be expected to give ROR #0 
@@ -821,11 +378,11 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
             */
             op2 = rm >> 1;
             op2 = op2 | (((uint32_t)cpsr.C) << 31);
-            carry = rm & 1;
+            carryBit = rm & 1;
         }
     }
 
-    return {op2, carry};
+    return {op2, carryBit};
 }
 
 
@@ -914,4 +471,60 @@ void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
     } else {
         registers[index] = value;
     }
+}
+
+
+
+
+
+bool ARM7TDMI::aluSetsZeroBit(uint32_t value) {
+    return value == 0;
+}
+
+bool ARM7TDMI::aluSetsSignBit(uint32_t value) {
+    return value >> 31;
+}
+
+bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
+    return !(rnValue < op2);
+}
+
+bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+    // todo: maybe there is a more efficient way to do this
+    return (!(rnValue & 0x80000000) && (op2 & 0x80000000) && (result & 0x80000000)) || 
+            ((rnValue & 0x80000000) && !(op2 & 0x80000000) && !(result & 0x80000000));
+}
+
+bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
+    return (0xFFFFFFFF - op2) < rnValue;
+}
+
+bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+    // todo: maybe there is a more efficient way to do this
+    return ((rnValue & 0x80000000) && (op2 & 0x80000000) && !(result & 0x80000000)) || 
+            (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && (result & 0x80000000));
+}
+
+bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
+    return result >> 32;
+}
+
+bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+    // todo: maybe there is a more efficient way to do this
+    return   ((rnValue & 0x80000000) && (op2 & 0x80000000) && !((rnValue + op2) & 0x80000000)) || 
+             (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && ((rnValue + op2) & 0x80000000)) || 
+            // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) && !(((uint32_t)result) & 0x80000000)) ||  never happens
+             (!((rnValue + op2) & 0x80000000) && !(cpsr.C & 0x80000000) && ((result) & 0x80000000));
+}
+
+bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
+    return !(result >> 32);
+}
+
+bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+    // todo: maybe there is a more efficient way to do this
+    return ((rnValue & 0x80000000) && ((~op2) & 0x80000000) && !((rnValue + (~op2)) & 0x80000000)) || 
+            (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) && ((rnValue + (~op2)) & 0x80000000)) || 
+             // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) && !(result & 0x80000000)) || never happens
+            (!((rnValue + (~op2)) & 0x80000000) && !(cpsr.C & 0x80000000) && (result & 0x80000000));
 }

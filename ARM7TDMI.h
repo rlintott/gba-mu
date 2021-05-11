@@ -17,6 +17,7 @@ public:
 private:
 
     // general purpose registers 
+    // todo: change design to change the registers when mode switches, so dont have to check mode every register access
     std::array<uint32_t, 16> registers = {
         0x1,
         0x2,
@@ -161,6 +162,11 @@ private:
     static const uint8_t SP_REGISTER = 13; 
     static const uint32_t BOOT_LOCATION = 0x0;
 
+    uint8_t overflowBit = 0;
+    uint8_t carryBit = 0;
+    uint8_t zeroBit = 0;
+    uint8_t signBit = 0;
+
     // struct representing program status register (xPSR)
     struct ProgramStatusRegister {
         uint8_t Mode : 5;        //  M4-M0 - Mode Bits
@@ -175,6 +181,7 @@ private:
         uint8_t N : 1;          // N - Sign Flag       (0=Not Signed, 1=Signed)               
     };
 
+    // todo: deprecate in favour of shifting op2 in place and only returning carry
     struct AluShiftResult {
         uint32_t op2;
         uint8_t carry;
@@ -190,20 +197,12 @@ private:
         SYSTEM = 31
     };
 
-    enum AsmOpcodeType {
-        DATA_PROCESSING_IMM, 
-        DATA_PROCESSING_REG_SHIFT_IMM,
-        DATA_PROCESSING_REG_SHIFT_REG,
-        UNDEFINED_OPCODE
-    };
-
     ProgramStatusRegister cpsr =        {0,0,0,0,0,0,0,0,0,0};
     ProgramStatusRegister SPSR_fiq =    {0,0,0,0,0,0,0,0,0,0};
     ProgramStatusRegister SPSR_svc =    {0,0,0,0,0,0,0,0,0,0};
     ProgramStatusRegister SPSR_abt =    {0,0,0,0,0,0,0,0,0,0};
     ProgramStatusRegister SPSR_irq =    {0,0,0,0,0,0,0,0,0,0};
     ProgramStatusRegister SPSR_und =    {0,0,0,0,0,0,0,0,0,0};
-
 
     // struct representing the number of cycles an operation will take
     struct Cycles {
@@ -213,35 +212,7 @@ private:
         uint8_t waitState : 8;
     };
 
-    struct Instruction {
-        std::string name;
-        Cycles (ARM7TDMI::*execute)(uint32_t) = nullptr;
-    };
-
-    std::vector<Instruction> dataProccessingOpcodes;
-
-    Instruction undefinedOpcode;
-
     Bus *bus;
-
-    AsmOpcodeType getAsmOpcodeType(uint32_t instruction);
-
-    Cycles AND(uint32_t instruction);
-    Cycles EOR(uint32_t instruction);
-    Cycles ORR(uint32_t instruction);
-    Cycles MOV(uint32_t instruction);
-    Cycles BIC(uint32_t instruction);
-    Cycles MVN(uint32_t instruction);
-    Cycles ADD(uint32_t instruction);
-    Cycles ADC(uint32_t instruction);
-    Cycles SUB(uint32_t instruction);
-    Cycles SBC(uint32_t instruction);
-    Cycles RSC(uint32_t instruction);
-    Cycles RSB(uint32_t instruction);
-    Cycles TST(uint32_t instruction);
-    Cycles TEQ(uint32_t instruction);
-    Cycles CMP(uint32_t instruction);
-    Cycles CMN(uint32_t instruction);
 
     Cycles UNDEF(uint32_t instruction);
 
@@ -250,6 +221,39 @@ private:
     uint32_t aluShiftAsr(uint32_t value, uint8_t shift);
     uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     uint32_t aluShiftRrx(uint32_t value, uint8_t shift);
+
+    Cycles executeAluInstruction(uint32_t instruction);
+    Cycles executeAluInstructionOperation(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
+
+    bool aluSetsZeroBit(uint32_t value);
+    bool aluSetsSignBit(uint32_t value);
+    bool aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    bool aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2);
+    bool aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2);
+    bool aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    bool aluAddWithCarrySetsCarryBit(uint64_t result);
+    bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    bool aluSubWithCarrySetsCarryBit(uint64_t result);
+    bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+
+    enum AluOpcode {
+        AND = 0x0,
+        EOR = 0x1,
+        SUB = 0x2,
+        RSB = 0x3,
+        ADD = 0x4,
+        ADC = 0x5,
+        SBC = 0x6,
+        RSC = 0x7,
+        TST = 0x8,
+        TEQ = 0x9,
+        CMP = 0xA,
+        CMN = 0xB,
+        ORR = 0xC,
+        MOV = 0xD,
+        BIC = 0xE,
+        MVN = 0xF
+    };
 
 
 public:
