@@ -6,8 +6,8 @@
 
 
 ARM7TDMI::ARM7TDMI() {
-    cpsr.Mode = SUPERVISOR;
-    cpsr.T = 0; // set to ARM state
+    switchToMode(SUPERVISOR);
+    cpsr.T = 0; // set CPU to ARM state
     setRegister(PC_REGISTER, BOOT_LOCATION);
 }
 
@@ -18,7 +18,7 @@ ARM7TDMI::~ARM7TDMI() {
 
 void ARM7TDMI::step() {
     // read from program counter
-    uint32_t rawInstruction = bus->read(registers[PC_REGISTER]);
+    uint32_t rawInstruction = bus->read(getRegister(PC_REGISTER));
 
     if(cpsr.T) { // check state bit, is CPU in ARM state?
         Cycles cycles = executeInstruction(rawInstruction);
@@ -34,17 +34,71 @@ void ARM7TDMI::connectBus(Bus* bus) {
 }
 
 
+void ARM7TDMI::switchToMode(Mode mode) {
+    cpsr.Mode = mode;
+    switch(mode) {
+        case USER: {
+            currentSpsr = &cpsr;
+            registers[8] = &r8;
+            registers[9] = &r9;
+            registers[10] = &r10;
+            registers[11] = &r11;
+            registers[12] = &r12;
+            registers[13] = &r13;
+            registers[14] = &r14;
+        }
+        case FIQ: {
+            currentSpsr = &SPSR_fiq;
+            registers[8] = &r8_fiq;
+            registers[9] = &r9_fiq;
+            registers[10] = &r10_fiq;
+            registers[11] = &r11_fiq;
+            registers[12] = &r12_fiq;
+            registers[13] = &r13_fiq;
+            registers[14] = &r14_fiq;
+        }
+        case IRQ: {
+            currentSpsr = &SPSR_irq;
+            registers[13] = &r13_irq;
+            registers[14] = &r14_irq;
+        }
+        case SUPERVISOR: {
+            currentSpsr = &SPSR_svc;
+            registers[13] = &r13_svc;
+            registers[14] = &r14_svc;
+        }
+        case ABORT: {
+            currentSpsr = &SPSR_abt;
+            registers[13] = &r13_abt;
+            registers[14] = &r14_abt;
+        }
+        case UNDEFINED: {
+            currentSpsr = &SPSR_und;
+            registers[13] = &r13_abt;
+            registers[14] = &r14_abt;
+        }
+        case SYSTEM: {
+            currentSpsr = &SPSR_svc;
+            registers[13] = &r13_svc; // ? TODO check
+            registers[14] = &r14_svc; // ?
+        }
+    }
+}
+
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 // TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
 
 ARM7TDMI::Cycles ARM7TDMI::executeAluInstruction(uint32_t instruction) {
+    // shift op2
     AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
     uint8_t rd = (instruction & 0x0000F000) >> 12;
     uint8_t rn = (instruction & 0x000F0000) >> 16;
     uint8_t opcode = instruction & 0x01E00000 >> 21;
 
     uint32_t rnValue;
+    // if rn == pc regiser, have to add to it to account for pipelining / prefetching
     if(rn != PC_REGISTER) {
         rnValue = getRegister(rn);
     } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
@@ -418,76 +472,34 @@ uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
 
 
 ARM7TDMI::ProgramStatusRegister ARM7TDMI::getModeSpsr() {
-    if(cpsr.Mode == USER) {
-        return cpsr;
-    } else if(cpsr.Mode == FIQ) {
-        return SPSR_fiq;
-    } else if(cpsr.Mode == IRQ) {
-        return SPSR_irq;
-    } else if(cpsr.Mode == SUPERVISOR) {
-        return SPSR_svc;
-    } else if(cpsr.Mode == ABORT) {
-        return SPSR_abt;
-    } else if(cpsr.Mode == UNDEFINED) {
-        return SPSR_und;
-    } else {
-        return cpsr;
-    }
+    return *currentSpsr;
 }
 
 
 uint32_t ARM7TDMI::getRegister(uint8_t index) {
-    if(cpsr.Mode == USER) {
-        return registers[index];
-    } else if(cpsr.Mode == FIQ) {
-        return *(fiqRegisters[index]);
-    } else if(cpsr.Mode == IRQ) {
-        return *(irqRegisters[index]);
-    } else if(cpsr.Mode == SUPERVISOR) {
-        return *(svcRegisters[index]);
-    } else if(cpsr.Mode == ABORT) {
-        return *(abtRegisters[index]);
-    } else if(cpsr.Mode == UNDEFINED) {
-        return *(undRegisters[index]);
-    } else {
-        return registers[index];
-    }
+    return *(registers[index]);
 }
 
 
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
-    if(cpsr.Mode == USER) {
-        registers[index] = value;
-    } else if(cpsr.Mode == FIQ) {
-        *(fiqRegisters[index]) = value;
-    } else if(cpsr.Mode == IRQ) {
-        *(irqRegisters[index]) = value;
-    } else if(cpsr.Mode == SUPERVISOR) {
-        *(svcRegisters[index]) = value;
-    } else if(cpsr.Mode == ABORT) {
-        *(abtRegisters[index]) = value;
-    } else if(cpsr.Mode == UNDEFINED) {
-        *(undRegisters[index]) = value;
-    } else {
-        registers[index] = value;
-    }
+    *(registers[index]) = value;
 }
-
-
-
 
 
 bool ARM7TDMI::aluSetsZeroBit(uint32_t value) {
     return value == 0;
 }
 
+
 bool ARM7TDMI::aluSetsSignBit(uint32_t value) {
     return value >> 31;
 }
 
+
 bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
     return !(rnValue < op2);
 }
+
 
 bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
     // todo: maybe there is a more efficient way to do this
@@ -495,9 +507,11 @@ bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32
             ((rnValue & 0x80000000) && !(op2 & 0x80000000) && !(result & 0x80000000));
 }
 
+
 bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
     return (0xFFFFFFFF - op2) < rnValue;
 }
+
 
 bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
     // todo: maybe there is a more efficient way to do this
@@ -505,9 +519,11 @@ bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t re
             (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && (result & 0x80000000));
 }
 
+
 bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
     return result >> 32;
 }
+
 
 bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
     // todo: maybe there is a more efficient way to do this
@@ -517,9 +533,11 @@ bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, ui
              (!((rnValue + op2) & 0x80000000) && !(cpsr.C & 0x80000000) && ((result) & 0x80000000));
 }
 
+
 bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
     return !(result >> 32);
 }
+
 
 bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
     // todo: maybe there is a more efficient way to do this
