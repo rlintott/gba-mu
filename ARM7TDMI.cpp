@@ -684,7 +684,7 @@ uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
                 (((uint32_t)psr.C) << 29) |
                 (((uint32_t)psr.V) << 28) |
                 (((uint32_t)psr.Q) << 27) |
-                (((uint32_t)psr.Reserved) << 8) | 
+                (((uint32_t)psr.Reserved) << 26) | 
                 (((uint32_t)psr.I) << 7) |
                 (((uint32_t)psr.F) << 6) |
                 (((uint32_t)psr.T) << 5) |
