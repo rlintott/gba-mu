@@ -116,8 +116,10 @@ ARM7TDMI::Cycles ARM7TDMI::execAluInstruction(uint32_t instruction) {
         cpsr.N = signBit;
         cpsr.V = overflowBit;
     } else if(rd == PC_REGISTER && sFlagSet(instruction)) {
-        cpsr = getModeSpsr();
+        cpsr = *getCurrentModeSpsr();
     } else { } // flags not affected, not allowed in CMP
+
+    return {};
 }
 
 
@@ -250,35 +252,33 @@ ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t r
             signBit = aluSetsSignBit(result);
         }
     }
+    return {};
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END OF ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 /* ~~~~~~~~~~~ Multiply and Multiply-Accumulate (MUL, MLA) Operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
 ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
     uint8_t opcode = getOpcode(instruction);
-    uint8_t rd = getRd(instruction);
+    uint8_t rd = (instruction & 0x000F0000) >> 16; // rd is different for multiply
     uint8_t rm = getRm(instruction);
     uint8_t rs = getRs(instruction);
-
     assert(rd != rm && (rd != PC_REGISTER && 
                         rm != PC_REGISTER &&
                         rs != PC_REGISTER));
-
     uint64_t result;
+
     switch(opcode) {
-        case 0: {// MUL 
+        case 0: { // MUL 
             result = getRegister(rm) * getRegister(rs);
         }
-        case 1: {// MLA
-            uint8_t rn = getRn(instruction);
+        case 1: { // MLA
+            uint8_t rn = (instruction & 0x0000F000) >> 12; // rn is different for multiply
             assert(rn != PC_REGISTER);
             result = getRegister(rm) * getRegister(rs) + getRegister(rn);
         }
     }   
-    
     setRegister(rd, (uint32_t)result);
 
     if(sFlagSet(instruction)) {
@@ -286,14 +286,77 @@ ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
         cpsr.N = aluSetsSignBit((uint32_t)result);
         cpsr.C = 0;  
     }
+    return {};
 }
 
 
-/* ~~~~~~~~~~~ End of Multiply and Multiply-Accumulate (MUL, MLA) Operations ~~~~~~~~~~~~~~~~~~~~*/
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations ~~~~~~~~~~~~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::UNDEF(uint32_t instruction) {
+ARM7TDMI::Cycles ARM7TDMI::execPsrTransferInstruction(uint32_t instruction) {   
+    assert(!sFlagSet(instruction));
+    assert(!(instruction & 0x0C000000));
+
+    bool immediate = (instruction & 0x02000000); // bit 25: I - Immediate Operand Flag  (0=Register, 1=Immediate) (Zero for MRS)
+    bool psrSource = (instruction & 0x00400000);  // bit 22: Psr - Source/Destination PSR  (0=CPSR, 1=SPSR_<current mode>)
+
+    switch((instruction & 0x00200000) >> 21) { // bit 21: special opcode for PSR
+        case 0: { // MRS{cond} Rd,Psr ; Rd = Psr
+            assert(!immediate);
+            assert(getRn(instruction) == 0xF);
+            assert(!(instruction & 0x00000FFF));
+            uint8_t rd = getRd(instruction);
+            if(psrSource) {
+                setRegister(rd, psrToInt(cpsr));
+            }
+            else {
+                setRegister(rd, psrToInt(*getCurrentModeSpsr()));
+            }
+        }
+        case 1: { // MSR{cond} Psr{_field},Op  ;Psr[field] = Op=
+            assert((instruction & 0x0000F000) == 0x0000F000);
+            uint8_t fscx = (instruction & 0x000F0000) >> 16;
+            if(immediate) {
+                uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
+                uint8_t shift =  (instruction & 0x00000F00) >> 7;
+                transferToPsr(aluShiftRor(immValue, shift), fscx, psrSource);
+            } else { // register
+                assert(!(instruction & 0x00000FF0));
+                assert(getRm(instruction) != PC_REGISTER);
+                transferToPsr(getRegister(getRm(instruction)), fscx, psrSource);
+            }
+        }
+    }
+
     return {};
+}
+
+void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
+    ProgramStatusRegister* psr = psrSource ? &cpsr : getCurrentModeSpsr();
+    if(field & 0b1000) {
+        // TODO: is this correct? it says   f =  write to flags field     Bit 31-24 (aka _flg)
+        psr->N = (bool)(value & 0x80000000);
+        psr->Z = (bool)(value & 0x40000000);
+        psr->C = (bool)(value & 0x20000000);
+        psr->V = (bool)(value & 0x10000000);
+        psr->Q = (bool)(value & 0x08000000);
+    }
+    if(field & 0b0100) {
+        // reserved, don't change
+    }
+    if(field & 0b0010) {
+        // reserverd don't change
+    }
+    if(field & 0b0001) {
+        psr->I = (bool)(value & 0x00000080);
+        psr->F = (bool)(value & 0x00000040);
+        psr->T = (bool)(value & 0x00000020);
+        psr->Mode = 0 | (value & 0x00000010) | 
+                        (value & 0x00000008) | 
+                        (value & 0x00000004) | 
+                        (value & 0x00000002) | 
+                        (value & 0x00000001);
+    }
 }
 
 
@@ -509,8 +572,8 @@ uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
 }
 
 
-ARM7TDMI::ProgramStatusRegister ARM7TDMI::getModeSpsr() {
-    return *currentSpsr;
+ARM7TDMI::ProgramStatusRegister* ARM7TDMI::getCurrentModeSpsr() {
+    return currentSpsr;
 }
 
 
@@ -585,23 +648,24 @@ bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, ui
             (!((rnValue + (~op2)) & 0x80000000) && !(cpsr.C & 0x80000000) && (result & 0x80000000));
 }
 
+// not guaranteed to always be rn, check the spec first
+uint8_t ARM7TDMI::getRn(uint32_t instruction) {
+    return (instruction & 0x000F0000) >> 16;
+}
+
+// not guaranteed to always be rd, check the spec first
 uint8_t ARM7TDMI::getRd(uint32_t instruction) {
     return (instruction & 0x0000F000) >> 12;
 }
 
-
-uint8_t ARM7TDMI::getRn(uint32_t instruction) {
-    return (instruction & 0x000F0000) >> 16;
+// not guaranteed to always be rs, check the spec first
+uint8_t ARM7TDMI::getRs(uint32_t instruction) {
+    return (instruction & 0x00000F00) >> 8;
 }
 
 
 uint8_t ARM7TDMI::getRm(uint32_t instruction) {
     return (instruction & 0x0000000F);
-}
-
-
-uint8_t ARM7TDMI::getRs(uint32_t instruction) {
-    return (instruction & 0x00000F00) >> 8;
 }
 
 
@@ -614,3 +678,15 @@ bool ARM7TDMI::sFlagSet(uint32_t instruction) {
 }
 
 
+uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
+    return 0 | (((uint32_t)psr.N) << 31) | 
+                (((uint32_t)psr.Z) << 30) | 
+                (((uint32_t)psr.C) << 29) |
+                (((uint32_t)psr.V) << 28) |
+                (((uint32_t)psr.Q) << 27) |
+                (((uint32_t)psr.Reserved) << 8) | 
+                (((uint32_t)psr.I) << 7) |
+                (((uint32_t)psr.F) << 6) |
+                (((uint32_t)psr.T) << 5) |
+                (((uint32_t)psr.Mode) << 0);
+} 

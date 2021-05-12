@@ -139,6 +139,7 @@ private:
     Cycles execAluInstruction(uint32_t instruction);
     Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
     Cycles execMultiplyInstruction(uint32_t instruction);
+    Cycles execPsrTransferInstruction(uint32_t instruction);
 
     bool aluSetsZeroBit(uint32_t value);
     bool aluSetsSignBit(uint32_t value);
@@ -158,6 +159,9 @@ private:
     uint8_t getOpcode(uint32_t instruction);
 
     bool sFlagSet(uint32_t instruction);
+
+    uint32_t psrToInt(ProgramStatusRegister psr);
+    void transferToPsr(uint32_t value, uint8_t field, bool psrSource);
 
     enum AluOpcode {
         AND = 0x0,
@@ -203,7 +207,7 @@ public:
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
     // returns the SPSR for the CPU's current mode
-    ProgramStatusRegister getModeSpsr();
+    ProgramStatusRegister* getCurrentModeSpsr();
 
     // dependency injection
     void connectBus(Bus* bus);
