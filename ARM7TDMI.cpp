@@ -333,6 +333,7 @@ ARM7TDMI::Cycles ARM7TDMI::execPsrTransferInstruction(uint32_t instruction) {
 
 void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
     ProgramStatusRegister* psr = psrSource ? &cpsr : getCurrentModeSpsr();
+
     if(field & 0b1000) {
         // TODO: is this correct? it says   f =  write to flags field     Bit 31-24 (aka _flg)
         psr->N = (bool)(value & 0x80000000);
@@ -340,6 +341,8 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
         psr->C = (bool)(value & 0x20000000);
         psr->V = (bool)(value & 0x10000000);
         psr->Q = (bool)(value & 0x08000000);
+        psr->Reserved = (psr->Reserved & 0b0001111111111111111) | 
+                        (((value & 0x07000000) >> 24) << 16);
     }
     if(field & 0b0100) {
         // reserved, don't change
@@ -347,15 +350,19 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
     if(field & 0b0010) {
         // reserverd don't change
     }
-    if(field & 0b0001) {
-        psr->I = (bool)(value & 0x00000080);
-        psr->F = (bool)(value & 0x00000040);
-        psr->T = (bool)(value & 0x00000020);
-        psr->Mode = 0 | (value & 0x00000010) | 
-                        (value & 0x00000008) | 
-                        (value & 0x00000004) | 
-                        (value & 0x00000002) | 
-                        (value & 0x00000001);
+    if(cpsr.Mode != USER) {
+        if(field & 0b0001) {
+            psr->I = (bool)(value & 0x00000080);
+            psr->F = (bool)(value & 0x00000040);
+             // t bit may not be changed, for THUMB/ARM switching use BX instruction.
+            assert(!(bool)(value & 0x00000020));
+            psr->T = (bool)(value & 0x00000020);
+            psr->Mode = 0 | (value & 0x00000010) | 
+                            (value & 0x00000008) | 
+                            (value & 0x00000004) | 
+                            (value & 0x00000002) | 
+                            (value & 0x00000001);
+        }
     }
 }
 
