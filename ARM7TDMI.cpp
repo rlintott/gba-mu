@@ -3,7 +3,14 @@
 #include <bit>
 #include <bitset>
 #include <iostream>
+#include "assert.h"
+#include <bitset>
 
+#ifdef NDEBUG 
+#define DEBUG(x) 
+#else
+#define DEBUG(x) do { std::cerr << x; } while (0)
+#endif
 
 ARM7TDMI::ARM7TDMI() {
     switchToMode(SUPERVISOR);
@@ -21,7 +28,7 @@ void ARM7TDMI::step() {
     uint32_t rawInstruction = bus->read(getRegister(PC_REGISTER));
 
     if(cpsr.T) { // check state bit, is CPU in ARM state?
-        Cycles cycles = executeInstruction(rawInstruction);
+        // Cycles cycles = executeInstruction(rawInstruction);
 
     } else { // THUMB state
 
@@ -90,9 +97,9 @@ void ARM7TDMI::switchToMode(Mode mode) {
 // TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
 
-ARM7TDMI::Cycles ARM7TDMI::execAluInstruction(uint32_t instruction) {
+ARM7TDMI::Cycles ARM7TDMI::aluHandler(uint32_t instruction, ARM7TDMI *cpu) {
     // shift op2
-    AluShiftResult shiftResult = aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+    AluShiftResult shiftResult = cpu->aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
     uint8_t rd = getRd(instruction);
     uint8_t rn = getRn(instruction);
     uint8_t opcode = getOpcode(instruction);
@@ -100,23 +107,23 @@ ARM7TDMI::Cycles ARM7TDMI::execAluInstruction(uint32_t instruction) {
     uint32_t rnValue;
     // if rn == pc regiser, have to add to it to account for pipelining / prefetching
     if(rn != PC_REGISTER) {
-        rnValue = getRegister(rn);
+        rnValue = cpu->getRegister(rn);
     } else if(!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = getRegister(rn) + 12;
+        rnValue = cpu->getRegister(rn) + 12;
     } else {
-        rnValue = getRegister(rn) + 8;
+        rnValue = cpu->getRegister(rn) + 8;
     }
     uint32_t op2 = shiftResult.op2;
 
-    execAluOpcode(opcode, rd, getRegister(rn), op2);
+    cpu->execAluOpcode(opcode, rd, cpu->getRegister(rn), op2);
 
     if(rd != PC_REGISTER && sFlagSet(instruction)) {
-        cpsr.C = carryBit;
-        cpsr.Z = overflowBit;
-        cpsr.N = signBit;
-        cpsr.V = overflowBit;
+        cpu->cpsr.C = cpu->carryBit;
+        cpu->cpsr.Z = cpu->overflowBit;
+        cpu->cpsr.N = cpu->signBit;
+        cpu->cpsr.V = cpu->overflowBit;
     } else if(rd == PC_REGISTER && sFlagSet(instruction)) {
-        cpsr = *getCurrentModeSpsr();
+        cpu->cpsr = *(cpu->getCurrentModeSpsr());
     } else { } // flags not affected, not allowed in CMP
 
     return {};
@@ -185,7 +192,7 @@ ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t r
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluAddWithCarrySetsCarryBit(result);
-            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result);
+            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, this);
         }
         case SBC: { // SBC
             uint64_t result = rnVal + (~op2) + cpsr.C;
@@ -193,7 +200,7 @@ ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t r
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result);
+            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, this);
         }
         case RSC: { // RSC
             uint64_t result = op2 + (~rnVal) + cpsr.C;
@@ -201,7 +208,7 @@ ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t r
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result);
+            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result, this);
         }
         case TST: { // TST
             uint32_t result = rnVal & op2;
@@ -259,7 +266,7 @@ ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t r
 /* ~~~~~~~~~~~ Multiply and Multiply-Accumulate (MUL, MLA) Operations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 
-ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
+ARM7TDMI::Cycles ARM7TDMI::multiplyHandler(uint32_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = getOpcode(instruction);
     uint8_t rd = (instruction & 0x000F0000) >> 16; // rd is different for multiply
     uint8_t rm = getRm(instruction);
@@ -271,20 +278,20 @@ ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
 
     switch(opcode) {
         case 0: { // MUL 
-            result = getRegister(rm) * getRegister(rs);
+            result = cpu->getRegister(rm) * cpu->getRegister(rs);
         }
         case 1: { // MLA
             uint8_t rn = (instruction & 0x0000F000) >> 12; // rn is different for multiply
             assert(rn != PC_REGISTER);
-            result = getRegister(rm) * getRegister(rs) + getRegister(rn);
+            result = cpu->getRegister(rm) * cpu->getRegister(rs) + cpu->getRegister(rn);
         }
     }   
-    setRegister(rd, (uint32_t)result);
+    cpu->setRegister(rd, (uint32_t)result);
 
     if(sFlagSet(instruction)) {
-        cpsr.Z = aluSetsZeroBit((uint32_t)result);
-        cpsr.N = aluSetsSignBit((uint32_t)result);
-        cpsr.C = 0;  
+        cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
+        cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
+        cpu->cpsr.C = 0;  
     }
     return {};
 }
@@ -293,9 +300,9 @@ ARM7TDMI::Cycles ARM7TDMI::execMultiplyInstruction(uint32_t instruction) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations ~~~~~~~~~~~~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::execPsrTransferInstruction(uint32_t instruction) {   
-    assert(!sFlagSet(instruction));
+ARM7TDMI::Cycles ARM7TDMI::psrHandler(uint32_t instruction, ARM7TDMI *cpu) {   
     assert(!(instruction & 0x0C000000));
+    assert(!sFlagSet(instruction));
 
     bool immediate = (instruction & 0x02000000); // bit 25: I - Immediate Operand Flag  (0=Register, 1=Immediate) (Zero for MRS)
     bool psrSource = (instruction & 0x00400000);  // bit 22: Psr - Source/Destination PSR  (0=CPSR, 1=SPSR_<current mode>)
@@ -307,10 +314,10 @@ ARM7TDMI::Cycles ARM7TDMI::execPsrTransferInstruction(uint32_t instruction) {
             assert(!(instruction & 0x00000FFF));
             uint8_t rd = getRd(instruction);
             if(psrSource) {
-                setRegister(rd, psrToInt(cpsr));
+                cpu->setRegister(rd, psrToInt(cpu->cpsr));
             }
             else {
-                setRegister(rd, psrToInt(*getCurrentModeSpsr()));
+                cpu->setRegister(rd, psrToInt(*(cpu->getCurrentModeSpsr())));
             }
         }
         case 1: { // MSR{cond} Psr{_field},Op  ;Psr[field] = Op=
@@ -319,11 +326,11 @@ ARM7TDMI::Cycles ARM7TDMI::execPsrTransferInstruction(uint32_t instruction) {
             if(immediate) {
                 uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
                 uint8_t shift =  (instruction & 0x00000F00) >> 7;
-                transferToPsr(aluShiftRor(immValue, shift), fscx, psrSource);
+                cpu->transferToPsr(aluShiftRor(immValue, shift), fscx, psrSource);
             } else { // register
                 assert(!(instruction & 0x00000FF0));
                 assert(getRm(instruction) != PC_REGISTER);
-                transferToPsr(getRegister(getRm(instruction)), fscx, psrSource);
+                cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx, psrSource);
             }
         }
     }
@@ -367,6 +374,19 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
 }
 
 
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
+
+ARM7TDMI::Cycles ARM7TDMI::undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu) {
+    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string());
+
+    return {};
+}
+
+
+
+
+
 /*
 ARM Binary Opcode Format
     |..3 ..................2 ..................1 ..................0|
@@ -387,32 +407,98 @@ ARM Binary Opcode Format
     |_Cond__|0_1_1|________________xxx____________________|1|__xxx__| Undefined
     |_Cond__|1_0_0|P|U|S|W|L|__Rn___|__________Register_List________| BlockTrans
     |_Cond__|1_0_1|L|___________________Offset______________________| B,BL,BLX
-    |_Cond__|1_1_1_1|_____________Ignored_by_Processor______________| SWI           
-*/  
+    |_Cond__|1_1_1_1|_____________Ignored_by_Processor______________| SWI  
 
-// TODO: find a way to write a decoder that is as FAST and SIMPLE as possible
-ARM7TDMI::Cycles ARM7TDMI::executeInstruction(uint32_t instruction) {
-    // highest possible specificity to lowest specifity
-    switch(instruction & 0x010E00000) {
-        case 0x0:
-        case 0x1:
-        case 0x2:
-        case 0x3:
-        case 0x4: 
-        case 0x5:
-        case 0x6:
-        case 0x7:
-        case 0x8: 
-        case 0x9: 
-        case 0xA:
-        case 0xB:
-        case 0xC:
-        case 0xD:
-        case 0xE:
-        case 0xF:
-            break;
+decoding from highest to lowest specifity to ensure corredct opcode parsed
+
+    case: 000
+
+        1:  xxxx0001001011111111111100x1xxxx    BX,BLX
+        2:  xxxx00010x00xxxxxxxx00001001xxxx    TransSwp12  (15)
+        3:  xxxx00010xx0xxxxxxxx00000000xxxx    PSR Reg     (14)
+        4:  xxxx000xx0xxxxxxxxxx00001xx1xxxx    TransReg10  (10)
+        5:  xxxx000000xxxxxxxxxxxxxx1001xxxx    Multiply    (10)
+        6:  xxxx00001xxxxxxxxxxxxxxx1001xxxx    MulLong     (9)
+        7:  xxxx000xx1xxxxxxxxxxxxxx1xx1xxxx    TransImm10  (6)
+        9:  xxxx000xxxxxxxxxxxxxxxxx0xx1xxxx    DataProc    (5)
+        10: xxxx000xxxxxxxxxxxxxxxxxxxx0xxxx    DataProc    (4)
+
+    case 001:
+
+        8:  xxxx00110x10xxxxxxxxxxxxxxxxxxxx    PSR Imm     (7)
+        16: xxxx001xxxxxxxxxxxxxxxxxxxxxxxxx    DataProc    (3)
+
+    case 100:
+
+        17: xxxx100xxxxxxxxxxxxxxxxxxxxxxxxx    BlockTrans  (3)
+
+    case 101:
+
+        14: xxxx101xxxxxxxxxxxxxxxxxxxxxxxxx    B,BL,BLX    (3)
+
+    case 111:
+    
+        12: xxxx1111xxxxxxxxxxxxxxxxxxxxxxxx    SWI         (4)
+    
+    case 011:
+
+        11: xxxx011xxxxxxxxxxxxxxxxxxxx0xxxx    TransReg9   (4)
+        13: xxxx011xxxxxxxxxxxxxxxxxxxx1xxxx    Undefined   (4)
+         
+*/  
+// TODO: use hex values to make it more concise 
+ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) {
+    return multiplyHandler;
+    switch(instruction & 0b00001110000000000000000000000000) { // mask 1
+        case 0b00000000000000000000000000000000: {
+            if((instruction & 0b00001111111111111111111111010000) == 0b00000001001011111111111100010000) { // BX,BLX    
+            }
+            else if((instruction & 0b00001111101100000000111111110000) == 0b00000001000000000000000010010000) { // TransSwp12 
+            
+            }
+            else if((instruction & 0b00001111100100000000111111110000) == 0b00000001000000000000000000000000) { // PSR Reg
+               return psrHandler; 
+            }
+            else if((instruction & 0b00001110010000000000111110010000) == 0b00000000000000000000000010010000) { // TransReg10
+            
+            }
+            else if((instruction & 0b00001111110000000000000011110000) == 0b00000000000000000000000010010000) { // Multiply
+                return multiplyHandler;
+            }
+            else if((instruction & 0b00001111100000000000000011110000) == 0b00000000100000000000000010010000) { // MulLong
+            
+            }
+            else if((instruction & 0b00001110010000000000000010010000) == 0b00000000010000000000000010010000) { // TransImm10
+            
+            }
+            else { // dataProc
+                return aluHandler;
+            }
+        }
+        case 0b00000010000000000000000000000000: {
+            if((instruction & 0b00001111101100000000000000000000) == 0b00000011001000000000000000000000) { // PSR Imm
+                return psrHandler;
+            }
+            else { // DataProc 
+                return aluHandler;
+            }
+        }
+        case 0b00001000000000000000000000000000: {
+            // Block trans
+        }
+        case 0b00001010000000000000000000000000: {
+            // B,BL,BLX
+        }
+        case 0b00001110000000000000000000000000: {
+            // SWI
+        }
+        case 0b00000110000000000000000000000000: {
+            if((instruction & 0b00001110000000000000000000010000) == 0b00000110000000000000000000000000) { // TransReg9
+            }
+            else { // Undefined 
+            }
+        }
     }
-    return {};
 }
 
 
@@ -567,14 +653,14 @@ uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
 
 
 uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
-    assert (shift < 32U);
+    assert(shift < 32U);
     return (value >> shift) | (value << (-shift & 31U));
 }
 
 
-uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift) {
-    assert (shift < 32U);
-    uint32_t rrxMask = cpsr.C;
+uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI* cpu) {
+    assert(shift < 32U);
+    uint32_t rrxMask = (cpu->cpsr).C;
     return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
 }
 
@@ -633,12 +719,12 @@ bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
 }
 
 
-bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI* cpu) {
     // todo: maybe there is a more efficient way to do this
     return   ((rnValue & 0x80000000) && (op2 & 0x80000000) && !((rnValue + op2) & 0x80000000)) || 
              (!(rnValue & 0x80000000) && !(op2 & 0x80000000) && ((rnValue + op2) & 0x80000000)) || 
             // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) && !(((uint32_t)result) & 0x80000000)) ||  never happens
-             (!((rnValue + op2) & 0x80000000) && !(cpsr.C & 0x80000000) && ((result) & 0x80000000));
+             (!((rnValue + op2) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) && ((result) & 0x80000000));
 }
 
 
@@ -647,12 +733,12 @@ bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
 }
 
 
-bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result) {
+bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI* cpu) {
     // todo: maybe there is a more efficient way to do this
     return ((rnValue & 0x80000000) && ((~op2) & 0x80000000) && !((rnValue + (~op2)) & 0x80000000)) || 
             (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) && ((rnValue + (~op2)) & 0x80000000)) || 
              // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) && !(result & 0x80000000)) || never happens
-            (!((rnValue + (~op2)) & 0x80000000) && !(cpsr.C & 0x80000000) && (result & 0x80000000));
+            (!((rnValue + (~op2)) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) && (result & 0x80000000));
 }
 
 // not guaranteed to always be rn, check the spec first

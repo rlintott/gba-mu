@@ -13,8 +13,18 @@ class ARM7TDMI {
 public: 
     ARM7TDMI();
     ~ARM7TDMI();
+        
 
 private:
+
+    // struct representing the number of cycles an operation will take
+    struct Cycles {
+        uint8_t nonSequentialCycles : 8;
+        uint8_t sequentialCycles : 8;
+        uint8_t internalCycles : 8;
+        uint8_t waitState : 8;
+    };
+
 
     // registers can be dynamically changed to support different registers for different CPU modes 
     std::array<uint32_t*, 16> registers = {
@@ -118,49 +128,43 @@ private:
 
     ProgramStatusRegister* currentSpsr;
 
-    // struct representing the number of cycles an operation will take
-    struct Cycles {
-        uint8_t nonSequentialCycles : 8;
-        uint8_t sequentialCycles : 8;
-        uint8_t internalCycles : 8;
-        uint8_t waitState : 8;
-    };
-
     Bus *bus;
 
     Cycles UNDEF(uint32_t instruction);
 
-    uint32_t aluShiftLsl(uint32_t value, uint8_t shift);
-    uint32_t aluShiftLsr(uint32_t value, uint8_t shift);
-    uint32_t aluShiftAsr(uint32_t value, uint8_t shift);
-    uint32_t aluShiftRor(uint32_t value, uint8_t shift);
-    uint32_t aluShiftRrx(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftLsl(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftLsr(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftAsr(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI* cpu);
 
-    Cycles execAluInstruction(uint32_t instruction);
+    static Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
+    static Cycles multiplyHandler(uint32_t instruction, ARM7TDMI *cpu);
+    static Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
+    static Cycles undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu);
+
     Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
-    Cycles execMultiplyInstruction(uint32_t instruction);
-    Cycles execPsrTransferInstruction(uint32_t instruction);
 
-    bool aluSetsZeroBit(uint32_t value);
-    bool aluSetsSignBit(uint32_t value);
-    bool aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
-    bool aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2);
-    bool aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2);
-    bool aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
-    bool aluAddWithCarrySetsCarryBit(uint64_t result);
-    bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
-    bool aluSubWithCarrySetsCarryBit(uint64_t result);
-    bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    static bool aluSetsZeroBit(uint32_t value);
+    static bool aluSetsSignBit(uint32_t value);
+    static bool aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    static bool aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2);
+    static bool aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2);
+    static bool aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    static bool aluAddWithCarrySetsCarryBit(uint64_t result);
+    static bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI* cpu);
+    static bool aluSubWithCarrySetsCarryBit(uint64_t result);
+    static bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI* cpu);
 
-    uint8_t getRd(uint32_t instruction);
-    uint8_t getRn(uint32_t instruction);
-    uint8_t getRs(uint32_t instruction);
-    uint8_t getRm(uint32_t instruction);
-    uint8_t getOpcode(uint32_t instruction);
+    static uint8_t getRd(uint32_t instruction);
+    static uint8_t getRn(uint32_t instruction);
+    static uint8_t getRs(uint32_t instruction);
+    static uint8_t getRm(uint32_t instruction);
+    static uint8_t getOpcode(uint32_t instruction);
 
-    bool sFlagSet(uint32_t instruction);
+    static bool sFlagSet(uint32_t instruction);
 
-    uint32_t psrToInt(ProgramStatusRegister psr);
+    static uint32_t psrToInt(ProgramStatusRegister psr);
     void transferToPsr(uint32_t value, uint8_t field, bool psrSource);
 
     enum AluOpcode {
@@ -184,6 +188,11 @@ private:
 
 
 public:
+    typedef Cycles (*ArmOpcodeHandler)(uint32_t, ARM7TDMI*);
+
+    typedef Cycles (*ThumbOpcodeHandler)(uint16_t);
+
+    ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
 
     void step();
 
