@@ -55,6 +55,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
             registers[12] = &r12;
             registers[13] = &r13;
             registers[14] = &r14;
+            break;
         }
         case FIQ: {
             currentSpsr = &SPSR_fiq;
@@ -65,31 +66,37 @@ void ARM7TDMI::switchToMode(Mode mode) {
             registers[12] = &r12_fiq;
             registers[13] = &r13_fiq;
             registers[14] = &r14_fiq;
+            break;
         }
         case IRQ: {
             currentSpsr = &SPSR_irq;
             registers[13] = &r13_irq;
             registers[14] = &r14_irq;
+            break;
         }
         case SUPERVISOR: {
             currentSpsr = &SPSR_svc;
             registers[13] = &r13_svc;
             registers[14] = &r14_svc;
+            break;
         }
         case ABORT: {
             currentSpsr = &SPSR_abt;
             registers[13] = &r13_abt;
             registers[14] = &r14_abt;
+            break;
         }
         case UNDEFINED: {
             currentSpsr = &SPSR_und;
             registers[13] = &r13_abt;
             registers[14] = &r14_abt;
+            break;
         }
         case SYSTEM: {
             currentSpsr = &SPSR_svc;
             registers[13] = &r13_svc; // ? TODO check
             registers[14] = &r14_svc; // ?
+            break;
         }
     }
 }
@@ -153,112 +160,144 @@ ARM7TDMI::Cycles ARM7TDMI::aluHandler(uint32_t instruction, ARM7TDMI *cpu) {
 ARM7TDMI::Cycles ARM7TDMI::execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t rnVal, uint32_t op2) {
     switch(opcode) {
         case AND: { // AND
+            DEBUG("AND" << std::endl);
             uint32_t result = rnVal & op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case EOR: { // EOR
+            DEBUG("EOR" << std::endl);
             uint32_t result = rnVal ^ op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case SUB: { // SUB
+            DEBUG("SUB" << std::endl);
             uint32_t result = rnVal - op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             carryBit = aluSubtractSetsCarryBit(rnVal, op2);
             overflowBit = aluSubtractSetsOverflowBit(rnVal, op2, result);
+            break;
         }
         case RSB: { // RSB
+            DEBUG("RSB" << std::endl);
             uint32_t result = op2 - rnVal;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             carryBit = aluSubtractSetsCarryBit(op2, rnVal);
             overflowBit = aluSubtractSetsOverflowBit(op2, rnVal, result);
+            break;
         }
         case ADD: { // ADD
+            DEBUG("ADD" << std::endl);
             uint32_t result = rnVal + op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             carryBit = aluAddSetsCarryBit(rnVal, op2);
             overflowBit = aluAddSetsOverflowBit(rnVal, op2, result);
+            break;
         } 
         case ADC: { // ADC
+            DEBUG("ADC" << std::endl);
             uint64_t result = (uint64_t)(rnVal + op2 + cpsr.C);
             setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluAddWithCarrySetsCarryBit(result);
             overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, this);
+            break;
         }
         case SBC: { // SBC
+            DEBUG("SBC" << std::endl);
             uint64_t result = rnVal + (~op2) + cpsr.C;
             setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
             overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, this);
+            break;
         }
         case RSC: { // RSC
+            DEBUG("RSC" << std::endl);
             uint64_t result = op2 + (~rnVal) + cpsr.C;
             setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
             overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result, this);
+            break;
         }
         case TST: { // TST
+            DEBUG("TEST" << std::endl);
             uint32_t result = rnVal & op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case TEQ: { // TEQ
+            DEBUG("TEQ" << std::endl);
             uint32_t result = rnVal ^ op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case CMP: { // CMP
+            DEBUG("CMP" << std::endl);
             uint32_t result = rnVal - op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             carryBit = aluSubtractSetsCarryBit(rnVal, op2);
             overflowBit = aluSubtractSetsOverflowBit(rnVal, op2, result);
+            break;
         }
         case CMN: { // CMN
+            DEBUG("CMN" << std::endl);
             uint32_t result = rnVal + op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             carryBit = aluAddSetsCarryBit(rnVal, op2);
             overflowBit = aluAddSetsOverflowBit(rnVal, op2, result);
+            break;
         }
         case ORR: { // ORR
+            DEBUG("ORR" << std::endl);
             uint32_t result = rnVal | op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case MOV: { // MOV
+            DEBUG("MOV" << std::endl);
             uint32_t result = op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case BIC: { // BIC
+            DEBUG("BIC" << std::endl);
             uint32_t result = rnVal & (~op2);
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
         case MVN: { // MVN
+            DEBUG("MVN" << std::endl);
             uint32_t result = ~op2;
             setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            break;
         }
     }
     return {};
@@ -281,11 +320,13 @@ ARM7TDMI::Cycles ARM7TDMI::multiplyHandler(uint32_t instruction, ARM7TDMI *cpu) 
     switch(opcode) {
         case 0: { // MUL 
             result = cpu->getRegister(rm) * cpu->getRegister(rs);
+            break;
         }
         case 1: { // MLA
             uint8_t rn = (instruction & 0x0000F000) >> 12; // rn is different for multiply
             assert(rn != PC_REGISTER);
             result = cpu->getRegister(rm) * cpu->getRegister(rs) + cpu->getRegister(rn);
+            break;
         }
     }   
     cpu->setRegister(rd, (uint32_t)result);
@@ -321,6 +362,7 @@ ARM7TDMI::Cycles ARM7TDMI::psrHandler(uint32_t instruction, ARM7TDMI *cpu) {
             else {
                 cpu->setRegister(rd, psrToInt(*(cpu->getCurrentModeSpsr())));
             }
+            break;
         }
         case 1: { // MSR{cond} Psr{_field},Op  ;Psr[field] = Op=
             assert((instruction & 0x0000F000) == 0x0000F000);
@@ -334,6 +376,7 @@ ARM7TDMI::Cycles ARM7TDMI::psrHandler(uint32_t instruction, ARM7TDMI *cpu) {
                 assert(getRm(instruction) != PC_REGISTER);
                 cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx, psrSource);
             }
+            break;
         }
     }
 
@@ -475,6 +518,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
             else { // dataProc
                 return aluHandler;
             }
+            break;
         }
         case 0b00000010000000000000000000000000: {
             if((instruction & 0b00001111101100000000000000000000) == 0b00000011001000000000000000000000) { // PSR Imm
@@ -485,19 +529,23 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
             }
         }
         case 0b00001000000000000000000000000000: {
-            // Block trans
+            break;
         }
         case 0b00001010000000000000000000000000: {
-            // B,BL,BLX
+            break;
         }
         case 0b00001110000000000000000000000000: {
-            // SWI
+            break;
         }
         case 0b00000110000000000000000000000000: {
             if((instruction & 0b00001110000000000000000000010000) == 0b00000110000000000000000000000000) { // TransReg9
             }
             else { // Undefined 
             }
+            break;
+        }
+        default: {
+            return undefinedOpHandler; 
         }
     }
     return undefinedOpHandler;

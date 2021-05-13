@@ -22,7 +22,7 @@ int main() {
     Bus bus;
     ARM7TDMI cpu;
 
-    loadRawBinary(&bus, "test.bin");
+    loadRawBinary(&bus, "emutest_arm1.bin");
     cpu.connectBus(&bus);
     cpu.step();
     cpu.step();
