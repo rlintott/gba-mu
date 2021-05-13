@@ -315,30 +315,80 @@ ARM7TDMI::Cycles ARM7TDMI::multiplyHandler(uint32_t instruction, ARM7TDMI *cpu) 
     assert(rd != rm && (rd != PC_REGISTER && 
                         rm != PC_REGISTER &&
                         rs != PC_REGISTER));
+    assert((instruction & 0x000000F0) == 0x00000090);
     uint64_t result;
+    BitPreservedInt64 longResult; 
 
     switch(opcode) {
-        case 0: { // MUL 
-            result = cpu->getRegister(rm) * cpu->getRegister(rs);
+        case 0b0000: { // MUL 
+            result = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+            cpu->setRegister(rd, (uint32_t)result);
             break;
         }
-        case 1: { // MLA
+        case 0b0001: { // MLA
             uint8_t rn = (instruction & 0x0000F000) >> 12; // rn is different for multiply
             assert(rn != PC_REGISTER);
-            result = cpu->getRegister(rm) * cpu->getRegister(rs) + cpu->getRegister(rn);
+            result = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs) + (uint64_t)cpu->getRegister(rn);
+            cpu->setRegister(rd, (uint32_t)result);
+            break;
+        }
+        case 0b0100: { // UMULL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
+            uint8_t rdhi = rd;
+            uint8_t rdlo = (instruction & 0x0000F000) >> 12;
+            longResult._unsigned =  (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32)); // high destination reg
+            cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            break;
+        }
+        case 0b0101: { // UMLAL {cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs+RdHiLo
+            uint8_t rdhi = rd;
+            uint8_t rdlo = (instruction & 0x0000F000) >> 12;
+            longResult._unsigned =  (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs) + 
+                        ((((uint64_t)(cpu->getRegister(rdhi))) << 32) | ((uint64_t)(cpu->getRegister(rdlo))));
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32)); // high destination reg
+            cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            break;
+        }
+        case 0b0110: { // SMULL {cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
+            uint8_t rdhi = rd;
+            uint8_t rdlo = (instruction & 0x0000F000) >> 12;
+            BitPreservedInt32 rmVal;
+            BitPreservedInt32 rsVal;
+            rmVal._unsigned = cpu->getRegister(rm);
+            rsVal._unsigned = cpu->getRegister(rs);
+            longResult._signed = (int64_t)rmVal._signed * (int64_t)rsVal._signed;
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32)); // high destination reg
+            cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            break;
+        }
+        case 0b0111: { // SMLAL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs+RdHiLo
+            uint8_t rdhi = rd;
+            uint8_t rdlo = (instruction & 0x0000F000) >> 12;
+            BitPreservedInt32 rmVal;
+            BitPreservedInt32 rsVal;
+            rmVal._unsigned = cpu->getRegister(rm);
+            rsVal._unsigned = cpu->getRegister(rs);
+            BitPreservedInt64 accum; 
+            accum._unsigned = ((((uint64_t)(cpu->getRegister(rdhi))) << 32) | ((uint64_t)(cpu->getRegister(rdlo))));
+            longResult._signed = (int64_t)rmVal._signed * (int64_t)rsVal._signed + accum._signed;
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32)); // high destination reg
+            cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
             break;
         }
     }   
-    cpu->setRegister(rd, (uint32_t)result);
 
     if(sFlagSet(instruction)) {
-        cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
-        cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
+        if(!(opcode & 0b0100)) { // regular mult opcode, 
+            cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
+            cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
+        } else {            
+            cpu->cpsr.Z = (longResult._unsigned == 0);
+            cpu->cpsr.N = (longResult._unsigned >> 63);
+        }
         cpu->cpsr.C = 0;  
     }
     return {};
 }
-
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations ~~~~~~~~~~~~~~~~~~~~*/
@@ -385,7 +435,6 @@ ARM7TDMI::Cycles ARM7TDMI::psrHandler(uint32_t instruction, ARM7TDMI *cpu) {
 
 void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
     ProgramStatusRegister* psr = psrSource ? &cpsr : getCurrentModeSpsr();
-
     if(field & 0b1000) {
         // TODO: is this correct? it says   f =  write to flags field     Bit 31-24 (aka _flg)
         psr->N = (bool)(value & 0x80000000);
@@ -424,11 +473,8 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
 
 ARM7TDMI::Cycles ARM7TDMI::undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu) {
     DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
-
     return {};
 }
-
-
 
 
 
@@ -695,9 +741,7 @@ uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
 
 
 uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
-    // assuming that the compiler implements arithmetic right shift on signed ints 
-    // TODO: make more portable
-    return (uint32_t)(((int32_t)value) >> shift);
+    return value < 0 ? ~(~value >> shift) : value >> shift ;
 }
 
 
@@ -821,14 +865,14 @@ bool ARM7TDMI::sFlagSet(uint32_t instruction) {
 
 
 uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
-    return 0 | (((uint32_t)psr.N) << 31) | 
-                (((uint32_t)psr.Z) << 30) | 
-                (((uint32_t)psr.C) << 29) |
-                (((uint32_t)psr.V) << 28) |
-                (((uint32_t)psr.Q) << 27) |
+    return 0 |  (((uint32_t)psr.N) << 31)        | 
+                (((uint32_t)psr.Z) << 30)        | 
+                (((uint32_t)psr.C) << 29)        |
+                (((uint32_t)psr.V) << 28)        |
+                (((uint32_t)psr.Q) << 27)        |
                 (((uint32_t)psr.Reserved) << 26) | 
-                (((uint32_t)psr.I) << 7) |
-                (((uint32_t)psr.F) << 6) |
-                (((uint32_t)psr.T) << 5) |
+                (((uint32_t)psr.I) << 7)         |
+                (((uint32_t)psr.F) << 6)         |
+                (((uint32_t)psr.T) << 5)         |
                 (((uint32_t)psr.Mode) << 0);
 } 

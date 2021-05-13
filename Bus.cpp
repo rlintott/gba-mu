@@ -21,7 +21,7 @@ uint32_t Bus::read32(uint32_t address) {
 
 void Bus::write8(uint32_t address, uint8_t byte) {
     if(0x00 <= address && address < 0x7FF) {
-        ram[address] = byte;
+        ram.push_back(byte);
         return;
     }
 

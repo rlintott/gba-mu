@@ -19,6 +19,14 @@ bool loadRawBinary(Bus* bus, std::string path) {
 
 
 int main() {
+    int32_t a = -2147483647;
+    int32_t b = -2147483646;
+
+    int64_t c = (int64_t)a * (int64_t)b;
+    std::cout << a << std::endl;
+    std::cout << b << std::endl;
+    std::cout << c << std::endl;
+
     Bus bus;
     ARM7TDMI cpu;
 

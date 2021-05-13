@@ -22,7 +22,7 @@ public:
 public:
 
     // 2kB placeholder random access memory for testing
-    std::array<uint8_t, 2048> ram;
+    std::vector<uint8_t> ram;
 
     // Gameboy Advance's ARM CPU
     ARM7TDMI cpu;

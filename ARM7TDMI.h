@@ -25,6 +25,15 @@ private:
         uint8_t waitState : 8;
     };
 
+    union BitPreservedInt32 {
+        int32_t _signed;
+        uint32_t _unsigned;
+    };
+
+    union BitPreservedInt64 {
+        int64_t _signed;
+        uint64_t _unsigned;
+    };
 
     // registers can be dynamically changed to support different registers for different CPU modes 
     std::array<uint32_t*, 16> registers = {
