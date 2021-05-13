@@ -25,16 +25,18 @@ ARM7TDMI::~ARM7TDMI() {
 
 void ARM7TDMI::step() {
     // read from program counter
-    uint32_t rawInstruction = bus->read(getRegister(PC_REGISTER));
+    uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
+    DEBUG(std::bitset<32>(instruction).to_string() << std::endl);
 
-    if(cpsr.T) { // check state bit, is CPU in ARM state?
-        // Cycles cycles = executeInstruction(rawInstruction);
-
+    if(!cpsr.T) { // check state bit, is CPU in ARM state?
+        ArmOpcodeHandler handler = decodeArmInstruction(instruction);
+        Cycles cycles = handler(instruction, this);
+        // increment PC
+        setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4); 
     } else { // THUMB state
 
     }
 }
-
 
 void ARM7TDMI::connectBus(Bus* bus) {
     this->bus = bus;
@@ -378,7 +380,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, bool psrSource) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
 ARM7TDMI::Cycles ARM7TDMI::undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string());
+    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
 
     return {};
 }
@@ -448,7 +450,6 @@ decoding from highest to lowest specifity to ensure corredct opcode parsed
 */  
 // TODO: use hex values to make it more concise 
 ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) {
-    return multiplyHandler;
     switch(instruction & 0b00001110000000000000000000000000) { // mask 1
         case 0b00000000000000000000000000000000: {
             if((instruction & 0b00001111111111111111111111010000) == 0b00000001001011111111111100010000) { // BX,BLX    
@@ -499,6 +500,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
             }
         }
     }
+    return undefinedOpHandler;
 }
 
 
@@ -632,8 +634,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i, bool r
 }
 
 
-// TODO would probably be better to make all these small utility functions inline or something rather than class methods? a slight optimization
-
+// TODO: separate these utility functions into a different file
 // TODO: make sure all these shift functions are correct
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
     return value << shift;

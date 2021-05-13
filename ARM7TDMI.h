@@ -186,6 +186,8 @@ private:
         MVN = 0xF
     };
 
+    // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
+    AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
 public:
     typedef Cycles (*ArmOpcodeHandler)(uint32_t, ARM7TDMI*);
@@ -197,6 +199,8 @@ public:
     void step();
 
     void clock();
+
+    void enterInstructionCycle();
 
     // CPU exceptions
     void irq();
@@ -211,9 +215,6 @@ public:
 
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of R14_irq
     void setRegister(uint8_t index, uint32_t value);
-
-    // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
-    AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister* getCurrentModeSpsr();
