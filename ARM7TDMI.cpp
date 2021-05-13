@@ -445,7 +445,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field, ProgramStatusRegiste
         psr->V = (bool)(value & 0x10000000);
         psr->Q = (bool)(value & 0x08000000);
         psr->Reserved = (psr->Reserved & 0b0001111111111111111) | 
-                        (((value & 0x07000000) >> 24) << 16);
+                        ((value & 0x07000000) >> 8);
     }
     if(field & 0b0100) {
         // reserved, don't change
