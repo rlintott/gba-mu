@@ -174,7 +174,7 @@ private:
     static bool sFlagSet(uint32_t instruction);
 
     static uint32_t psrToInt(ProgramStatusRegister psr);
-    void transferToPsr(uint32_t value, uint8_t field, bool psrSource);
+    void transferToPsr(uint32_t value, uint8_t field, ProgramStatusRegister* psr);
 
     enum AluOpcode {
         AND = 0x0,
