@@ -6,6 +6,12 @@
 #include <string>
 #include <iostream>
 
+#ifdef NDEBUG 
+#define DEBUG(x) 
+#else
+#define DEBUG(x) do { std::cerr << x; } while (0)
+#endif
+
 class Bus;
 
 class ARM7TDMI {
@@ -15,15 +21,25 @@ public:
     ~ARM7TDMI();
         
 
-private:
-
     // struct representing the number of cycles an operation will take
+
+private:
     struct Cycles {
         uint8_t nonSequentialCycles : 8;
         uint8_t sequentialCycles : 8;
         uint8_t internalCycles : 8;
         uint8_t waitState : 8;
     };
+
+
+    class ArmOpcodeHandlers {
+    public:
+        static ARM7TDMI::Cycles multiplyHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu);
+    };
+
 
     union BitPreservedInt32 {
         int32_t _signed;
@@ -147,10 +163,6 @@ private:
     static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI* cpu);
 
-    static Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
-    static Cycles multiplyHandler(uint32_t instruction, ARM7TDMI *cpu);
-    static Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
-    static Cycles undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu);
 
     Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
 
@@ -198,12 +210,13 @@ private:
     // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
-public:
     typedef Cycles (*ArmOpcodeHandler)(uint32_t, ARM7TDMI*);
 
     typedef Cycles (*ThumbOpcodeHandler)(uint16_t);
 
     ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
+
+public:
 
     void step();
 
