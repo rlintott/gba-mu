@@ -2,56 +2,45 @@
 
 #include "ARM7TDMI.h"
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
-    uint32_t instruction, ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(uint32_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = getOpcode(instruction);
-    uint8_t rd =
-        (instruction & 0x000F0000) >> 16;  // rd is different for multiply
+    uint8_t rd = (instruction & 0x000F0000) >> 16;  // rd is different for multiply
     uint8_t rm = getRm(instruction);
     uint8_t rs = getRs(instruction);
-    assert(rd != rm &&
-           (rd != PC_REGISTER && rm != PC_REGISTER && rs != PC_REGISTER));
+    assert(rd != rm && (rd != PC_REGISTER &&
+                        rm != PC_REGISTER &&
+                        rs != PC_REGISTER));
     assert((instruction & 0x000000F0) == 0x00000090);
     uint64_t result;
     BitPreservedInt64 longResult;
 
     switch (opcode) {
         case 0b0000: {  // MUL
-            result =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+            result = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
             cpu->setRegister(rd, (uint32_t)result);
             break;
         }
-        case 0b0001: {  // MLA
-            uint8_t rn = (instruction & 0x0000F000) >>
-                         12;  // rn is different for multiply
+        case 0b0001: {                                      // MLA
+            uint8_t rn = (instruction & 0x0000F000) >> 12;  // rn is different for multiply
             assert(rn != PC_REGISTER);
-            result = (uint64_t)cpu->getRegister(rm) *
-                         (uint64_t)cpu->getRegister(rs) +
-                     (uint64_t)cpu->getRegister(rn);
+            result = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs) + (uint64_t)cpu->getRegister(rn);
             cpu->setRegister(rd, (uint32_t)result);
             break;
         }
         case 0b0100: {  // UMULL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
-            longResult._unsigned =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
-            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >>
-                                              32));  // high destination reg
+            longResult._unsigned = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));  // high destination reg
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
             break;
         }
         case 0b0101: {  // UMLAL {cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs+RdHiLo
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
-            longResult._unsigned =
-                (uint64_t)cpu->getRegister(rm) *
-                    (uint64_t)cpu->getRegister(rs) +
-                ((((uint64_t)(cpu->getRegister(rdhi))) << 32) |
-                 ((uint64_t)(cpu->getRegister(rdlo))));
-            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >>
-                                              32));  // high destination reg
+            longResult._unsigned = (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs) +
+                                   ((((uint64_t)(cpu->getRegister(rdhi))) << 32) | ((uint64_t)(cpu->getRegister(rdlo))));
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));  // high destination reg
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
             break;
         }
@@ -62,10 +51,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             BitPreservedInt32 rsVal;
             rmVal._unsigned = cpu->getRegister(rm);
             rsVal._unsigned = cpu->getRegister(rs);
-            longResult._signed =
-                (int64_t)rmVal._signed * (int64_t)rsVal._signed;
-            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >>
-                                              32));  // high destination reg
+            longResult._signed = (int64_t)rmVal._signed * (int64_t)rsVal._signed;
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));  // high destination reg
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
             break;
         }
@@ -77,12 +64,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             rmVal._unsigned = cpu->getRegister(rm);
             rsVal._unsigned = cpu->getRegister(rs);
             BitPreservedInt64 accum;
-            accum._unsigned = ((((uint64_t)(cpu->getRegister(rdhi))) << 32) |
-                               ((uint64_t)(cpu->getRegister(rdlo))));
-            longResult._signed =
-                (int64_t)rmVal._signed * (int64_t)rsVal._signed + accum._signed;
-            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >>
-                                              32));  // high destination reg
+            accum._unsigned = ((((uint64_t)(cpu->getRegister(rdhi))) << 32) | ((uint64_t)(cpu->getRegister(rdlo))));
+            longResult._signed = (int64_t)rmVal._signed * (int64_t)rsVal._signed + accum._signed;
+            cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));  // high destination reg
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
             break;
         }
@@ -101,24 +85,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     return {};
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations
- * ~~~~~~~~~~~~~~~~~~~~*/
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations ~~~~~~~~~~~~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
-                                                         ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction, ARM7TDMI *cpu) {
     assert(!(instruction & 0x0C000000));
     assert(!sFlagSet(instruction));
 
-    bool immediate =
-        (instruction & 0x02000000);  // bit 25: I - Immediate Operand Flag
-                                     // (0=Register, 1=Immediate) (Zero for MRS)
-    bool psrSource =
-        (instruction & 0x00400000);  // bit 22: Psr - Source/Destination PSR
-                                     // (0=CPSR, 1=SPSR_<current mode>)
+    bool immediate = (instruction & 0x02000000);  // bit 25: I - Immediate Operand Flag  (0=Register, 1=Immediate) (Zero for MRS)
+    bool psrSource = (instruction & 0x00400000);  // bit 22: Psr - Source/Destination PSR  (0=CPSR, 1=SPSR_<current mode>)
 
-    switch ((instruction & 0x00200000) >>
-            21) {  // bit 21: special opcode for PSR
-        case 0: {  // MRS{cond} Rd,Psr ; Rd = Psr
+    switch ((instruction & 0x00200000) >> 21) {  // bit 21: special opcode for PSR
+        case 0: {                                // MRS{cond} Rd,Psr ; Rd = Psr
             assert(!immediate);
             assert(getRn(instruction) == 0xF);
             assert(!(instruction & 0x00000FFF));
@@ -133,8 +110,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
         case 1: {  // MSR{cond} Psr{_field},Op  ;Psr[field] = Op=
             assert((instruction & 0x0000F000) == 0x0000F000);
             uint8_t fscx = (instruction & 0x000F0000) >> 16;
-            ProgramStatusRegister *psr =
-                (psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
+            ProgramStatusRegister *psr = (psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
             if (immediate) {
                 uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
                 uint8_t shift = (instruction & 0x00000F00) >> 7;
@@ -142,8 +118,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
             } else {  // register
                 assert(!(instruction & 0x00000FF0));
                 assert(getRm(instruction) != PC_REGISTER);
-                cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx,
-                                   psr);
+                cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx, psr);
             }
             break;
         }
@@ -152,10 +127,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
     return {};
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-// TODO: put assertions for every unexpected or unallowed circumstance (for
-// deubgging)
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+// TODO: put assertions for every unexpected or unallowed circumstance (for deubgging)
 // TODO: cycle calculation
 /*
     0: AND{cond}{S} Rd,Rn,Op2    ;AND logical       Rd = Rn AND Op2
@@ -176,11 +149,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
     F: MVN{cond}{S} Rd,Op2       ;not               Rd = NOT Op2
 */
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
-                                                         ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, ARM7TDMI *cpu) {
     // shift op2
-    AluShiftResult shiftResult = cpu->aluShift(
-        instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+    AluShiftResult shiftResult = cpu->aluShift(instruction, (instruction & 0x02000000), (instruction & 0x00000010));
     uint8_t rd = getRd(instruction);
     uint8_t rn = getRn(instruction);
     uint8_t opcode = getOpcode(instruction);
@@ -190,8 +161,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
     bool zeroBit = (cpu->cpsr).Z;
 
     uint32_t rnValue;
-    // if rn == pc regiser, have to add to it to account for pipelining /
-    // prefetching
+    // if rn == pc regiser, have to add to it to account for pipelining / prefetching
     // TODO probably dont need this logic if pipelining is emulated
     if (rn != PC_REGISTER) {
         rnValue = cpu->getRegister(rn);
@@ -258,8 +228,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluAddWithCarrySetsCarryBit(result);
-            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
             break;
         }
         case SBC: {  // SBC
@@ -269,8 +238,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
             break;
         }
         case RSC: {  // RSC
@@ -280,8 +248,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result, cpu);
             break;
         }
         case TST: {  // TST
@@ -363,12 +330,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
     return {};
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Undefined Operation
- * ~~~~~~~~~~~~~~~~~~~~*/
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
-    uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string()
-                               << std::endl);
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu) {
+    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
     return {};
 }
