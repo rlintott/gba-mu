@@ -177,7 +177,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
 
     switch (opcode) {
         case AND: {  // AND
-            DEBUG("AND" << std::endl);
             uint32_t result = rnVal & op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -185,7 +184,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case EOR: {  // EOR
-            DEBUG("EOR" << std::endl);
             uint32_t result = rnVal ^ op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -193,7 +191,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case SUB: {  // SUB
-            DEBUG("SUB" << std::endl);
             uint32_t result = rnVal - op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -203,7 +200,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case RSB: {  // RSB
-            DEBUG("RSB" << std::endl);
             uint32_t result = op2 - rnVal;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -213,7 +209,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case ADD: {  // ADD
-            DEBUG("ADD" << std::endl);
             uint32_t result = rnVal + op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -223,7 +218,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case ADC: {  // ADC
-            DEBUG("ADC" << std::endl);
             uint64_t result = (uint64_t)(rnVal + op2 + (cpu->cpsr).C);
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
@@ -233,7 +227,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case SBC: {  // SBC
-            DEBUG("SBC" << std::endl);
             uint64_t result = rnVal + (~op2) + (cpu->cpsr).C;
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
@@ -243,7 +236,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case RSC: {  // RSC
-            DEBUG("RSC" << std::endl);
             uint64_t result = op2 + (~rnVal) + (cpu->cpsr).C;
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
@@ -253,21 +245,18 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case TST: {  // TST
-            DEBUG("TEST" << std::endl);
             uint32_t result = rnVal & op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             break;
         }
         case TEQ: {  // TEQ
-            DEBUG("TEQ" << std::endl);
             uint32_t result = rnVal ^ op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             break;
         }
         case CMP: {  // CMP
-            DEBUG("CMP" << std::endl);
             uint32_t result = rnVal - op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
@@ -276,7 +265,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case CMN: {  // CMN
-            DEBUG("CMN" << std::endl);
             uint32_t result = rnVal + op2;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
@@ -285,7 +273,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case ORR: {  // ORR
-            DEBUG("ORR" << std::endl);
             uint32_t result = rnVal | op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -293,7 +280,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case MOV: {  // MOV
-            DEBUG("MOV" << std::endl);
             uint32_t result = op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -301,7 +287,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case BIC: {  // BIC
-            DEBUG("BIC" << std::endl);
             uint32_t result = rnVal & (~op2);
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -309,7 +294,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
             break;
         }
         case MVN: {  // MVN
-            DEBUG("MVN" << std::endl);
             uint32_t result = ~op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
