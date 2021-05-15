@@ -177,7 +177,11 @@ decoding from highest to lowest specifity to ensure corredct opcode parsed
     case 111:
     
         12: xxxx1111xxxxxxxxxxxxxxxxxxxxxxxx    SWI         (4)
-    
+
+    case 010:
+
+        xx: xxxx010xxxxxxxxxxxxxxxxxxxxxxxxx    transImm9    
+
     case 011:
 
         11: xxxx011xxxxxxxxxxxxxxxxxxxx0xxxx    TransReg9   (4)
@@ -202,8 +206,10 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
                 return ArmOpcodeHandlers::multiplyHandler;
             } else if ((instruction & 0b00001111100000000000000011110000) ==
                        0b00000000100000000000000010010000) {  // MulLong
+                return ArmOpcodeHandlers::multiplyHandler;
             } else if ((instruction & 0b00001110010000000000000010010000) ==
                        0b00000000010000000000000010010000) {  // TransImm10
+
             } else {                                          // dataProc
                 return ArmOpcodeHandlers::aluHandler;
             }
@@ -226,10 +232,16 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
         case 0b00001110000000000000000000000000: {
             break;
         }
+        case 0b00000100000000000000000000000000: { // transImm9
+            return ArmOpcodeHandlers::sdtHandler;
+            break;
+        }
         case 0b00000110000000000000000000000000: {
             if ((instruction & 0b00001110000000000000000000010000) ==
                 0b00000110000000000000000000000000) {  // TransReg9
-            } else {                                   // Undefined
+                return ArmOpcodeHandlers::sdtHandler;
+            } else { // Undefined
+                return ArmOpcodeHandlers::undefinedOpHandler;                           
             }
             break;
         }
