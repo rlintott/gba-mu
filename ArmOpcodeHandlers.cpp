@@ -334,6 +334,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction, A
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ SINGLE DATA TRANSFER ~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::sdtHandler(uint32_t instruction, ARM7TDMI *cpu) {
+    // TODO:  implement the following restriction <expression>  ;an immediate used as address
+    // ;*** restriction: must be located in range PC+/-4095+8, if so,
+    // ;*** assembler will calculate offset and use PC (R15) as base.
+
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint8_t rn = getRn(instruction);
