@@ -13,6 +13,7 @@
 #define DEBUG(x) do { std::cerr << x; } while (0)
 #endif
 
+
 class Bus {
 
 public:
@@ -28,7 +29,13 @@ public:
     ARM7TDMI cpu;
 
     uint32_t read32(uint32_t address);
+    uint8_t read8(uint32_t address);
+    uint16_t read16(uint32_t address);
 
-    void write8(uint32_t address, uint8_t byte);
+    uint32_t write32(uint32_t address, uint32_t word);
+    uint32_t write8(uint32_t address, uint8_t byte);
+    uint32_t write16(uint32_t address, uint16_t halfWord);
+
+    void testPushToRam(uint8_t byte);
     
 };

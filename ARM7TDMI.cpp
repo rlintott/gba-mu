@@ -494,3 +494,24 @@ uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
            (((uint32_t)psr.T) << 5) |
            (((uint32_t)psr.Mode) << 0);
 }
+
+bool ARM7TDMI::dataTransGetP(uint32_t instruction) {
+    return instruction & 0x01000000;
+}
+
+bool ARM7TDMI::dataTransGetU(uint32_t instruction) {
+    return instruction & 0x00800000;   
+}
+
+bool ARM7TDMI::dataTransGetB(uint32_t instruction) {
+    return instruction & 0x00400000;   
+
+}
+
+bool ARM7TDMI::dataTransGetW(uint32_t instruction) {
+    return instruction & 0x00200000;    
+}
+
+bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
+    return instruction & 0x00100000;    
+}

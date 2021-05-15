@@ -23,7 +23,6 @@ class ARM7TDMI {
     ~ARM7TDMI();
 
     // struct representing the number of cycles an operation will take
-
    private:
     struct Cycles {
         uint8_t nonSequentialCycles : 8;
@@ -38,6 +37,7 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles sdtHandler(uint32_t instruction, ARM7TDMI *cpu);
     };
 
     union BitPreservedInt32 {
@@ -180,6 +180,12 @@ class ARM7TDMI {
     static uint8_t getRs(uint32_t instruction);
     static uint8_t getRm(uint32_t instruction);
     static uint8_t getOpcode(uint32_t instruction);
+
+    static bool dataTransGetP(uint32_t instruction);
+    static bool dataTransGetU(uint32_t instruction);
+    static bool dataTransGetB(uint32_t instruction);
+    static bool dataTransGetW(uint32_t instruction);
+    static bool dataTransGetL(uint32_t instruction);
 
     static bool sFlagSet(uint32_t instruction);
 

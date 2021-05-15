@@ -19,11 +19,27 @@ uint32_t Bus::read32(uint32_t address) {
 }
 
 
-void Bus::write8(uint32_t address, uint8_t byte) {
-    if(0x00 <= address && address < 0x7FF) {
-        ram.push_back(byte);
-        return;
-    }
+uint8_t Bus::read8(uint32_t address){
 
-    DEBUG("writing to non-existent memory location... " << byte);
+}
+uint16_t Bus::read16(uint32_t address){
+
+}
+
+uint32_t Bus::write32(uint32_t address, uint32_t word){
+
+}
+uint32_t Bus::write8(uint32_t address, uint8_t byte){
+
+}
+uint32_t Bus::write16(uint32_t address, uint16_t halfWord){
+
+}
+
+
+
+
+void Bus::testPushToRam(uint8_t byte) {
+    ram.push_back(byte);
+    return;
 }

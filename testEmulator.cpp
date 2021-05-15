@@ -10,7 +10,7 @@ bool loadRawBinary(Bus* bus, std::string path) {
     std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
 
     for(int i = 0; i < buffer.size(); i++) {
-        bus->write8(i, buffer[i]);
+        bus->testPushToRam(buffer[i]);
         // DEBUG(std::bitset<8>(buffer[i]).to_string() << " ");
     }
 
