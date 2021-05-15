@@ -18,7 +18,6 @@
 class Bus;
 
 class ARM7TDMI {
-
    public:
     ARM7TDMI();
     ~ARM7TDMI();
@@ -34,10 +33,12 @@ class ARM7TDMI {
 
     class ArmOpcodeHandlers {
        public:
-        static ARM7TDMI::Cycles multiplyHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles multiplyHandler(uint32_t instruction,
+                                                ARM7TDMI *cpu);
         static ARM7TDMI::Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction,
+                                                   ARM7TDMI *cpu);
         static ARM7TDMI::Cycles sdtHandler(uint32_t instruction, ARM7TDMI *cpu);
     };
 
@@ -51,21 +52,10 @@ class ARM7TDMI {
         uint64_t _unsigned;
     };
 
-    // registers can be dynamically changed to support different registers for different CPU modes
+    // registers can be dynamically changed to support different registers for
+    // different CPU modes
     std::array<uint32_t *, 16> registers = {
-        &r0,
-        &r1,
-        &r2,
-        &r3,
-        &r4,
-        &r5,
-        &r6,
-        &r7,
-        &r8,
-        &r9,
-        &r10,
-        &r11,
-        &r12,
+        &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
         &r13,  // stack pointer
         &r14,  // link register
         &r15   // program counter
@@ -116,19 +106,24 @@ class ARM7TDMI {
 
     // struct representing program status register (xPSR)
     struct ProgramStatusRegister {
-        uint8_t Mode : 5;        //  M4-M0 - Mode Bits
-        uint8_t T : 1;           // T - State Bit       (0=ARM, 1=THUMB) - Do not change manually!
-        uint8_t F : 1;           // F - FIQ disable     (0=Enable, 1=Disable)
-        uint8_t I : 1;           // I - IRQ disable     (0=Enable, 1=Disable)
-        uint32_t Reserved : 19;  // Reserved            (For future use) - Do not change manually!
-        uint8_t Q : 1;           // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and up only)
-        uint8_t V : 1;           // V - Overflow Flag   (0=No Overflow, 1=Overflow)
-        uint8_t C : 1;           // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
-        uint8_t Z : 1;           // Z - Zero Flag       (0=Not Zero, 1=Zero)
-        uint8_t N : 1;           // N - Sign Flag       (0=Not Signed, 1=Signed)
+        uint8_t Mode : 5;  //  M4-M0 - Mode Bits
+        uint8_t T : 1;  // T - State Bit       (0=ARM, 1=THUMB) - Do not change
+                        // manually!
+        uint8_t F : 1;  // F - FIQ disable     (0=Enable, 1=Disable)
+        uint8_t I : 1;  // I - IRQ disable     (0=Enable, 1=Disable)
+        uint32_t Reserved : 19;  // Reserved            (For future use) - Do
+                                 // not change manually!
+        uint8_t Q : 1;  // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and
+                        // up only)
+        uint8_t V : 1;  // V - Overflow Flag   (0=No Overflow, 1=Overflow)
+        uint8_t
+            C : 1;  // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
+        uint8_t Z : 1;  // Z - Zero Flag       (0=Not Zero, 1=Zero)
+        uint8_t N : 1;  // N - Sign Flag       (0=Not Signed, 1=Signed)
     };
 
-    // todo: deprecate in favour of shifting op2 in place and only returning carry
+    // todo: deprecate in favour of shifting op2 in place and only returning
+    // carry
     struct AluShiftResult {
         uint32_t op2;
         uint8_t carry;
@@ -163,18 +158,23 @@ class ARM7TDMI {
     static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
 
-    Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1, uint32_t op2);
+    Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1,
+                         uint32_t op2);
 
     static bool aluSetsZeroBit(uint32_t value);
     static bool aluSetsSignBit(uint32_t value);
-    static bool aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    static bool aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2,
+                                           uint32_t result);
     static bool aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2);
     static bool aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2);
-    static bool aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result);
+    static bool aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2,
+                                      uint32_t result);
     static bool aluAddWithCarrySetsCarryBit(uint64_t result);
-    static bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI *cpu);
+    static bool aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
+                                               uint32_t result, ARM7TDMI *cpu);
     static bool aluSubWithCarrySetsCarryBit(uint64_t result);
-    static bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2, uint32_t result, ARM7TDMI *cpu);
+    static bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
+                                               uint32_t result, ARM7TDMI *cpu);
 
     static uint8_t getRd(uint32_t instruction);
     static uint8_t getRn(uint32_t instruction);
@@ -191,7 +191,8 @@ class ARM7TDMI {
     static bool sFlagSet(uint32_t instruction);
 
     static uint32_t psrToInt(ProgramStatusRegister psr);
-    void transferToPsr(uint32_t value, uint8_t field, ProgramStatusRegister *psr);
+    void transferToPsr(uint32_t value, uint8_t field,
+                       ProgramStatusRegister *psr);
 
     enum AluOpcode {
         AND = 0x0,
@@ -212,7 +213,8 @@ class ARM7TDMI {
         MVN = 0xF
     };
 
-    // shifts the second operand according to ALU logic. returns the shifted operand and the carry bit
+    // shifts the second operand according to ALU logic. returns the shifted
+    // operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
     typedef Cycles (*ArmOpcodeHandler)(uint32_t, ARM7TDMI *);
@@ -236,10 +238,12 @@ class ARM7TDMI {
 
     Cycles executeInstruction(uint32_t rawInstruction);
 
-    // accounts for modes, ex in IRQ mode, getting register 14 will return value of R14_irq
+    // accounts for modes, ex in IRQ mode, getting register 14 will return value
+    // of R14_irq
     uint32_t getRegister(uint8_t index);
 
-    // accounts for modes, ex in IRQ mode, setting register 14 will set value of R14_irq
+    // accounts for modes, ex in IRQ mode, setting register 14 will set value of
+    // R14_irq
     void setRegister(uint8_t index, uint32_t value);
 
     // returns the SPSR for the CPU's current mode
