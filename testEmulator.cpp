@@ -36,19 +36,18 @@ int main() {
     printMemory(&bus);
 
     cpu.connectBus(&bus);
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
-    cpu.step();
+
+    std::cout << "Press eneter to step the CPU forward... ";
+
+    while(true) {
+        char userInput = '0';
+        while(userInput != '\n') {
+            std::cin.get(userInput);
+        }
+        cpu.step();
+    }
+
+
     printMemory(&bus);
 
     std::cout << "completed!" << "\n";

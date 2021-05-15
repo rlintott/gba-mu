@@ -1,10 +1,11 @@
-#include "ARM7TDMI.h"
 
 #include <bit>
 #include <bitset>
 #include <iostream>
 
+#include "ARM7TDMI.h"
 #include "Bus.h"
+#include "Disassembler.h"
 #include "assert.h"
 
 ARM7TDMI::ARM7TDMI() {
@@ -19,7 +20,7 @@ ARM7TDMI::~ARM7TDMI() {
 void ARM7TDMI::step() {
     // read from program counter
     uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
-    DEBUG(std::bitset<32>(instruction).to_string() << std::endl);
+    //DEBUG(std::bitset<32>(instruction).to_string() << std::endl);
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         ArmOpcodeHandler handler = decodeArmInstruction(instruction);
@@ -211,6 +212,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
                        0b00000000010000000000000010010000) {  // TransImm10
 
             } else {                                          // dataProc
+                Disassembler::disassembleDataProcessing(instruction);   
                 return ArmOpcodeHandlers::aluHandler;
             }
             break;
@@ -220,6 +222,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(uint32_t instruction) 
                 0b00000011001000000000000000000000) {  // PSR Imm
                 return ArmOpcodeHandlers::psrHandler;
             } else {  // DataProc
+                Disassembler::disassembleDataProcessing(instruction);   
                 return ArmOpcodeHandlers::aluHandler;
             }
         }

@@ -18,6 +18,7 @@
 class Bus;
 
 class ARM7TDMI {
+
    public:
     ARM7TDMI();
     ~ARM7TDMI();
@@ -248,4 +249,6 @@ class ARM7TDMI {
     void connectBus(Bus *bus);
 
     void switchToMode(Mode mode);
+
+    friend class Disassembler;
 };
