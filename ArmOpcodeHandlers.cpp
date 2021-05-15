@@ -352,7 +352,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::sdtHandler(uint32_t instruction, A
             }
             case 1: {  // LSR
                 offset = shiftAmount != 0 ? aluShiftLsr(cpu->getRegister(rm), shiftAmount) : 0;
-
                 break;
             }
             case 2: {  // ASR
