@@ -6,8 +6,9 @@
 #include <iostream>
 
 #include "Bus.h"
-#include "Disassembler.h"
+#include "Debugger.h"
 #include "assert.h"
+
 
 ARM7TDMI::ARM7TDMI() {
     switchToMode(SUPERVISOR);
@@ -31,7 +32,13 @@ void ARM7TDMI::step() {
     }
 }
 
-void ARM7TDMI::connectBus(Bus *bus) { this->bus = bus; }
+void ARM7TDMI::connectBus(Bus *bus) { 
+    this->bus = bus; 
+}
+
+void ARM7TDMI::addDebugger(Debugger * debugger) {
+    this->debugger = debugger;
+}
 
 void ARM7TDMI::switchToMode(Mode mode) {
     cpsr.Mode = mode;
@@ -213,7 +220,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
                        0b00000000010000000000000010010000) {  // TransImm10
 
             } else {  // dataProc
-                Disassembler::disassembleDataProcessing(instruction);
+                debugger->disassembleDataProcessing(instruction);
                 return ArmOpcodeHandlers::aluHandler;
             }
             break;
@@ -223,7 +230,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
                 0b00000011001000000000000000000000) {  // PSR Imm
                 return ArmOpcodeHandlers::psrHandler;
             } else {  // DataProc
-                Disassembler::disassembleDataProcessing(instruction);
+                debugger->disassembleDataProcessing(instruction);
                 return ArmOpcodeHandlers::aluHandler;
             }
         }

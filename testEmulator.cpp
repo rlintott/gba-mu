@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iterator>
 #include <bitset>
+#include "Debugger.h"
 
 
 bool loadRawBinary(Bus* bus, std::string path) {
@@ -33,11 +34,15 @@ int main() {
 
     loadRawBinary(&bus, "emutest_arm1.bin");
 
-    printMemory(&bus);
+    //printMemory(&bus);
 
     cpu.connectBus(&bus);
 
-    std::cout << "Press eneter to step the CPU forward... ";
+    Debugger debugger(&cpu);
+
+    //std::cout << "Press eneter to step the CPU forward... ";
+
+    debugger.startDebugger();
 
     while(true) {
         char userInput = '0';
@@ -46,7 +51,6 @@ int main() {
         }
         cpu.step();
     }
-
 
     printMemory(&bus);
 

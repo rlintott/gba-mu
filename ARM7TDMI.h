@@ -16,6 +16,7 @@
 #endif
 
 class Bus;
+class Debugger;
 
 class ARM7TDMI {
    public:
@@ -223,6 +224,10 @@ class ARM7TDMI {
 
     ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
 
+    Debugger * debugger;
+
+    friend class Debugger;
+
    public:
     void step();
 
@@ -254,5 +259,6 @@ class ARM7TDMI {
 
     void switchToMode(Mode mode);
 
-    friend class Disassembler;
+    void addDebugger(Debugger * disassember);
+
 };

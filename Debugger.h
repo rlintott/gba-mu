@@ -2,21 +2,59 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <deque>
 
 #include "ARM7TDMI.h"
 
-class Disassembler {
-   public:
-    Disassembler();
-    ~Disassembler();
+// ncurses
+struct _win_st;
+typedef _win_st WINDOW;
 
-    static void disassembleDataProcessing(uint32_t instruction);
-    static void disassembleMultiply(uint32_t instruction);
-    static void disassembleMultiplyLong(uint32_t instruction);
-    static void disassembleSingleDataSwap(uint32_t instruction);
+class Debugger {
+   public:
+    Debugger(ARM7TDMI* cpu);
+    ~Debugger();
+
+    void disassembleDataProcessing(uint32_t instruction);
+    void disassembleMultiply(uint32_t instruction);
+    void disassembleMultiplyLong(uint32_t instruction);
+    void disassembleSingleDataSwap(uint32_t instruction);
+    void startDebugger();
 
    private:
-    static std::unordered_map<ARM7TDMI::AluOpcode, std::string> opcodeToName;
+    ARM7TDMI * cpu = nullptr;
+
+     /* terminal drawing */
+    WINDOW * instrWindow = nullptr;
+    WINDOW * regWindow = nullptr;
+    WINDOW * psrWindow = nullptr;
+
+    void displayInstr(std::string output);
+    void initDisplay(uint32_t thing);
+    void closeDisplay();
+
+    std::deque<std::string> instrBuffer;
+    std::deque<std::string> regBuffer;
+    std::deque<std::string> psrBuffer;
+
+    std::unordered_map<ARM7TDMI::AluOpcode, std::string> opcodeToName = {
+        {ARM7TDMI::AND, "AND"},
+        {ARM7TDMI::EOR, "EOR"},
+        {ARM7TDMI::SUB, "SUB"},
+        {ARM7TDMI::RSB, "RSB"},
+        {ARM7TDMI::ADD, "ADD"},
+        {ARM7TDMI::ADC, "ADC"},
+        {ARM7TDMI::SBC, "SBC"},
+        {ARM7TDMI::RSC, "RSC"},
+        {ARM7TDMI::TST, "TST"},
+        {ARM7TDMI::TEQ, "TEQ"},
+        {ARM7TDMI::CMP, "CMP"},
+        {ARM7TDMI::CMN, "CMN"},
+        {ARM7TDMI::ORR, "ORR"},
+        {ARM7TDMI::MOV, "MOV"},
+        {ARM7TDMI::BIC, "BIC"},
+        {ARM7TDMI::MVN, "MVN"}
+    };
 
     typedef struct data_processing {
         unsigned operand2 : 12;
