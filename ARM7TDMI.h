@@ -41,6 +41,7 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction,
                                                    ARM7TDMI *cpu);
         static ARM7TDMI::Cycles sdtHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles halfWordDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
     };
 
     union BitPreservedInt32 {
