@@ -36,7 +36,7 @@ class ARM7TDMI {
        public:
         static ARM7TDMI::Cycles multiplyHandler(uint32_t instruction,
                                                 ARM7TDMI *cpu);
-        static ARM7TDMI::Cycles aluHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles dataProcHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction,
                                                    ARM7TDMI *cpu);

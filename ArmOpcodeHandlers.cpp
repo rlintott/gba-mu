@@ -176,8 +176,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
     F: MVN{cond}{S} Rd,Op2       ;not               Rd = NOT Op2
 */
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
-                                                         ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(uint32_t instruction,
+                                                              ARM7TDMI *cpu) {
     // shift op2
     AluShiftResult shiftResult = cpu->aluShift(
         instruction, (instruction & 0x02000000), (instruction & 0x00000010));
@@ -576,12 +576,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
     }
 }
 
-
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
     // TODO: data aborts (if even applicable to GBA?)
     assert((instruction & 0x0E000000) == 0x08000000);
     // base register
-    uint8_t rn = getRn(instruction); 
+    uint8_t rn = getRn(instruction);
     uint32_t rnVal = cpu->getRegister(rn);
     assert(rn != 15);
     bool p = dataTransGetP(instruction);
@@ -589,85 +589,89 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(uint32_t ins
     bool l = dataTransGetL(instruction);
     bool w = dataTransGetW(instruction);
     // special case for block transfer, s = what is usually b
-    bool s = dataTransGetB(instruction);  
+    bool s = dataTransGetB(instruction);
     uint16_t regList = (uint16_t)instruction;
-    uint32_t addressRnStoredAt = 0; // see below
+    uint32_t addressRnStoredAt = 0;  // see below
 
-    if(u) {
+    if (u) {
         // up, add offset to base
-        if(p) {
+        if (p) {
             // pre-increment addressing
             rnVal += 4;
-        } 
-        for(int reg = 0; reg < 16; reg++) {
-            if(regList & 1) {
-                if(l) {
+        }
+        for (int reg = 0; reg < 16; reg++) {
+            if (regList & 1) {
+                if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data = cpu->bus->read32(rnVal);
-                    (!s) ? cpu->setRegister(reg, data) : cpu->setUserRegister(reg, data);
+                    (!s) ? cpu->setRegister(reg, data)
+                         : cpu->setUserRegister(reg, data);
                 } else {
                     // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
-                    if(reg == rn) {
+                    if (reg == rn) {
                         // hacky!
                         addressRnStoredAt = rnVal;
                     }
-                    uint32_t data = (!s) ? cpu->getRegister(reg) : cpu->getUserRegister(reg);
+                    uint32_t data = (!s) ? cpu->getRegister(reg)
+                                         : cpu->getUserRegister(reg);
                     cpu->bus->write32(rnVal, data);
                 }
                 rnVal += 4;
             }
             regList >>= 1;
         }
-        if(p) {
+        if (p) {
             // adjust the final rnVal so it is correct
             rnVal -= 4;
         }
 
     } else {
         // down, subtract offset from base
-        if(p) {
+        if (p) {
             // pre-increment addressing
             rnVal -= 4;
-        } 
-        for(int reg = 15; reg >= 0; reg--) {
-            if(regList & 0x8000) {
-                if(l) {
+        }
+        for (int reg = 15; reg >= 0; reg--) {
+            if (regList & 0x8000) {
+                if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data = cpu->bus->read32(rnVal);
-                    (!s) ? cpu->setRegister(reg, data) : cpu->setUserRegister(reg, data);
+                    (!s) ? cpu->setRegister(reg, data)
+                         : cpu->setUserRegister(reg, data);
                 } else {
                     // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
-                    if(reg == rn) {
+                    if (reg == rn) {
                         // hacky!
                         addressRnStoredAt = rnVal;
                     }
 
-                    uint32_t data = (!s) ? cpu->getRegister(reg) : cpu->getUserRegister(reg);
+                    uint32_t data = (!s) ? cpu->getRegister(reg)
+                                         : cpu->getUserRegister(reg);
                     cpu->bus->write32(rnVal, data);
                 }
                 rnVal -= 4;
             }
             regList <<= 1;
         }
-        if(p) {
+        if (p) {
             // adjust the final rnVal so it is correct
             rnVal += 4;
         }
     }
 
-    if(w) {
-        if((!l) && ((uint16_t)instruction << (15 - rn)) > 0x8000) {
-            // A STM which includes storing the base, with the base 
-            // as the first register to be stored, will therefore 
-            // store the unchanged value, whereas with the base second 
+    if (w) {
+        if ((!l) && ((uint16_t)instruction << (15 - rn)) > 0x8000) {
+            // A STM which includes storing the base, with the base
+            // as the first register to be stored, will therefore
+            // store the unchanged value, whereas with the base second
             // or later in the transfer order, will store the modified value.
             assert(addressRnStoredAt != 0);
             cpu->bus->write32(addressRnStoredAt, rnVal);
-        } 
+        }
         cpu->setRegister(rn, rnVal);
     }
 
-    if(s && (instruction & 0x00008000) && l) {
+    if (s && (instruction & 0x00008000) && l) {
         // f instruction is LDM and R15 is in the list: (Mode Changes)
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
         cpu->cpsr = *(cpu->getCurrentModeSpsr());

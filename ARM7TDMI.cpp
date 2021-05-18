@@ -221,7 +221,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
 
             } else {  // dataProc
                 debugger->disassembleDataProcessing(instruction);
-                return ArmOpcodeHandlers::aluHandler;
+                return ArmOpcodeHandlers::dataProcHandler;
             }
             break;
         }
@@ -231,7 +231,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
                 return ArmOpcodeHandlers::psrHandler;
             } else {  // DataProc
                 debugger->disassembleDataProcessing(instruction);
-                return ArmOpcodeHandlers::aluHandler;
+                return ArmOpcodeHandlers::dataProcHandler;
             }
         }
         case 0b00001000000000000000000000000000: {
