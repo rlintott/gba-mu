@@ -590,6 +590,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     bool w = dataTransGetW(instruction);
     // special case for block transfer, s = what is usually b
     bool s = dataTransGetB(instruction);
+    if(s) assert(cpu->cpsr.Mode != USER);
     uint16_t regList = (uint16_t)instruction;
     uint32_t addressRnStoredAt = 0;  // see below
 
@@ -614,6 +615,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
                     }
                     uint32_t data = (!s) ? cpu->getRegister(reg)
                                          : cpu->getUserRegister(reg);
+                    // TODO: take this out when implemeinting pipelining
+                    if(reg == 15) data += 12;
                     cpu->bus->write32(rnVal, data);
                 }
                 rnVal += 4;
@@ -647,6 +650,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
 
                     uint32_t data = (!s) ? cpu->getRegister(reg)
                                          : cpu->getUserRegister(reg);
+                    if(reg == 15) data += 12;
                     cpu->bus->write32(rnVal, data);
                 }
                 rnVal -= 4;
@@ -660,7 +664,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     }
 
     if (w) {
-        if ((!l) && ((uint16_t)instruction << (15 - rn)) > 0x8000) {
+        if ((((uint16_t)instruction << (15 - rn)) > 0x8000) && !l) {
             // A STM which includes storing the base, with the base
             // as the first register to be stored, will therefore
             // store the unchanged value, whereas with the base second
@@ -671,7 +675,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         cpu->setRegister(rn, rnVal);
     }
 
-    if (s && (instruction & 0x00008000) && l) {
+    if (s && l && (instruction & 0x00008000)) {
         // f instruction is LDM and R15 is in the list: (Mode Changes)
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
