@@ -431,12 +431,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(uint32_t in
             if ((address & 0x00000003) != 0 &&
                 (address & 0x00000001) == 0) {  
                 // aligned to half-word but not word
-                uint32_t low = (uint32_t)(cpu->bus->read16(address));
-                uint32_t hi = (uint32_t)(cpu->bus->read16(address - 2));
-                cpu->setRegister(rd, ((hi << 16) | low));
+                uint32_t low = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE));
+                uint32_t hi = (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE));
+                cpu->setRegister(rd, cpu->bus->read32(((hi << 16) | low) & 0xFFFFFFFC));
             } else {  
                 // aligned to word
-                cpu->setRegister(rd, (cpu->bus->read32(address)));
+                cpu->setRegister(rd, (cpu->bus->read32(address & 0xFFFFFFFC)));
             }
         }
     } else {
@@ -444,8 +444,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(uint32_t in
         if (b) {  // transfer 8 bits
             cpu->bus->write8(address, (uint8_t)(rdVal));
         } else {                                  // transfer 32 bits
-            assert((address & 0x00000003) == 0);  // assert is word aligned
-            cpu->bus->write32(address, (rdVal));
+            cpu->bus->write32(address & 0xFFFFFFFC, (rdVal));
         }
     }
 
@@ -509,9 +508,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         case 1: {     // STRH or LDRH (depending on l)
             if (l) {  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword
                       // (zero-extended)
-                cpu->setRegister(rd, (uint32_t)(cpu->bus->read16(address)));
+                cpu->setRegister(rd, (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE)));
             } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
-                cpu->bus->write16(address, (uint16_t)rdVal);
+                cpu->bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal);
             }
         }
         case 2: {  // LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign
@@ -528,7 +527,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         case 3: {  // LDR{cond}SH Rd,<Address>  ;Load Signed halfword (sign
                    // extended)
             assert(l);
-            uint32_t val = (uint32_t)(cpu->bus->read16(address));
+            uint32_t val = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE));
             if (val & 0x00008000) {
                 cpu->setRegister(rd, 0xFFFF0000 | val);
             } else {
@@ -546,6 +545,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
+    // TODO: figure out memory alignment logic (for all data transfer ops)
     uint32_t instruction, ARM7TDMI *cpu) {
 
     assert((instruction & 0x0F800000) == 0x01000000);
@@ -569,10 +569,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
     } else {
         // SWPB swap word
         uint32_t rnVal = cpu->getRegister(rn);
-        uint32_t data = cpu->bus->read32(rnVal);
+        uint32_t data = cpu->bus->read32(rnVal & 0xFFFFFFFC);
         cpu->setRegister(rd, data);
         uint32_t rmVal = cpu->getRegister(rm);
-        cpu->bus->write32(rnVal, rmVal);
+        cpu->bus->write32(rnVal & 0xFFFFFFFC, rmVal);
     }
 }
 
@@ -582,6 +582,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     assert((instruction & 0x0E000000) == 0x08000000);
     // base register
     uint8_t rn = getRn(instruction);
+    // align memory address;
     uint32_t rnVal = cpu->getRegister(rn);
     assert(rn != 15);
     bool p = dataTransGetP(instruction);
@@ -604,7 +605,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             if (regList & 1) {
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
-                    uint32_t data = cpu->bus->read32(rnVal);
+                    uint32_t data = cpu->bus->read32(rnVal & 0xFFFFFFFC);
                     (!s) ? cpu->setRegister(reg, data)
                          : cpu->setUserRegister(reg, data);
                 } else {
@@ -617,7 +618,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
                                          : cpu->getUserRegister(reg);
                     // TODO: take this out when implemeinting pipelining
                     if(reg == 15) data += 12;
-                    cpu->bus->write32(rnVal, data);
+                    cpu->bus->write32(rnVal & 0xFFFFFFFC, data);
                 }
                 rnVal += 4;
             }
@@ -638,7 +639,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             if (regList & 0x8000) {
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
-                    uint32_t data = cpu->bus->read32(rnVal);
+                    uint32_t data = cpu->bus->read32(rnVal & 0xFFFFFFFC);
                     (!s) ? cpu->setRegister(reg, data)
                          : cpu->setUserRegister(reg, data);
                 } else {
@@ -651,7 +652,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
                     uint32_t data = (!s) ? cpu->getRegister(reg)
                                          : cpu->getUserRegister(reg);
                     if(reg == 15) data += 12;
-                    cpu->bus->write32(rnVal, data);
+                    cpu->bus->write32(rnVal & 0xFFFFFFFC, data);
                 }
                 rnVal -= 4;
             }
@@ -670,7 +671,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             // store the unchanged value, whereas with the base second
             // or later in the transfer order, will store the modified value.
             assert(addressRnStoredAt != 0);
-            cpu->bus->write32(addressRnStoredAt, rnVal);
+            cpu->bus->write32(addressRnStoredAt & 0xFFFFFFFC, rnVal);
         }
         cpu->setRegister(rn, rnVal);
     }
@@ -680,6 +681,68 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
     }
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0x0E000000) == 0x0A000000);
+
+    uint32_t offset = ((instruction & 0x00FFFFFF) << 2);
+    // TODO might be able to remove +8 when after implekemting pipelining
+    uint32_t branchAddress = cpu->getRegister(PC_REGISTER) + offset + 8;
+    branchAddress &= 0xFFFFFFFC;
+    switch ((instruction & 0x01000000) >> 24) {
+        case 0: {
+            // B
+            break;
+        }
+        case 1: {
+            // BL LR=PC+4
+            cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 4);
+            break;
+        }
+    }
+
+    cpu->setRegister(PC_REGISTER, branchAddress);
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
+          
+    assert(((instruction & 0x0FFFFF00) >> 8) == 0b00010010111111111111);
+    // for this op rn is where rm usually is 
+    uint8_t rn = getRm(instruction);
+    assert(rn != PC_REGISTER);
+    uint32_t rnVal = cpu->getRegister(rn);
+
+    switch((instruction & 0x000000F0) >> 4) {
+        case 0x1: {
+            // BX PC=Rn, T=Rn.0   
+        }
+        case 0x3: {
+            // BLX PC=Rn, T=Rn.0, LR=PC+4
+            cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 4);
+        }
+    }
+
+    /*
+        For ARM code, the low bits of the target address should be usually zero, 
+        otherwise, R15 is forcibly aligned by clearing the lower two bits.
+        For THUMB code, the low bit of the target address may/should/must be set, 
+        the bit is (or is not) interpreted as thumb-bit (depending on the opcode), 
+        and R15 is then forcibly aligned by clearing the lower bit.
+        In short, R15 will be always forcibly aligned, so mis-aligned branches 
+        won't have effect on subsequent opcodes that use R15, or [R15+disp] as operand.
+    */
+
+    bool t = rnVal & 0x1;
+    cpu->cpsr.T = t;
+    if(t) {
+        rnVal &= 0xFFFFFFFE;
+    } else {
+        rnVal &= 0xFFFFFFFC;
+    }
+    cpu->setRegister(PC_REGISTER, rnVal);
 }
 
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/

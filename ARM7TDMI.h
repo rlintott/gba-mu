@@ -44,6 +44,9 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles halfWordDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles singleDataSwapHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles branchHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles branchAndExchangeHandler(uint32_t instruction, ARM7TDMI *cpu);
+
     };
 
     union BitPreservedInt32 {
