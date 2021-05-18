@@ -5,4 +5,3 @@
 
 There are many more tasks left to do than are documented in the code
 
-* TODO: refactor... so much duplicated code... preferably using OOP design patterns (since it is C++)
