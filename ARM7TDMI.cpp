@@ -244,13 +244,13 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
             break;
         }
         case 0b00000100000000000000000000000000: {  // transImm9
-            return ArmOpcodeHandlers::sdtHandler;
+            return ArmOpcodeHandlers::singleDataTransHandler;
             break;
         }
         case 0b00000110000000000000000000000000: {
             if ((instruction & 0b00001110000000000000000000010000) ==
                 0b00000110000000000000000000000000) {  // TransReg9
-                return ArmOpcodeHandlers::sdtHandler;
+                return ArmOpcodeHandlers::singleDataTransHandler;
             } else {  // Undefined
                 return ArmOpcodeHandlers::undefinedOpHandler;
             }
@@ -423,8 +423,13 @@ ARM7TDMI::ProgramStatusRegister *ARM7TDMI::getCurrentModeSpsr() {
 
 uint32_t ARM7TDMI::getRegister(uint8_t index) { return *(registers[index]); }
 
+uint32_t ARM7TDMI::getUserRegister(uint8_t index) { return *(userRegisters[index]); }
+
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
     *(registers[index]) = value;
+}
+void ARM7TDMI::setUserRegister(uint8_t index, uint32_t value) {
+    *(userRegisters[index]) = value;
 }
 
 bool ARM7TDMI::aluSetsZeroBit(uint32_t value) { return value == 0; }

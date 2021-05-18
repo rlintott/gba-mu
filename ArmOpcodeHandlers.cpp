@@ -349,7 +349,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::aluHandler(uint32_t instruction,
 
 /* ~~~~~~~~ SINGLE DATA TRANSFER ~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::sdtHandler(uint32_t instruction,
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(uint32_t instruction,
                                                          ARM7TDMI *cpu) {
     // TODO:  implement the following restriction <expression>  ;an immediate
     // used as address
@@ -457,24 +457,27 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::sdtHandler(uint32_t instruction,
     return {};
 }
 
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
 
-ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0);
     uint8_t rd = getRd(instruction);
-    uint32_t rdVal = (rd == 15) ? cpu->getRegister(rd) + 12 : cpu->getRegister(rd);
+    uint32_t rdVal =
+        (rd == 15) ? cpu->getRegister(rd) + 12 : cpu->getRegister(rd);
     uint8_t rn = getRn(instruction);
-    uint32_t rnVal = (rn == 15) ? cpu->getRegister(rn) + 8 : cpu->getRegister(rn);
+    uint32_t rnVal =
+        (rn == 15) ? cpu->getRegister(rn) + 8 : cpu->getRegister(rn);
 
     uint32_t offset = 0;
 
     bool l = dataTransGetL(instruction);
 
-    if(instruction & 0x00400000) {
+    if (instruction & 0x00400000) {
         // immediate as offset
         offset = (((instruction & 0x00000F00) >> 4) | getRm(instruction));
 
     } else {
-        // register as offset 
+        // register as offset
         assert(!(instruction & 0x00000F00));
         assert(getRm(instruction) != 15);
         offset = cpu->getRegister(getRm(instruction));
@@ -483,12 +486,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(uint32_t 
     assert(instruction & 0x00000010);
 
     uint32_t address = rnVal;
-    uint8_t u = dataTransGetU(instruction);
     uint8_t p = dataTransGetP(instruction);
-    if(p) { 
+    if (p) {
         // pre-indexing offset
-        address = u ? address + offset : address - offset;
-        if(dataTransGetW(instruction)) {
+        address =
+            dataTransGetU(instruction) ? address + offset : address - offset;
+        if (dataTransGetW(instruction)) {
             // write address back into base register
             cpu->setRegister(rn, address);
         }
@@ -498,32 +501,35 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(uint32_t 
     }
 
     uint8_t opcode = (instruction & 0x00000060) >> 5;
-    switch(opcode) {
+    switch (opcode) {
         case 0: {
             // Reserved for SWP instruction
-            assert(false); 
+            assert(false);
         }
-        case 1: { // STRH or LDRH (depending on l)
-            if(l){  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword (zero-extended)
+        case 1: {     // STRH or LDRH (depending on l)
+            if (l) {  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword
+                      // (zero-extended)
                 cpu->setRegister(rd, (uint32_t)(cpu->bus->read16(address)));
-            } else { // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
+            } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
                 cpu->bus->write16(address, (uint16_t)rdVal);
             }
         }
-        case 2: { // LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign extended)
-            // TODO: better way to do this? 
+        case 2: {  // LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign
+                   // extended)
+            // TODO: better way to do this?
             assert(l);
             uint32_t val = (uint32_t)(cpu->bus->read8(address));
-            if(val & 0x00000080) {
+            if (val & 0x00000080) {
                 cpu->setRegister(rd, 0xFFFFFF00 | val);
             } else {
                 cpu->setRegister(rd, val);
             }
         }
-        case 3: { // LDR{cond}SH Rd,<Address>  ;Load Signed halfword (sign extended)
+        case 3: {  // LDR{cond}SH Rd,<Address>  ;Load Signed halfword (sign
+                   // extended)
             assert(l);
             uint32_t val = (uint32_t)(cpu->bus->read16(address));
-            if(val & 0x00008000) {
+            if (val & 0x00008000) {
                 cpu->setRegister(rd, 0xFFFF0000 | val);
             } else {
                 cpu->setRegister(rd, val);
@@ -531,14 +537,142 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(uint32_t 
         }
     }
 
-    if(!p) {
+    if (!p) {
         // add offset after transfer and always write back
-        address = u ? address + offset : address - offset;
-        cpu->setRegister(rn, address);        
+        address =
+            dataTransGetU(instruction) ? address + offset : address - offset;
+        cpu->setRegister(rn, address);
+    }
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
+
+    assert((instruction & 0x0F800000) == 0x01000000);
+    assert(!(instruction & 0x00300000));
+    assert((instruction & 0x00000FF0) == 0x00000090);
+    bool b = dataTransGetB(instruction);
+    uint8_t rn = getRn(instruction);
+    uint8_t rd = getRd(instruction);
+    uint8_t rm = getRm(instruction);
+    assert((rn != 15) && (rd != 15) && (rm != 15));
+
+    // SWP{cond}{B} Rd,Rm,[Rn]     ;Rd=[Rn], [Rn]=Rm
+    if (b) {
+        // SWPB swap byte
+        uint32_t rnVal = cpu->getRegister(rn);
+        uint8_t data = cpu->bus->read8(rnVal);
+        cpu->setRegister(rd, (uint32_t)data);
+        // TODO: check, is it a zero-extended 32-bit write or an 8-bit write?
+        uint8_t rmVal = (uint8_t)(cpu->getRegister(rm));
+        cpu->bus->write8(rnVal, rmVal);
+    } else {
+        // SWPB swap word
+        uint32_t rnVal = cpu->getRegister(rn);
+        uint32_t data = cpu->bus->read32(rnVal);
+        cpu->setRegister(rd, data);
+        uint32_t rmVal = cpu->getRegister(rm);
+        cpu->bus->write32(rnVal, rmVal);
     }
 }
 
 
+ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu) {
+    // TODO: data aborts (if even applicable to GBA?)
+    assert((instruction & 0x0E000000) == 0x08000000);
+    // base register
+    uint8_t rn = getRn(instruction); 
+    uint32_t rnVal = cpu->getRegister(rn);
+    assert(rn != 15);
+    bool p = dataTransGetP(instruction);
+    bool u = dataTransGetU(instruction);
+    bool l = dataTransGetL(instruction);
+    bool w = dataTransGetW(instruction);
+    // special case for block transfer, s = what is usually b
+    bool s = dataTransGetB(instruction);  
+    uint16_t regList = (uint16_t)instruction;
+    uint32_t addressRnStoredAt = 0; // see below
+
+    if(u) {
+        // up, add offset to base
+        if(p) {
+            // pre-increment addressing
+            rnVal += 4;
+        } 
+        for(int reg = 0; reg < 16; reg++) {
+            if(regList & 1) {
+                if(l) {
+                    // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
+                    uint32_t data = cpu->bus->read32(rnVal);
+                    (!s) ? cpu->setRegister(reg, data) : cpu->setUserRegister(reg, data);
+                } else {
+                    // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
+                    if(reg == rn) {
+                        // hacky!
+                        addressRnStoredAt = rnVal;
+                    }
+                    uint32_t data = (!s) ? cpu->getRegister(reg) : cpu->getUserRegister(reg);
+                    cpu->bus->write32(rnVal, data);
+                }
+                rnVal += 4;
+            }
+            regList >>= 1;
+        }
+        if(p) {
+            // adjust the final rnVal so it is correct
+            rnVal -= 4;
+        }
+
+    } else {
+        // down, subtract offset from base
+        if(p) {
+            // pre-increment addressing
+            rnVal -= 4;
+        } 
+        for(int reg = 15; reg >= 0; reg--) {
+            if(regList & 0x8000) {
+                if(l) {
+                    // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
+                    uint32_t data = cpu->bus->read32(rnVal);
+                    (!s) ? cpu->setRegister(reg, data) : cpu->setUserRegister(reg, data);
+                } else {
+                    // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
+                    if(reg == rn) {
+                        // hacky!
+                        addressRnStoredAt = rnVal;
+                    }
+
+                    uint32_t data = (!s) ? cpu->getRegister(reg) : cpu->getUserRegister(reg);
+                    cpu->bus->write32(rnVal, data);
+                }
+                rnVal -= 4;
+            }
+            regList <<= 1;
+        }
+        if(p) {
+            // adjust the final rnVal so it is correct
+            rnVal += 4;
+        }
+    }
+
+    if(w) {
+        if((!l) && ((uint16_t)instruction << (15 - rn)) > 0x8000) {
+            // A STM which includes storing the base, with the base 
+            // as the first register to be stored, will therefore 
+            // store the unchanged value, whereas with the base second 
+            // or later in the transfer order, will store the modified value.
+            assert(addressRnStoredAt != 0);
+            cpu->bus->write32(addressRnStoredAt, rnVal);
+        } 
+        cpu->setRegister(rn, rnVal);
+    }
+
+    if(s && (instruction & 0x00008000) && l) {
+        // f instruction is LDM and R15 is in the list: (Mode Changes)
+        // While R15 loaded, additionally: CPSR=SPSR_<current mode>
+        cpu->cpsr = *(cpu->getCurrentModeSpsr());
+    }
+}
 
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 

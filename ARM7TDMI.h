@@ -40,8 +40,10 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles psrHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles undefinedOpHandler(uint32_t instruction,
                                                    ARM7TDMI *cpu);
-        static ARM7TDMI::Cycles sdtHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles singleDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles halfWordDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles singleDataSwapHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
     };
 
     union BitPreservedInt32 {
@@ -57,6 +59,13 @@ class ARM7TDMI {
     // registers can be dynamically changed to support different registers for
     // different CPU modes
     std::array<uint32_t *, 16> registers = {
+        &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
+        &r13,  // stack pointer
+        &r14,  // link register
+        &r15   // program counter
+    };
+
+    std::array<uint32_t *, 16> userRegisters = {
         &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
         &r13,  // stack pointer
         &r14,  // link register
@@ -247,10 +256,13 @@ class ARM7TDMI {
     // accounts for modes, ex in IRQ mode, getting register 14 will return value
     // of R14_irq
     uint32_t getRegister(uint8_t index);
+    uint32_t getUserRegister(uint8_t index);
+
 
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of
     // R14_irq
     void setRegister(uint8_t index, uint32_t value);
+    void setUserRegister(uint8_t index, uint32_t value);
 
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister *getCurrentModeSpsr();
