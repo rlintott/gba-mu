@@ -227,6 +227,27 @@ class ARM7TDMI {
         MVN = 0xF
     };
 
+
+
+    enum Condition {
+        EQ = 0x0, // 0:   EQ     Z=1           equal (zero) (same)
+        NE = 0x1, // 1:   NE     Z=0           not equal (nonzero) (not same)
+        CS = 0x2, // 2:   CS/HS  C=1           unsigned higher or same (carry set)
+        CC = 0x3, // 3:   CC/LO  C=0           unsigned lower (carry cleared)
+        MI = 0x4, // 4:   MI     N=1           signed negative (minus)
+        PL = 0x5, // 5:   PL     N=0           signed positive or zero (plus)
+        VS = 0x6, // 6:   VS     V=1           signed overflow (V set)
+        VC = 0x7, // 7:   VC     V=0           signed no overflow (V cleared)
+        HI = 0x8, // 8:   HI     C=1 and Z=0   unsigned higher
+        LS = 0x9, // 9:   LS     C=0 or Z=1    unsigned lower or same
+        GE = 0xA, // A:   GE     N=V           signed greater or equal
+        LT = 0xB, // B:   LT     N<>V          signed less than
+        GT = 0xC, // C:   GT     Z=0 and N=V   signed greater than
+        LE = 0xD, // D:   LE     Z=1 or N<>V   signed less or equal
+        AL = 0xE, // E:   AL     -             always (the "AL" suffix can be omitted)
+        NV = 0xF  // F:   NV     -             never (ARMv1,v2 only) (Reserved ARMv3 and up)
+    };
+
     // shifts the second operand according to ALU logic. returns the shifted
     // operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
@@ -236,6 +257,8 @@ class ARM7TDMI {
     typedef Cycles (*ThumbOpcodeHandler)(uint16_t);
 
     ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
+
+    bool conditionalHolds(uint8_t cond);
 
     Debugger * debugger;
 

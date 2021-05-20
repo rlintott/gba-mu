@@ -21,11 +21,14 @@ ARM7TDMI::~ARM7TDMI() {}
 void ARM7TDMI::step() {
     // read from program counter
     uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
-    // DEBUG(std::bitset<32>(instruction).to_string() << std::endl);
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        ArmOpcodeHandler handler = decodeArmInstruction(instruction);
-        Cycles cycles = handler(instruction, this);
+        uint8_t cond = (instruction & 0xF0000000) >> 28;
+
+        if(conditionalHolds(cond)) {
+            ArmOpcodeHandler handler = decodeArmInstruction(instruction);
+            Cycles cycles = handler(instruction, this);
+        }
         // increment PC
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
     } else {  // THUMB state
@@ -94,6 +97,63 @@ void ARM7TDMI::switchToMode(Mode mode) {
             registers[13] = &r13_svc;  // ? TODO check
             registers[14] = &r14_svc;  // ?
             break;
+        }
+    }
+}
+
+bool ARM7TDMI::conditionalHolds(uint8_t cond) {
+    switch(cond) {
+        case Condition::EQ: {
+            return cpsr.Z;
+        }
+        case Condition::NE: {
+            return !cpsr.Z;
+        }
+        case Condition::CS: {
+            return cpsr.C;
+        }
+        case Condition::CC: {
+            return !cpsr.C;
+        }
+        case Condition::MI: {
+            return cpsr.N;
+        }
+        case Condition::PL: {
+            return !cpsr.N;
+        }
+        case Condition::VS: {
+            return cpsr.V;
+        }
+        case Condition::VC: {
+            return !cpsr.V;
+        }
+        case Condition::HI: {
+            return cpsr.C && !cpsr.Z;
+        }
+        case Condition::LS: {
+            return !cpsr.C || cpsr.Z;
+        }
+        case Condition::GE: {
+            return cpsr.N == cpsr.V;
+        }
+        case Condition::LT: {
+            return cpsr.N != cpsr.V;
+        }
+        case Condition::GT: {
+            return !cpsr.Z && (cpsr.N == cpsr.V);
+        }
+        case Condition::LE: {
+            return cpsr.Z || (cpsr.N != cpsr.V);
+        }
+        case Condition::AL: {
+            return true;
+        }
+        case Condition::NV: {
+           return false;       
+        }
+        default: {
+            assert(false);
+            return false;
         }
     }
 }
