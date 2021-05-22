@@ -19,12 +19,53 @@ class Bus;
 class Debugger;
 
 class ARM7TDMI {
+
    public:
     ARM7TDMI();
     ~ARM7TDMI();
 
-    // struct representing the number of cycles an operation will take
+    void step();
+
+    void clock();
+
+    // CPU exceptions
+    void irq();
+    void firq();
+    void reset();
+
+    // dependency injection
+    void connectBus(Bus *bus);
+
+    void addDebugger(Debugger * debugger);
+
+    // struct representing program status register (xPSR)
+    struct ProgramStatusRegister {
+        uint8_t Mode : 5;  //  M4-M0 - Mode Bits
+        uint8_t T : 1;  // T - State Bit       (0=ARM, 1=THUMB) - Do not change
+                        // manually!
+        uint8_t F : 1;  // F - FIQ disable     (0=Enable, 1=Disable)
+        uint8_t I : 1;  // I - IRQ disable     (0=Enable, 1=Disable)
+        uint32_t Reserved : 19;  // Reserved            (For future use) - Do
+                                 // not change manually!
+        uint8_t Q : 1;  // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and
+                        // up only)
+        uint8_t V : 1;  // V - Overflow Flag   (0=No Overflow, 1=Overflow)
+        uint8_t
+            C : 1;  // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
+        uint8_t Z : 1;  // Z - Zero Flag       (0=Not Zero, 1=Zero)
+        uint8_t N : 1;  // N - Sign Flag       (0=Not Signed, 1=Signed)
+    };
+
+    // returns the SPSR for the CPU's current mode
+    ProgramStatusRegister *getCurrentModeSpsr();
+
+    // accounts for modes, ex in IRQ mode, getting register 14 will return value
+    // of R14_irq
+    uint32_t getRegister(uint8_t index);
+    uint32_t getUserRegister(uint8_t index);
+  
    private:
+   // struct representing the number of cycles an operation will take
     struct Cycles {
         uint8_t nonSequentialCycles : 8;
         uint8_t sequentialCycles : 8;
@@ -118,23 +159,6 @@ class ARM7TDMI {
     uint8_t zeroBit = 0;
     uint8_t signBit = 0;
 
-    // struct representing program status register (xPSR)
-    struct ProgramStatusRegister {
-        uint8_t Mode : 5;  //  M4-M0 - Mode Bits
-        uint8_t T : 1;  // T - State Bit       (0=ARM, 1=THUMB) - Do not change
-                        // manually!
-        uint8_t F : 1;  // F - FIQ disable     (0=Enable, 1=Disable)
-        uint8_t I : 1;  // I - IRQ disable     (0=Enable, 1=Disable)
-        uint32_t Reserved : 19;  // Reserved            (For future use) - Do
-                                 // not change manually!
-        uint8_t Q : 1;  // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and
-                        // up only)
-        uint8_t V : 1;  // V - Overflow Flag   (0=No Overflow, 1=Overflow)
-        uint8_t
-            C : 1;  // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
-        uint8_t Z : 1;  // Z - Zero Flag       (0=Not Zero, 1=Zero)
-        uint8_t N : 1;  // N - Sign Flag       (0=Not Signed, 1=Signed)
-    };
 
     // todo: deprecate in favour of shifting op2 in place and only returning
     // carry
@@ -262,42 +286,17 @@ class ARM7TDMI {
 
     Debugger * debugger;
 
-    friend class Debugger;
-
-   public:
-    void step();
-
-    void clock();
-
-    void enterInstructionCycle();
-
-    // CPU exceptions
-    void irq();
-    void firq();
-    void undefinedInstruction();
-    void reset();
-
     Cycles executeInstruction(uint32_t rawInstruction);
-
-    // accounts for modes, ex in IRQ mode, getting register 14 will return value
-    // of R14_irq
-    uint32_t getRegister(uint8_t index);
-    uint32_t getUserRegister(uint8_t index);
-
 
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of
     // R14_irq
     void setRegister(uint8_t index, uint32_t value);
     void setUserRegister(uint8_t index, uint32_t value);
 
-    // returns the SPSR for the CPU's current mode
-    ProgramStatusRegister *getCurrentModeSpsr();
 
-    // dependency injection
-    void connectBus(Bus *bus);
+
+    friend class Debugger;
 
     void switchToMode(Mode mode);
-
-    void addDebugger(Debugger * disassember);
 
 };

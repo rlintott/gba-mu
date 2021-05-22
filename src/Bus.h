@@ -25,9 +25,6 @@ public:
     // 2kB placeholder random access memory for testing
     std::vector<uint8_t> ram;
 
-    // Gameboy Advance's ARM CPU
-    ARM7TDMI cpu;
-
     uint32_t read32(uint32_t address);
     uint8_t read8(uint32_t address);
     uint16_t read16(uint32_t address);
@@ -36,6 +33,6 @@ public:
     uint32_t write8(uint32_t address, uint8_t byte);
     uint32_t write16(uint32_t address, uint16_t halfWord);
 
-    void testPushToRam(uint8_t byte);
+    void tempPushToRam(uint8_t byte);
     
 };
