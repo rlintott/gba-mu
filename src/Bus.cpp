@@ -35,7 +35,6 @@ uint32_t Bus::write16(uint32_t address, uint16_t halfWord){
 
 }
 
-
 void Bus::tempPushToRam(uint8_t byte) {
     ram.push_back(byte);
     return;
