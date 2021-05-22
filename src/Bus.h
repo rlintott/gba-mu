@@ -22,8 +22,14 @@ public:
 
 public:
 
-    // 2kB placeholder random access memory for testing
-    std::vector<uint8_t> ram;
+    // work ram! 02000000-0203FFFF (256kB)
+    std::array<uint8_t, 263168>* wRamBoard;
+    // 03000000-03007FFF (32 kB)
+    std::array<uint8_t, 32896>* wRamChip;
+
+
+    // Game Pak ROM/FlashROM (max 32MB), 08000000-09FFFFFF
+    std::vector<uint8_t>* gamePakRom;
 
     uint32_t read32(uint32_t address);
     uint8_t read8(uint32_t address);
@@ -33,6 +39,7 @@ public:
     uint32_t write8(uint32_t address, uint8_t byte);
     uint32_t write16(uint32_t address, uint16_t halfWord);
 
-    void tempPushToRam(uint8_t byte);
+    void loadRom(std::string path);
+
     
 };

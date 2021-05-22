@@ -17,13 +17,7 @@ GameBoyAdvance::~GameBoyAdvance() {
 
 
 void GameBoyAdvance::loadRom(std::string path) {
-    std::ifstream binFile(path, std::ios::binary);
-    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
-
-    for(int i = 0; i < buffer.size(); i++) {
-        bus->tempPushToRam(buffer[i]);
-        // DEBUG(std::bitset<8>(buffer[i]).to_string() << " ");
-    }
+    bus->loadRom(path);
 }
 
 
