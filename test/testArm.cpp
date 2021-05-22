@@ -1,11 +1,12 @@
-#include <vector>
 #include <cstdint>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <iterator>
+#include <vector>
 
 #include "../src/ARM7TDMI.h"
-
+#include "../src/Bus.h"
+#include "../src/GameBoyAdvance.h"
 
 typedef struct cpu_log {
     uint32_t address;
@@ -15,7 +16,6 @@ typedef struct cpu_log {
     uint32_t cycles;
 } cpu_log_t;
 
-
 std::vector<cpu_log> getLogs(std::string path) {
     std::ifstream logFile;
     logFile.open(path);
@@ -23,45 +23,56 @@ std::vector<cpu_log> getLogs(std::string path) {
 
     std::vector<cpu_log> logs;
     std::string delimiter = ",";
-    while(std::getline(logFile, line)) {
+    while (std::getline(logFile, line)) {
         // std::cout << line << std::endl;
         int currentPos = 0;
-        int nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+        int nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                          ? line.size()
+                          : line.find(delimiter, currentPos);
         std::string value;
         cpu_log log;
 
         value = line.substr(currentPos, nextPos - currentPos);
         log.address = std::stoul(value, nullptr, 16);
         currentPos = nextPos + 1;
-        nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+        nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                      ? line.size()
+                      : line.find(delimiter, currentPos);
 
         value = line.substr(currentPos, nextPos - currentPos);
         log.instruction = std::stoul(value, nullptr, 16);
         currentPos = nextPos + 1;
-        nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+        nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                      ? line.size()
+                      : line.find(delimiter, currentPos);
 
         value = line.substr(currentPos, nextPos - currentPos);
         log.cpsr = std::stoul(value, nullptr, 16);
         currentPos = nextPos + 1;
-        nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+        nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                      ? line.size()
+                      : line.find(delimiter, currentPos);
 
-        for(int i = 0; i < 16; i++) {
+        for (int i = 0; i < 16; i++) {
             value = line.substr(currentPos, nextPos - currentPos);
             log.r[i] = std::stoul(value, nullptr, 16);
             currentPos = nextPos + 1;
-            nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+            nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                          ? line.size()
+                          : line.find(delimiter, currentPos);
         }
 
         value = line.substr(currentPos, nextPos - currentPos);
         log.cycles = std::stoul(value, nullptr, 10);
         currentPos = nextPos + 1;
-        nextPos = (line.find(delimiter, currentPos) == std::string::npos) ? line.size() : line.find(delimiter, currentPos);
+        nextPos = (line.find(delimiter, currentPos) == std::string::npos)
+                      ? line.size()
+                      : line.find(delimiter, currentPos);
 
         logs.push_back(log);
-    }     
+    }
     return logs;
 }
-
 
 int main() {
     getLogs("arm.log");
