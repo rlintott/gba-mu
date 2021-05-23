@@ -11,9 +11,16 @@
 
 
 ARM7TDMI::ARM7TDMI() {
-    switchToMode(SUPERVISOR);
-    cpsr.T = 0;  // set CPU to ARM state
-    setRegister(PC_REGISTER, BOOT_LOCATION);
+    switchToMode(SYSTEM);
+    cpsr.T = 0; // set CPU to ARM state
+    cpsr.Z = 1; // why? TODO: find out
+    cpsr.C = 1;
+    setRegister(PC_REGISTER, BOOT_LOCATION); 
+
+    // TODO: find out why setting register 0 and 1
+    setRegister(0, 0x08000000);
+    setRegister(1, 0x000000EA); 
+    setRegister(13, 0x03007F00); // stack pointer
 }
 
 ARM7TDMI::~ARM7TDMI() {}
@@ -30,7 +37,7 @@ void ARM7TDMI::step() {
     currentInstruction = instruction;
     #endif
 
-    DEBUG(std::bitset<32>(currentInstruction).to_string() << "\n");
+    //DEBUG(std::bitset<32>(currentInstruction).to_string() << "\n");
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         uint8_t cond = (instruction & 0xF0000000) >> 28;
@@ -60,6 +67,7 @@ void ARM7TDMI::addDebugger(Debugger * debugger) {
 void ARM7TDMI::switchToMode(Mode mode) {
     cpsr.Mode = mode;
     switch (mode) {
+        case SYSTEM:
         case USER: {
             currentSpsr = &cpsr;
             registers[8] = &r8;
@@ -104,12 +112,6 @@ void ARM7TDMI::switchToMode(Mode mode) {
             currentSpsr = &SPSR_und;
             registers[13] = &r13_abt;
             registers[14] = &r14_abt;
-            break;
-        }
-        case SYSTEM: {
-            currentSpsr = &SPSR_svc;
-            registers[13] = &r13_svc;  // ? TODO check
-            registers[14] = &r14_svc;  // ?
             break;
         }
     }
@@ -382,12 +384,14 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
             This value is zero extended to 32 bits, and then subject to a
             rotate right by twice the value in the rotate field.
         */
-        uint32_t rm = getRm(instruction);
+
+        DEBUG("shifting immediate\n");
+        uint32_t imm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
-        uint32_t op2 = aluShiftRor(rm, is % 32);
+        uint32_t op2 = aluShiftRor(imm, is % 32);
         // carry out bit is the least significant discarded bit of rm
         if (is > 0) {
-            carryBit = (rm >> (is - 1));
+            carryBit = (imm >> (is - 1));
         }
         return {op2, carryBit};
     }
@@ -526,6 +530,10 @@ uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu) {
 
 ARM7TDMI::ProgramStatusRegister *ARM7TDMI::getCurrentModeSpsr() {
     return currentSpsr;
+}
+
+ARM7TDMI::ProgramStatusRegister ARM7TDMI::getCpsr() {
+    return cpsr;
 }
 
 uint32_t ARM7TDMI::getRegister(uint8_t index) { return *(registers[index]); }

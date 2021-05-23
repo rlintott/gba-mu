@@ -59,12 +59,15 @@ class ARM7TDMI {
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister *getCurrentModeSpsr();
 
+    ProgramStatusRegister getCpsr();
+
     // accounts for modes, ex in IRQ mode, getting register 14 will return value
     // of R14_irq
     uint32_t getRegister(uint8_t index);
     uint32_t getUserRegister(uint8_t index);
 
     uint32_t getCurrentInstruction();
+    static uint32_t psrToInt(ProgramStatusRegister psr);
   
    private:
     uint32_t currentInstruction; // for debugging
@@ -233,7 +236,7 @@ class ARM7TDMI {
 
     static bool sFlagSet(uint32_t instruction);
 
-    static uint32_t psrToInt(ProgramStatusRegister psr);
+    
     void transferToPsr(uint32_t value, uint8_t field,
                        ProgramStatusRegister *psr);
 

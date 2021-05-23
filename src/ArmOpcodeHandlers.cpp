@@ -142,6 +142,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
             } else {  // register
                 assert(!(instruction & 0x00000FF0));
                 assert(getRm(instruction) != PC_REGISTER);
+                // TODO: refactor this, don't have to pass in a pointer to the psr
                 cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx,
                                    psr);
             }
@@ -179,6 +180,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     // shift op2
+
     AluShiftResult shiftResult = cpu->aluShift(
         instruction, (instruction & 0x02000000), (instruction & 0x00000010));
     uint8_t rd = getRd(instruction);
@@ -312,6 +314,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             break;
         }
         case MOV: {  // MOV
+            DEBUG("in mov\n");
             uint32_t result = op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
@@ -706,6 +709,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0x0A000000);
 
+    //DEBUG("howdy\n");
+
     uint32_t offset = ((instruction & 0x00FFFFFF) << 2);
     // TODO might be able to remove +8 when after implekemting pipelining
     uint32_t branchAddress = cpu->getRegister(PC_REGISTER) + offset + 8;
@@ -728,6 +733,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert(((instruction & 0x0FFFFF00) >> 8) == 0b00010010111111111111);
+
+    DEBUG("hi there!!!\n");
     // for this op rn is where rm usually is
     uint8_t rn = getRm(instruction);
     assert(rn != PC_REGISTER);
