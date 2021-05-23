@@ -191,20 +191,19 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     bool signBit = (cpu->cpsr).N;
     bool zeroBit = (cpu->cpsr).Z;
 
-    uint32_t rnValue;
+    uint32_t rnVal;
     // if rn == pc regiser, have to add to it to account for pipelining /
     // prefetching
     // TODO probably dont need this logic if pipelining is emulated
     if (rn != PC_REGISTER) {
-        rnValue = cpu->getRegister(rn);
+        rnVal = cpu->getRegister(rn);
     } else if (!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnValue = cpu->getRegister(rn) + 12;
+        rnVal = cpu->getRegister(rn) + 12;
     } else {
-        rnValue = cpu->getRegister(rn) + 8;
+        rnVal = cpu->getRegister(rn) + 8;
     }
     uint32_t op2 = shiftResult.op2;
 
-    uint32_t rnVal = cpu->getRegister(rn);
 
     switch (opcode) {
         case AND: {  // AND
@@ -240,6 +239,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             break;
         }
         case ADD: {  // ADD
+            DEBUG("in add! rd=" << (uint32_t)rd << " rn= " << (uint32_t)rn << std::endl);
             uint32_t result = rnVal + op2;
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
