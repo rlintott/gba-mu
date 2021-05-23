@@ -27,7 +27,6 @@ public:
     // 03000000-03007FFF (32 kB)
     std::array<uint8_t, 32896>* wRamChip;
 
-
     // Game Pak ROM/FlashROM (max 32MB), 08000000-09FFFFFF
     std::vector<uint8_t>* gamePakRom;
 
@@ -35,9 +34,9 @@ public:
     uint8_t read8(uint32_t address);
     uint16_t read16(uint32_t address);
 
-    uint32_t write32(uint32_t address, uint32_t word);
-    uint32_t write8(uint32_t address, uint8_t byte);
-    uint32_t write16(uint32_t address, uint16_t halfWord);
+    void write32(uint32_t address, uint32_t word);
+    void write8(uint32_t address, uint8_t byte);
+    void write16(uint32_t address, uint16_t halfWord);
 
     void loadRom(std::string path);
 
