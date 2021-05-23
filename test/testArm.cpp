@@ -3,10 +3,20 @@
 #include <iostream>
 #include <iterator>
 #include <vector>
+#include <bitset>
+#include <assert.h>
 
 #include "../src/ARM7TDMI.h"
 #include "../src/Bus.h"
 #include "../src/GameBoyAdvance.h"
+
+
+
+#define ASSERT_EQUAL(message, expected, actual) \
+    if (expected != actual) { \
+        DEBUG("ASSERTION FAILED: " << message <<  \
+        " expected: " << expected << " != actual: " << actual << \
+        "\n"); assert(false); } 
 
 typedef struct cpu_log {
     uint32_t address;
@@ -75,7 +85,23 @@ std::vector<cpu_log> getLogs(std::string path) {
 }
 
 int main() {
-    getLogs("arm.log");
+    std::vector<cpu_log> logs = getLogs("arm.log");
 
+    ARM7TDMI cpu;
+    Bus bus;
+    GameBoyAdvance gba(&cpu, &bus);
+    gba.loadRom("arm.gba");
+
+    for(cpu_log log : logs) {
+        uint32_t instrAddress = cpu.getRegister(15);
+        std::cout << "expectedAddr:\t" << log.address << std::endl;
+        std::cout << "actualAddr:\t" << instrAddress << std::endl;
+        ASSERT_EQUAL("address", (uint32_t)log.address, instrAddress)
+        cpu.step();
+        std::cout << "expectedInstr:\t" << log.instruction << std::endl;
+        std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
+        std::cout << "actualInstr bits\t" << std::bitset<32>(cpu.getCurrentInstruction()).to_string() << std::endl;
+        ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction())
+    }
     return 0;
 }

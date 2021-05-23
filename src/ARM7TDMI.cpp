@@ -18,19 +18,33 @@ ARM7TDMI::ARM7TDMI() {
 
 ARM7TDMI::~ARM7TDMI() {}
 
+uint32_t ARM7TDMI::getCurrentInstruction() {
+    return currentInstruction;
+}
+
 void ARM7TDMI::step() {
     // read from program counter
     uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
 
+    #ifndef NDEBUG
+    currentInstruction = instruction;
+    #endif
+
+    DEBUG(std::bitset<32>(currentInstruction).to_string() << "\n");
+
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         uint8_t cond = (instruction & 0xF0000000) >> 28;
-
         if(conditionalHolds(cond)) {
             ArmOpcodeHandler handler = decodeArmInstruction(instruction);
             Cycles cycles = handler(instruction, this);
+            if(handler != ArmOpcodeHandlers::branchAndExchangeHandler && handler != ArmOpcodeHandlers::branchHandler) {
+                // increment PC
+                setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
+            }
+        } else {
+            // increment PC
+            setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
         }
-        // increment PC
-        setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
     } else {  // THUMB state
     }
 }
@@ -261,26 +275,44 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
     uint32_t instruction) {
     switch (instruction & 0b00001110000000000000000000000000) {  // mask 1
         case 0b00000000000000000000000000000000: {
+
             if ((instruction & 0b00001111111111111111111111010000) ==
                 0b00000001001011111111111100010000) {  // BX,BLX
+
+                return ArmOpcodeHandlers::branchAndExchangeHandler;
+
             } else if ((instruction & 0b00001111101100000000111111110000) ==
                        0b00000001000000000000000010010000) {  // TransSwp12
+
+                return ArmOpcodeHandlers::singleDataSwapHandler;
+
             } else if ((instruction & 0b00001111100100000000111111110000) ==
                        0b00000001000000000000000000000000) {  // PSR Reg
+
                 return ArmOpcodeHandlers::psrHandler;
+
             } else if ((instruction & 0b00001110010000000000111110010000) ==
                        0b00000000000000000000000010010000) {  // TransReg10
+
+                return ArmOpcodeHandlers::halfWordDataTransHandler;
+
             } else if ((instruction & 0b00001111110000000000000011110000) ==
                        0b00000000000000000000000010010000) {  // Multiply
+
                 return ArmOpcodeHandlers::multiplyHandler;
+
             } else if ((instruction & 0b00001111100000000000000011110000) ==
                        0b00000000100000000000000010010000) {  // MulLong
+
                 return ArmOpcodeHandlers::multiplyHandler;
+
             } else if ((instruction & 0b00001110010000000000000010010000) ==
                        0b00000000010000000000000010010000) {  // TransImm10
+                
+                return ArmOpcodeHandlers::halfWordDataTransHandler;
 
             } else {  // dataProc
-                debugger->disassembleDataProcessing(instruction);
+                // debugger->disassembleDataProcessing(instruction);
                 return ArmOpcodeHandlers::dataProcHandler;
             }
             break;
@@ -288,36 +320,51 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
         case 0b00000010000000000000000000000000: {
             if ((instruction & 0b00001111101100000000000000000000) ==
                 0b00000011001000000000000000000000) {  // PSR Imm
+
                 return ArmOpcodeHandlers::psrHandler;
+
             } else {  // DataProc
-                debugger->disassembleDataProcessing(instruction);
+                // debugger->disassembleDataProcessing(instruction);
                 return ArmOpcodeHandlers::dataProcHandler;
             }
         }
-        case 0b00001000000000000000000000000000: {
-            break;
+        case 0b00001000000000000000000000000000: { // block transfer
+
+            return ArmOpcodeHandlers::blockDataTransHandler;
+
         }
-        case 0b00001010000000000000000000000000: {
-            break;
+        case 0b00001010000000000000000000000000: { // B,BL,BLX
+
+            return ArmOpcodeHandlers::branchHandler;
+
         }
-        case 0b00001110000000000000000000000000: {
+        case 0b00001110000000000000000000000000: { // SWI
+            // TODO: implement software interrupt
             break;
+
         }
         case 0b00000100000000000000000000000000: {  // transImm9
+
             return ArmOpcodeHandlers::singleDataTransHandler;
-            break;
+
         }
         case 0b00000110000000000000000000000000: {
             if ((instruction & 0b00001110000000000000000000010000) ==
                 0b00000110000000000000000000000000) {  // TransReg9
+
                 return ArmOpcodeHandlers::singleDataTransHandler;
+
             } else {  // Undefined
+
                 return ArmOpcodeHandlers::undefinedOpHandler;
+
             }
             break;
         }
         default: {
+
             return ArmOpcodeHandlers::undefinedOpHandler;
+
         }
     }
     return ArmOpcodeHandlers::undefinedOpHandler;

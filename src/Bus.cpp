@@ -7,9 +7,9 @@
 #include <iterator>
 
 Bus::Bus() {
-    // allocating these large objects on the heap
     wRamBoard = new std::array<uint8_t, 263168>();
     wRamChip = new std::array<uint8_t, 32896>();
+    gamePakRom = new std::vector<uint8_t>();
 }
 
 Bus::~Bus() {
@@ -112,6 +112,7 @@ void Bus::write16(uint32_t address, uint16_t halfWord) {
 }
 
 void Bus::loadRom(std::string path) {
+
     std::ifstream binFile(path, std::ios::binary);
     std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
 

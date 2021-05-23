@@ -513,6 +513,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         case 0: {
             // Reserved for SWP instruction
             assert(false);
+            break;
         }
         case 1: {     // STRH or LDRH (depending on l)
             if (l) {  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword
@@ -524,6 +525,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
             } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
                 cpu->bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal);
             }
+            break;
         }
         case 2: {  // LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign
                    // extended)
@@ -535,6 +537,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
             } else {
                 cpu->setRegister(rd, val);
             }
+            break;
         }
         case 3: {  // LDR{cond}SH Rd,<Address>  ;Load Signed halfword (sign
                    // extended)
@@ -546,6 +549,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
             } else {
                 cpu->setRegister(rd, val);
             }
+            break;
         }
     }
 
@@ -732,10 +736,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
     switch ((instruction & 0x000000F0) >> 4) {
         case 0x1: {
             // BX PC=Rn, T=Rn.0
+            break;
         }
         case 0x3: {
             // BLX PC=Rn, T=Rn.0, LR=PC+4
             cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 4);
+            break;
         }
     }
 

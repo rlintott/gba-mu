@@ -1,27 +1,28 @@
 #pragma once
 
-// define ndebug to suppress debug logs  
+// define ndebug to suppress debug logs
 // #define NDEBUG 1;
 
-#include <vector>
 #include <array>
+#include <vector>
+
 #include "ARM7TDMI.h"
 
-#ifdef NDEBUG 
-#define DEBUG(x) 
+#ifdef NDEBUG
+#define DEBUG(x)
 #else
-#define DEBUG(x) do { std::cerr << x; } while (0)
+#define DEBUG(x)        \
+    do {                \
+        std::cerr << x; \
+    } while (0)
 #endif
 
-
 class Bus {
-
-public:
+   public:
     Bus();
     ~Bus();
 
-public:
-
+   public:
     // work ram! 02000000-0203FFFF (256kB)
     std::array<uint8_t, 263168>* wRamBoard;
     // 03000000-03007FFF (32 kB)
@@ -39,6 +40,4 @@ public:
     void write16(uint32_t address, uint16_t halfWord);
 
     void loadRom(std::string path);
-
-    
 };

@@ -63,8 +63,12 @@ class ARM7TDMI {
     // of R14_irq
     uint32_t getRegister(uint8_t index);
     uint32_t getUserRegister(uint8_t index);
+
+    uint32_t getCurrentInstruction();
   
    private:
+    uint32_t currentInstruction; // for debugging
+
    // struct representing the number of cycles an operation will take
     struct Cycles {
         uint8_t nonSequentialCycles : 8;
@@ -152,7 +156,8 @@ class ARM7TDMI {
     static const uint8_t PC_REGISTER = 15;
     static const uint8_t LINK_REGISTER = 14;
     static const uint8_t SP_REGISTER = 13;
-    static const uint32_t BOOT_LOCATION = 0x0;
+    // TODO: temporary boot location for testing
+    static const uint32_t BOOT_LOCATION = 0x08000000;
 
     uint8_t overflowBit = 0;
     uint8_t carryBit = 0;

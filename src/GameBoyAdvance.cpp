@@ -1,10 +1,11 @@
 #include "GameBoyAdvance.h"
+
+#include <fstream>
+#include <iostream>
+#include <iterator>
+
 #include "ARM7TDMI.h"
 #include "Bus.h"
-
-#include <iostream>
-#include <fstream>
-#include <iterator>
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
     this->arm7tdmi = _arm7tdmi;
@@ -12,16 +13,6 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
     arm7tdmi->connectBus(bus);
 }
 
-GameBoyAdvance::~GameBoyAdvance() {
-}
+GameBoyAdvance::~GameBoyAdvance() {}
 
-
-void GameBoyAdvance::loadRom(std::string path) {
-    bus->loadRom(path);
-}
-
-
-
-
-
-
+void GameBoyAdvance::loadRom(std::string path) { bus->loadRom(path); }
