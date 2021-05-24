@@ -107,6 +107,9 @@ int main() {
         uint32_t cpsr = cpu.psrToInt(cpu.getCpsr());
         std::cout << "expectedCpsr:\t" << log.cpsr << std::endl;
         std::cout << "actualCpsr:\t" << cpsr << std::endl;
+        std::cout << "expectedCpsr bits\t" << std::bitset<32>(log.cpsr).to_string() << std::endl;
+        std::cout << "actualCpsr bits\t\t" << std::bitset<32>(cpsr).to_string() << std::endl;
+
         ASSERT_EQUAL("cpsr", (uint32_t)log.cpsr, (uint32_t)cpsr)
 
         ASSERT_EQUAL("r0", log.r[0], cpu.getRegister(0))

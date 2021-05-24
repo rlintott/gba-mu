@@ -140,7 +140,7 @@ class ARM7TDMI {
     uint32_t r13 = 0;
     uint32_t r14 = 0;
     uint32_t r15 = 0;
-    uint32_t r8_fiq = 69;
+    uint32_t r8_fiq = 0x0;
     uint32_t r9_fiq = 0x0;
     uint32_t r10_fiq = 0x0;
     uint32_t r11_fiq = 0x0;

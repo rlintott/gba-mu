@@ -6,6 +6,7 @@
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = getOpcode(instruction);
+    DEBUG("in multiply instr\n");
     // rd is different for multiply
     uint8_t rd = (instruction & 0x000F0000) >> 16;
     uint8_t rm = getRm(instruction);
@@ -34,10 +35,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             break;
         }
         case 0b0100: {  // UMULL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
+            DEBUG("umull\n");
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             longResult._unsigned =
                 (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+            DEBUG(longResult._unsigned << " <- result\n");
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
@@ -90,14 +93,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     }
 
     if (sFlagSet(instruction)) {
+        DEBUG("s flag set!\n");
         if (!(opcode & 0b0100)) {  // regular mult opcode,
             cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
             cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
         } else {
+            DEBUG("long mul cpsr setting\n");
             cpu->cpsr.Z = (longResult._unsigned == 0);
             cpu->cpsr.N = (longResult._unsigned >> 63);
         }
-        cpu->cpsr.C = 0;
+        // cpu->cpsr.C = 0;
+        // cpu->cpsr.V = 0;
     }
     return {};
 }
@@ -109,6 +115,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
                                                          ARM7TDMI *cpu) {
     assert(!(instruction & 0x0C000000));
     assert(!sFlagSet(instruction));
+    DEBUG("in psr handler\n");
     // bit 25: I - Immediate Operand Flag
     // (0=Register, 1=Immediate) (Zero for MRS)
     bool immediate = (instruction & 0x02000000);
@@ -116,14 +123,19 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
     // (0=CPSR, 1=SPSR_<current mode>)
     bool psrSource = (instruction & 0x00400000);
 
+    DEBUG(immediate << " <- immediate?\n");
+    DEBUG(psrSource << " <- psrSource?\n");
+
     // bit 21: special opcode for PSR
     switch ((instruction & 0x00200000) >> 21) {
         case 0: {  // MRS{cond} Rd,Psr ; Rd = Psr
+            DEBUG("MRS{cond}\n");
             assert(!immediate);
             assert(getRn(instruction) == 0xF);
             assert(!(instruction & 0x00000FFF));
             uint8_t rd = getRd(instruction);
-            if (psrSource) {
+            DEBUG((uint32_t)rd << " <- rd\n");
+            if (!psrSource) {
                 cpu->setRegister(rd, psrToInt(cpu->cpsr));
             } else {
                 cpu->setRegister(rd, psrToInt(*(cpu->getCurrentModeSpsr())));
@@ -131,10 +143,11 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
             break;
         }
         case 1: {  // MSR{cond} Psr{_field},Op  ;Psr[field] = Op=
+            DEBUG("MSR{cond}\n");
             assert((instruction & 0x0000F000) == 0x0000F000);
             uint8_t fscx = (instruction & 0x000F0000) >> 16;
             ProgramStatusRegister *psr =
-                (psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
+                (!psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
             if (immediate) {
                 uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
                 uint8_t shift = (instruction & 0x00000F00) >> 7;
@@ -364,7 +377,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
         cpu->cpsr.N = signBit;
         cpu->cpsr.V = overflowBit;
     } else if (rd == PC_REGISTER && sFlagSet(instruction)) {
+        DEBUG("changing cpsr in dataproc\n");
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
+        cpu->switchToMode(ARM7TDMI::Mode((*(cpu->getCurrentModeSpsr())).Mode));
     } else {
     }  // flags not affected, not allowed in CMP
 
@@ -379,7 +394,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     // used as address
     // ;*** restriction: must be located in range PC+/-4095+8, if so,
     // ;*** assembler will calculate offset and use PC (R15) as base.
-
+    DEBUG("single data transfer\n");
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
@@ -390,6 +405,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
 
     uint32_t offset;
     // I - Immediate Offset Flag (0=Immediate, 1=Shifted Register)
+    DEBUG((bool)(instruction & 0x02000000) << " <- imm\n");
     if ((instruction & 0x02000000)) {
         // Register shifted by Immediate as Offset
         assert(!(instruction & 0x00000010));  // bit 4 Must be 0 (Reserved, see
@@ -397,6 +413,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
         uint8_t rm = getRm(instruction);
         assert(rm != 15);
         uint8_t shiftAmount = (instruction & 0x00000F80) >> 7;
+        DEBUG(cpu->getRegister(rm) << " <- rmval\n");
         switch ((instruction & 0x00000060) >> 5 /*shift type*/) {
             case 0: {  // LSL
                 offset = shiftAmount != 0
@@ -414,9 +431,11 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
                 offset = shiftAmount != 0
                              ? aluShiftAsr(cpu->getRegister(rm), shiftAmount)
                              : aluShiftAsr(cpu->getRegister(rm), 32);
+            
                 break;
             }
-            case 4: {  // ROR
+            case 3: {  // ROR
+                DEBUG((uint32_t)shiftAmount << " shiftamount ROR \n");
                 offset =
                     shiftAmount != 0
                         ? aluShiftRor(cpu->getRegister(rm), shiftAmount % 32)
@@ -429,6 +448,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     }
 
     uint32_t address = rnVal;
+    DEBUG(address << " <- raw addr\n");
+    DEBUG(address << " <- offset\n");
+
     // U - Up/Down Bit (0=down; subtract offset
     // from base, 1=up; add to base)
     bool u = dataTransGetU(instruction);
@@ -436,13 +458,19 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     // P - Pre/Post (0=post; add offset after
     // transfer, 1=pre; before trans.)
     bool p = dataTransGetP(instruction);
+    DEBUG((uint32_t)rn << "<- rnIndex\n");
 
     if (p) {  // add offset before transfer
         address = u ? address + offset : address - offset;
         if (dataTransGetW(instruction)) {
+            DEBUG(address << " <- write address before trans\n");
             // write address back into base register
             cpu->setRegister(rn, address);
         }
+    } else {
+        DEBUG("adding offset after trasnfer\n");
+        // add offset after transfer and always write back
+        cpu->setRegister(rn, u ? address + offset : address - offset);
     }
 
     bool b = dataTransGetB(instruction);  // B - Byte/Word bit (0=transfer
@@ -450,12 +478,15 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     // TODO implement t bit, force non-privilege access
     // L - Load/Store bit (0=Store to memory, 1=Load from memory)
     if (dataTransGetL(instruction)) {
+        DEBUG("LDR\n");
         // LDR{cond}{B}{T} Rd,<Address> ;Rd=[Rn+/-<offset>]
         if (b) {  // transfer 8 bits
+            DEBUG("transferring byte\n");
             cpu->setRegister(rd, (uint32_t)(cpu->bus->read8(address)));
         } else {  // transfer 32 bits
             if ((address & 0x00000003) != 0 && (address & 0x00000001) == 0) {
                 // aligned to half-word but not word
+                DEBUG("half world aligned\n");
                 uint32_t low =
                     (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE));
                 uint32_t hi =
@@ -468,25 +499,28 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
                 // aligned to word
                 // Reads from forcibly aligned address "addr AND (NOT 3)",
                 // and does then rotate the data as "ROR (addr AND 3)*8". T
+                DEBUG(((address & 3) * 8) << " <- shiftAmount\n");
+                DEBUG((address & 0xFFFFFFFC) << " <- reading from addr\n");
+                DEBUG((uint32_t)rd << " <- rd index\n");
+                DEBUG(aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+                                    (address & 3) * 8) << "\n");
                 cpu->setRegister(
                     rd, aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
                                     (address & 3) * 8));
             }
         }
     } else {
+        DEBUG(" STR \n");
         // STR{cond}{B}{T} Rd,<Address>   ;[Rn+/-<offset>]=Rd
         if (b) {  // transfer 8 bits
             cpu->bus->write8(address, (uint8_t)(rdVal));
         } else {  // transfer 32 bits
+                DEBUG((address & 0xFFFFFFFC) << " <- writing to addr\n");
             cpu->bus->write32(address & 0xFFFFFFFC, (rdVal));
         }
     }
 
-    if (!p) {
-        // add offset after transfer and always write back
-        address = u ? address + offset : address - offset;
-        cpu->setRegister(rn, address);
-    }
+
     return {};
 }
 
@@ -813,5 +847,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string()
                                << std::endl);
+    cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     return {};
 }
