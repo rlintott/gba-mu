@@ -198,9 +198,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     if (rn != PC_REGISTER) {
         rnVal = cpu->getRegister(rn);
     } else if (!(instruction & 0x02000000) && (instruction & 0x00000010)) {
-        rnVal = cpu->getRegister(rn) + 12;
-    } else {
         rnVal = cpu->getRegister(rn) + 8;
+    } else {
+        rnVal = cpu->getRegister(rn) + 4;
     }
     uint32_t op2 = shiftResult.op2;
 
@@ -316,6 +316,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
         case MOV: {  // MOV
             DEBUG("in mov\n");
             uint32_t result = op2;
+            DEBUG(result << " mov result\n");
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
@@ -362,10 +363,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
-        (rd == 15) ? cpu->getRegister(rd) + 12 : cpu->getRegister(rd);
+        (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
     uint8_t rn = getRn(instruction);
     uint32_t rnVal =
-        (rn == 15) ? cpu->getRegister(rn) + 8 : cpu->getRegister(rn);
+        (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
 
     uint32_t offset;
     // I - Immediate Offset Flag (0=Immediate, 1=Shifted Register)
@@ -474,10 +475,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
     assert((instruction & 0x0E000000) == 0);
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
-        (rd == 15) ? cpu->getRegister(rd) + 12 : cpu->getRegister(rd);
+        (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
     uint8_t rn = getRn(instruction);
     uint32_t rnVal =
-        (rn == 15) ? cpu->getRegister(rn) + 8 : cpu->getRegister(rn);
+        (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
 
     uint32_t offset = 0;
 
@@ -639,7 +640,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
                     uint32_t data = (!s) ? cpu->getRegister(reg)
                                          : cpu->getUserRegister(reg);
                     // TODO: take this out when implemeinting pipelining
-                    if (reg == 15) data += 12;
+                    if (reg == 15) data += 8;
                     cpu->bus->write32(rnVal & 0xFFFFFFFC, data);
                 }
                 rnVal += 4;
@@ -673,7 +674,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
 
                     uint32_t data = (!s) ? cpu->getRegister(reg)
                                          : cpu->getUserRegister(reg);
-                    if (reg == 15) data += 12;
+                    if (reg == 15) data += 8;
                     cpu->bus->write32(rnVal & 0xFFFFFFFC, data);
                 }
                 rnVal -= 4;
@@ -709,36 +710,47 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0x0A000000);
 
-    //DEBUG("howdy\n");
+    DEBUG("in branch handler\n");
 
-    uint32_t offset = ((instruction & 0x00FFFFFF) << 2);
-    // TODO might be able to remove +8 when after implekemting pipelining
-    uint32_t branchAddress = cpu->getRegister(PC_REGISTER) + offset + 8;
-    branchAddress &= 0xFFFFFFFC;
+    int32_t offset = ((instruction & 0x00FFFFFF) << 2);
+    if(offset & 0x02000000) {
+        // negative? Then must sign extend
+        offset |= 0xFE000000;
+    }
+
+    BitPreservedInt32 pcVal;
+    pcVal._unsigned = cpu->getRegister(PC_REGISTER);
+    BitPreservedInt32 branchAddr;
+
+    // TODO might be able to remove +4 when after implekemting pipelining
+    branchAddr._signed = pcVal._signed + offset + 4;
+    branchAddr._unsigned &= 0xFFFFFFFC;
     switch ((instruction & 0x01000000) >> 24) {
         case 0: {
             // B
+            DEBUG("B\n");
             break;
         }
         case 1: {
             // BL LR=PC+4
-            cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 4);
+            cpu->setRegister(14, cpu->getRegister(PC_REGISTER));
             break;
         }
     }
 
-    cpu->setRegister(PC_REGISTER, branchAddress);
+    cpu->setRegister(PC_REGISTER, branchAddr._unsigned);
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert(((instruction & 0x0FFFFF00) >> 8) == 0b00010010111111111111);
 
-    DEBUG("hi there!!!\n");
+    DEBUG("bx handler\n");
     // for this op rn is where rm usually is
     uint8_t rn = getRm(instruction);
     assert(rn != PC_REGISTER);
     uint32_t rnVal = cpu->getRegister(rn);
+    DEBUG(rnVal << "\n");
 
     switch ((instruction & 0x000000F0) >> 4) {
         case 0x1: {
@@ -747,7 +759,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
         }
         case 0x3: {
             // BLX PC=Rn, T=Rn.0, LR=PC+4
-            cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 4);
+            cpu->setRegister(14, cpu->getRegister(PC_REGISTER));
             break;
         }
     }
@@ -756,19 +768,22 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
         For ARM code, the low bits of the target address should be usually zero,
         otherwise, R15 is forcibly aligned by clearing the lower two bits.
         For THUMB code, the low bit of the target address may/should/must be
-       set, the bit is (or is not) interpreted as thumb-bit (depending on the
-       opcode), and R15 is then forcibly aligned by clearing the lower bit. In
-       short, R15 will be always forcibly aligned, so mis-aligned branches won't
-       have effect on subsequent opcodes that use R15, or [R15+disp] as operand.
+        set, the bit is (or is not) interpreted as thumb-bit (depending on the
+        opcode), and R15 is then forcibly aligned by clearing the lower bit. In
+        short, R15 will be always forcibly aligned, so mis-aligned branches won't
+        have effect on subsequent opcodes that use R15, or [R15+disp] as operand.
     */
 
     bool t = rnVal & 0x1;
+    DEBUG(t << " \n");
     cpu->cpsr.T = t;
+    DEBUG((bool)cpu->cpsr.T << " cpsr.T \n");
     if (t) {
         rnVal &= 0xFFFFFFFE;
     } else {
         rnVal &= 0xFFFFFFFC;
     }
+    DEBUG(rnVal << "\n");
     cpu->setRegister(PC_REGISTER, rnVal);
 }
 

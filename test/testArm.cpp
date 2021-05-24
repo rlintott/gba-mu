@@ -119,8 +119,13 @@ int main() {
         ASSERT_EQUAL("r12", log.r[12], cpu.getRegister(12))
         ASSERT_EQUAL("r13", log.r[13], cpu.getRegister(13))
         ASSERT_EQUAL("r14", log.r[14], cpu.getRegister(14))
-        // add 4 to PC to account for pipelining
-        ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
+        if(log.cpsr & 0x00000020) {
+            // in thumb state add 2 to PC to account for pipelining
+            ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 2)
+        } else {
+            // in arm state add 4 to PC to account for pipelining
+            ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
+        }
     
         cpu.step();
 
