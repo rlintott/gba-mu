@@ -527,6 +527,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0);
+    DEBUG("in halfword data trans\n");
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
         (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
@@ -536,11 +537,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
 
     uint32_t offset = 0;
 
+    DEBUG((uint32_t)rd << " <- rd index\n");
+    DEBUG((uint32_t)rn << " <- rn index\n");
+    DEBUG((uint32_t)rdVal << " <- rdVal\n");
+    DEBUG((uint32_t)rnVal << " <- rnVal\n");
+
     bool l = dataTransGetL(instruction);
 
     if (instruction & 0x00400000) {
         // immediate as offset
-        offset = (((instruction & 0x00000F00) >> 4) | getRm(instruction));
+        offset = (((instruction & 0x00000F00) >> 4) | (instruction & 0x0000000F));
+        DEBUG(offset << " <- immediate offset\n");
 
     } else {
         // register as offset
@@ -564,6 +571,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
     } else {
         // post-indexing offset
         assert(dataTransGetW(instruction) == 0);
+        // add offset after transfer and always write back
+        cpu->setRegister(rn, dataTransGetU(instruction) ? address + offset : address - offset);
+
     }
 
     uint8_t opcode = (instruction & 0x00000060) >> 5;
@@ -575,12 +585,14 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         }
         case 1: {     // STRH or LDRH (depending on l)
             if (l) {  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword
-                      // (zero-extended)
+                      // (zero-extended)         
                 cpu->setRegister(
                     rd, aluShiftRor(
                             (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE)),
                             (address & 1) * 8));
             } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
+                DEBUG((address & 0xFFFFFFFE) << " <- address will store halfword to\n");
+                DEBUG((uint16_t)rdVal << " <- will store this\n");
                 cpu->bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal);
             }
             break;
@@ -599,11 +611,26 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         }
         case 3: {  // LDR{cond}SH Rd,<Address>  ;Load Signed halfword (sign
                    // extended)
-                   // LDRSH Rd,[odd]  -->  LDRSB Rd,[odd] ;sign-expand BYTE value
+            if(address & 0x00000001) {
+                // TODO refactor this, reusing the same code as case 2
+                // strange case: LDRSH Rd,[odd]  -->  LDRSB Rd,[odd] ;sign-expand BYTE value
+                assert(l);
+                uint32_t val = (uint32_t)(cpu->bus->read8(address));
+                if (val & 0x00000080) {
+                    cpu->setRegister(rd, 0xFFFFFF00 | val);
+                } else {
+                    cpu->setRegister(rd, val);
+                }
+                break;
+            }
+
             assert(l);
-            uint32_t val = (uint32_t)(cpu->bus->read8(address));
-            if (val & 0x00000080) {
-                cpu->setRegister(rd, 0xFFFFFF00 | val);
+            DEBUG("LDR{cond}SH\n");
+            DEBUG(address << " <- address will read from\n");
+            uint32_t val = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE));
+            DEBUG(val << " <- returned from read\n");
+            if (val & 0x00008000) {
+                cpu->setRegister(rd, 0xFFFF0000 | val);
             } else {
                 cpu->setRegister(rd, val);
             }
@@ -611,18 +638,13 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         }
     }
 
-    if (!p) {
-        // add offset after transfer and always write back
-        address =
-            dataTransGetU(instruction) ? address + offset : address - offset;
-        cpu->setRegister(rn, address);
-    }
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
     // TODO: figure out memory alignment logic (for all data transfer ops)
-    // (verify against existing CPU implementations)
+    // (verify against existing CPU implementations
     uint32_t instruction, ARM7TDMI *cpu) {
+    DEBUG("singlke data swap\n");
     assert((instruction & 0x0F800000) == 0x01000000);
     assert(!(instruction & 0x00300000));
     assert((instruction & 0x00000FF0) == 0x00000090);
@@ -655,6 +677,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
+    DEBUG("block data trans\n");
     // TODO: data aborts (if even applicable to GBA?)
     assert((instruction & 0x0E000000) == 0x08000000);
     // base register

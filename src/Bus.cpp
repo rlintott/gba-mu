@@ -42,7 +42,7 @@ uint32_t Bus::read32(uint32_t address) {
 
 uint8_t Bus::read8(uint32_t address) {
     if (0x02000000 <= address && address <= 0x0203FFFF) {
-        return (uint8_t)wRamBoard->at(address - 0x02000000);
+        return (uint8_t)wRamBoard->at(address - 0x02000000U);
     } else if (0x03000000 <= address && address <= 0x03007FFF) {
         return (uint8_t)wRamChip->at(address - 0x03000000U);
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
@@ -56,8 +56,9 @@ uint16_t Bus::read16(uint32_t address) {
         return (uint16_t)wRamBoard->at(address - 0x02000000U) |
                (uint16_t)wRamBoard->at((address + 1) - 0x02000000U) << 8;
     } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        return (uint16_t)wRamChip->at(address - 0x03000000U) |
-               (uint16_t)wRamChip->at((address + 1) - 0x03000000U) << 8;
+        DEBUG("reading halword from wRampChip\n");
+        return ((uint16_t)wRamChip->at(address - 0x03000000U)) |
+               ((uint16_t)wRamChip->at((address + 1) - 0x03000000U) << 8);
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
         return (uint16_t)gamePakRom->at(address - 0x08000000U) |
                (uint16_t)gamePakRom->at((address + 1) - 0x08000000U) << 8;
@@ -103,6 +104,7 @@ void Bus::write16(uint32_t address, uint16_t halfWord) {
         (*wRamBoard)[address - 0x02000000U] = (uint8_t)halfWord;
         (*wRamBoard)[(address + 1) - 0x02000000U] = (uint8_t)(halfWord >> 8);
     } else if (0x03000000 <= address && address <= 0x03007FFF) {
+        DEBUG("writing 16 bit to wRamChip\n");
         (*wRamChip)[address - 0x03000000U] = (uint8_t)halfWord;
         (*wRamChip)[(address + 1) - 0x03000000U] = (uint8_t)(halfWord >> 8);
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
