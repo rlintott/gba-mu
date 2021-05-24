@@ -654,24 +654,35 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
     uint8_t rm = getRm(instruction);
     assert((rn != 15) && (rd != 15) && (rm != 15));
 
+    DEBUG((uint32_t)rn << "<- rnIndex\n");
+    DEBUG((uint32_t)rd << "<- rdIndex\n");
+    DEBUG((uint32_t)rm << "<- rmIndex\n");
+
     // SWP{cond}{B} Rd,Rm,[Rn]     ;Rd=[Rn], [Rn]=Rm
     if (b) {
         // SWPB swap byte
         uint32_t rnVal = cpu->getRegister(rn);
+        uint8_t rmVal = (uint8_t)(cpu->getRegister(rm));
         uint8_t data = cpu->bus->read8(rnVal);
         cpu->setRegister(rd, (uint32_t)data);
         // TODO: check, is it a zero-extended 32-bit write or an 8-bit write?
-        uint8_t rmVal = (uint8_t)(cpu->getRegister(rm));
         cpu->bus->write8(rnVal, rmVal);
     } else {
         // SWPB swap word
         // The SWP opcode works like a combination of LDR and STR, that means, 
         // it does read-rotated, but does write-unrotated.
+        DEBUG("swapping word\n");
         uint32_t rnVal = cpu->getRegister(rn);
-        uint32_t data = cpu->bus->read32(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8));
-        cpu->setRegister(rd, data);
         uint32_t rmVal = cpu->getRegister(rm);
+        DEBUG(rnVal << " <- rnVal\n");
+        DEBUG(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8) << " <- rnVal after rotate\n");
+        DEBUG(cpu->bus->read32(rnVal) << " <- read w/o rotate\n");
+        // uint32_t data = cpu->bus->read32(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8));
+        
+        uint32_t data = aluShiftRor(cpu->bus->read32(rnVal & 0xFFFFFFFC), (rnVal & 3) * 8);
+        cpu->setRegister(rd, data);
         cpu->bus->write32(rnVal & 0xFFFFFFFC, rmVal);
+
     }
 }
 
