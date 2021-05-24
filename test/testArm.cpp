@@ -92,8 +92,13 @@ int main() {
     Bus bus;
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("arm.gba");
+    int count = 0;
 
     for(cpu_log log : logs) {
+
+        std::cout << "instruction " << count << std::endl;
+        count++;
+
         uint32_t instrAddress = cpu.getRegister(15);
         std::cout << "expectedAddr:\t" << log.address << std::endl;
         std::cout << "actualAddr:\t" << instrAddress << std::endl;

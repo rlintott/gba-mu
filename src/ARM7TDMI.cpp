@@ -419,9 +419,18 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
         uint32_t imm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
         uint32_t op2 = aluShiftRor(imm, is % 32);
+
+        DEBUG(std::bitset<32>(imm).to_string() << " before shift \n");
+        DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
+
+        DEBUG(imm << " is imm\n");
+        DEBUG((uint32_t)is << " is shift amount\n");
+
         // carry out bit is the least significant discarded bit of rm
         if (is > 0) {
-            carryBit = (imm >> (is - 1));
+            carryBit = (imm >> (is - 1)) & 0x1;
+            DEBUG((uint32_t)carryBit << " is carryBit\n");
+
         }
         return {op2, carryBit};
     }

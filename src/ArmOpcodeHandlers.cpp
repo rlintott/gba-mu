@@ -204,6 +204,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     }
     uint32_t op2 = shiftResult.op2;
 
+    DEBUG(op2 << " <- in dataproc, op2 (after shift)\n");
+
 
     switch (opcode) {
         case AND: {  // AND
@@ -211,6 +213,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            carryBit = shiftResult.carry;
             break;
         }
         case EOR: {  // EOR
@@ -218,6 +221,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            carryBit = shiftResult.carry;
             break;
         }
         case SUB: {  // SUB
@@ -249,7 +253,11 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             break;
         }
         case ADC: {  // ADC
-            uint64_t result = (uint64_t)(rnVal + op2 + (cpu->cpsr).C);
+            uint64_t result = (uint64_t)rnVal + (uint64_t)op2 + (uint64_t)(cpu->cpsr).C;
+            DEBUG(result << " in ADC, result was\n");
+            DEBUG(rnVal << " in ADC, rnval was\n");
+            DEBUG(op2 << " in ADC, op2 was\n");
+            DEBUG((uint32_t)(cpu->cpsr).C << " in ADC, cpsr.C was\n");
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
@@ -259,7 +267,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             break;
         }
         case SBC: {  // SBC
-            uint64_t result = rnVal + (~op2) + (cpu->cpsr).C;
+            uint64_t result = (uint64_t)rnVal + ~((uint64_t)op2) + (uint64_t)(cpu->cpsr).C;
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
@@ -269,7 +277,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             break;
         }
         case RSC: {  // RSC
-            uint64_t result = op2 + (~rnVal) + (cpu->cpsr).C;
+            uint64_t result = (uint64_t)op2 + ~((uint64_t)rnVal) + (uint64_t)(cpu->cpsr).C;
             cpu->setRegister(rd, (uint32_t)result);
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
@@ -280,12 +288,14 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
         }
         case TST: {  // TST
             uint32_t result = rnVal & op2;
+            carryBit = shiftResult.carry;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             break;
         }
         case TEQ: {  // TEQ
             uint32_t result = rnVal ^ op2;
+            carryBit = shiftResult.carry;
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
             break;
@@ -311,14 +321,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            carryBit = shiftResult.carry;
             break;
         }
         case MOV: {  // MOV
             DEBUG("in mov\n");
             uint32_t result = op2;
+
             DEBUG(result << " mov result\n");
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
+            carryBit = shiftResult.carry;
             signBit = aluSetsSignBit(result);
             break;
         }
@@ -327,6 +340,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            carryBit = shiftResult.carry;
             break;
         }
         case MVN: {  // MVN
@@ -334,11 +348,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             cpu->setRegister(rd, result);
             zeroBit = aluSetsZeroBit(result);
             signBit = aluSetsSignBit(result);
+            carryBit = shiftResult.carry;
             break;
         }
     }
 
     if (rd != PC_REGISTER && sFlagSet(instruction)) {
+        DEBUG("s flag set! in dataproc\n");
+        DEBUG(carryBit << " carryBit\n");
+        DEBUG(zeroBit << " zeroBit\n");
+        DEBUG(signBit << " signBit\n");
+        DEBUG(overflowBit << " overflowBit\n");
         cpu->cpsr.C = carryBit;
         cpu->cpsr.Z = zeroBit;
         cpu->cpsr.N = signBit;
