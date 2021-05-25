@@ -693,15 +693,26 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     assert((instruction & 0x0E000000) == 0x08000000);
     // base register
     uint8_t rn = getRn(instruction);
+    DEBUG((uint32_t)rn << " <- rnIndex\n");
     // align memory address;
     uint32_t rnVal = cpu->getRegister(rn);
     assert(rn != 15);
+
     bool p = dataTransGetP(instruction);
     bool u = dataTransGetU(instruction);
     bool l = dataTransGetL(instruction);
     bool w = dataTransGetW(instruction);
+    if(!(instruction & 0x0000FFFF)) {
+        // Empty Rlist: R15 loaded/stored (ARMv4 only), and Rb=Rb+/-40h (ARMv4-v5).
+        instruction |= 0x00008000;
+        // manually setting write bit to false so wont overwrite rn
+        w = false;
+        cpu->setRegister(rn, u ? rnVal + 0x40 : rnVal - 0x40);
+    }
+
     // special case for block transfer, s = what is usually b
     bool s = dataTransGetB(instruction);
+    DEBUG(s << " <- s bit set\n");
     if (s) assert(cpu->cpsr.Mode != USER);
     uint16_t regList = (uint16_t)instruction;
     uint32_t addressRnStoredAt = 0;  // see below
@@ -713,12 +724,18 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             rnVal += 4;
         }
         for (int reg = 0; reg < 16; reg++) {
+            DEBUG("iterating through regs, will add offset\n");
             if (regList & 1) {
+                DEBUG(reg << " <- reg is in list\n");
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data = cpu->bus->read32(rnVal & 0xFFFFFFFC);
                     (!s) ? cpu->setRegister(reg, data)
                          : cpu->setUserRegister(reg, data);
+                    if(reg == rn) {
+                        // when base is in rlist no writeback (LDM/ARMv4),
+                        w = false;
+                    }
                 } else {
                     // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
                     if (reg == rn) {
@@ -747,12 +764,18 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             rnVal -= 4;
         }
         for (int reg = 15; reg >= 0; reg--) {
+            DEBUG("iterating through regs, will  subtract offset\n");
             if (regList & 0x8000) {
+                DEBUG(reg << " <- reg is in list\n");
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data = cpu->bus->read32(rnVal & 0xFFFFFFFC);
                     (!s) ? cpu->setRegister(reg, data)
                          : cpu->setUserRegister(reg, data);
+                    if(reg == rn) {
+                        // when base is in rlist no writeback (LDM/ARMv4),
+                        w = false;
+                    }
                 } else {
                     // STM{cond}{amod} Rn{!},<Rlist>{^}  ;Store (Push)
                     if (reg == rn) {
@@ -776,7 +799,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     }
 
     if (w) {
-        if ((((uint16_t)instruction << (15 - rn)) > 0x8000) && !l) {
+        if (((uint16_t)(instruction << (15 - rn)) > 0x8000) && !l) {
+            // check if base is not first reg to be stored
+            DEBUG("base is second or later in transfer order\n");
+
             // A STM which includes storing the base, with the base
             // as the first register to be stored, will therefore
             // store the unchanged value, whereas with the base second
@@ -784,13 +810,16 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
             assert(addressRnStoredAt != 0);
             cpu->bus->write32(addressRnStoredAt & 0xFFFFFFFC, rnVal);
         }
+        DEBUG("writing back to base\n");
         cpu->setRegister(rn, rnVal);
     }
 
     if (s && l && (instruction & 0x00008000)) {
         // f instruction is LDM and R15 is in the list: (Mode Changes)
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
+        // TODO make sure to switch mode ANYWHERE where cpsr is set
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
+        cpu->switchToMode(ARM7TDMI::Mode(cpu->cpsr.Mode));
     }
 }
 
