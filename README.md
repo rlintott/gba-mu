@@ -12,7 +12,7 @@ Still very much a work in progress
 - [ ]  Everything else
 
 ## Todos
-There are many `TODO` comments scattered around the code, feel free to implement any of them
+There are many `TODO` comments scattered around the code, feel free to implement any of them and make a PR!
 
 ## Building 
 * **Dependencies:** cmake, c++17, Curses
