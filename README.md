@@ -3,12 +3,12 @@ Still very much a work in progress
 
 
 ## Progress
-- [x] CPU - 32bit ARM Instructions passing jsmolka's gba-suite test rom
+:white_check_mark: CPU - 32bit ARM Instructions passing jsmolka's gba-suite test rom
 - [ ]  CPU - 16bit THUMB Instructions passing jsmolka's gba-suite test rom
 - [ ]  CPU - Clean up / refactor code
 - [ ]  CPU - Cycle counting
-- [x] Bus - basic read / write capabilites
-- [x] Bus - can load a ROM. 
+:white_check_mark: Bus - basic read / write capabilites
+:white_check_mark: Bus - can load a ROM. 
 - [ ]  Everything else
 
 ## Todos
