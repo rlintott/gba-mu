@@ -97,6 +97,19 @@ class ARM7TDMI {
 
     };
 
+    class ThumbOpcodeHandlers {
+       public:
+        static ARM7TDMI::Cycles shiftHandler(uint16_t instruction,
+                                             ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles addSubHandler(uint16_t instruction,
+                                              ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles undefinedOpHandler(uint16_t instruction,
+                                                   ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles immHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles aluHandler(uint16_t instruction, ARM7TDMI *cpu);
+
+    };
+
     union BitPreservedInt32 {
         int32_t _signed;
         uint32_t _unsigned;
@@ -228,6 +241,11 @@ class ARM7TDMI {
     static uint8_t getRm(uint32_t instruction);
     static uint8_t getOpcode(uint32_t instruction);
 
+    static uint8_t thumbGetRs(uint16_t instruction);
+    static uint8_t thumbGetRd(uint16_t instruction);
+    static uint8_t thumbGetRb(uint16_t instruction);
+
+
     static bool dataTransGetP(uint32_t instruction);
     static bool dataTransGetU(uint32_t instruction);
     static bool dataTransGetB(uint32_t instruction);
@@ -285,10 +303,10 @@ class ARM7TDMI {
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
     typedef Cycles (*ArmOpcodeHandler)(uint32_t, ARM7TDMI *);
-
-    typedef Cycles (*ThumbOpcodeHandler)(uint16_t);
+    typedef Cycles (*ThumbOpcodeHandler)(uint16_t, ARM7TDMI *);
 
     ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
+    ThumbOpcodeHandler decodeThumbInstruction(uint16_t instruction);
 
     bool conditionalHolds(uint8_t cond);
 
