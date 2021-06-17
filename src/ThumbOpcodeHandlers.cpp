@@ -10,7 +10,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
 
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint8_t offset = (instruction & 0x07C0) >> 6;
-    // TODO: make into common fn
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
 
@@ -27,7 +26,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
                 carryFlag = cpu->cpsr.C;
             } else {
                 result = cpu->aluShiftLsl(rsVal, offset);
-                // TODO: put the logic for shift cary bit into functions
+                // TODO: put the logic for shift carry bit into functions
                 carryFlag = (rsVal >> (32 - offset)) & 1;
             }
             break;
@@ -202,7 +201,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
     uint8_t opcode = (instruction & 0x03C0) >> 6;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
-    uint32_t result;
     bool carryFlag, overflowFlag, signFlag, zeroFlag;
 
     switch(opcode) {
@@ -210,6 +208,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             // 0: AND{S} Rd,Rs     ;AND logical       Rd = Rd AND Rs
             uint32_t rsVal = cpu->getRegister(rs);
             uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
             result = rdVal & rsVal;
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
@@ -222,6 +221,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             //  1: EOR{S} Rd,Rs     ;XOR logical       Rd = Rd XOR Rs
             uint32_t rsVal = cpu->getRegister(rs);
             uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
             result = rdVal ^ rsVal;
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
@@ -235,6 +235,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             uint32_t rsVal = cpu->getRegister(rs);
             uint32_t rdVal = cpu->getRegister(rd);
             uint8_t offset = rsVal & 0xFF;
+            uint32_t result;
             result = aluShiftLsl(rdVal, offset);
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
@@ -246,22 +247,75 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
         }
         case 3: {
             // 3: LSR{S} Rd,Rs     ;log. shift right  Rd = Rd >> (Rs AND 0FFh)
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint8_t offset = rsVal & 0xFF;
+            uint32_t result;
+            result = aluShiftLsr(rdVal, offset);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            // TODO: 
+            carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break;
         }
         case 4: {
             // 4: ASR{S} Rd,Rs     ;arit shift right  Rd = Rd SAR (Rs AND 0FFh)
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint8_t offset = rsVal & 0xFF;
+            uint32_t result;
+            result = aluShiftAsr(rdVal, offset);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            // TODO: 
+            carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break;
         }
         case 5: {
             // 5: ADC{S} Rd,Rs     ;add with carry    Rd = Rd + Rs + Cy
+            uint64_t rsVal = cpu->getRegister(rs);
+            uint64_t rdVal = cpu->getRegister(rd);
+            uint64_t result;
+            result = rdVal + rsVal + (uint64_t)(cpu->cpsr.C);
+            signFlag = aluSetsSignBit((uint32_t)result);
+            zeroFlag = aluSetsZeroBit((uint32_t)result);
+            carryFlag = aluAddWithCarrySetsCarryBit(result);
+            overflowFlag = aluAddWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
+            cpu->setRegister(rd, result);
             break;
         }
         case 6: {
             // 6: SBC{S} Rd,Rs     ;sub with carry    Rd = Rd - Rs - NOT Cy
+            uint64_t rsVal = cpu->getRegister(rs);
+            uint64_t rdVal = cpu->getRegister(rd);
+            uint64_t result;
+            result = rdVal - rsVal - !(uint64_t)(cpu->cpsr.C);
+            signFlag = aluSetsSignBit((uint32_t)result);
+            zeroFlag = aluSetsZeroBit((uint32_t)result);
+            carryFlag = aluSubWithCarrySetsCarryBit(result);
+            overflowFlag = aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
+            cpu->setRegister(rd, result);
             break;
         }
         case 7: {
             // 7: ROR{S} Rd,Rs     ;rotate right      Rd = Rd ROR (Rs AND 0FFh)
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint8_t offset = rsVal & 0xFF;
+            uint32_t result;
+            result = aluShiftRor(rdVal, offset);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            // TODO: 
+            carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> ((offset % 32) - 1)) & 1;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
+            break;
+
             break;
         }
         case 8: {
