@@ -310,47 +310,188 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             result = aluShiftRor(rdVal, offset);
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
+            overflowFlag = cpu->cpsr.V;
             // TODO: 
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> ((offset % 32) - 1)) & 1;
-            overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            break;
-
             break;
         }
         case 8: {
             // 8: TST    Rd,Rs     ;test            Void = Rd AND Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
+            result = rdVal & rsVal;
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            carryFlag = cpu->cpsr.C;
+            overflowFlag = cpu->cpsr.V;
             break;
         }
         case 9: {
             // 9: NEG{S} Rd,Rs     ;negate            Rd = 0 - Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t result;
+            result = (uint32_t)0 - rsVal;
+            signFlag = aluSetsSignBit((uint32_t)result);
+            zeroFlag = aluSetsZeroBit((uint32_t)result);
+            carryFlag = aluSubtractSetsCarryBit(0, rsVal);
+            overflowFlag = aluSubtractSetsOverflowBit(0, rsVal, result);
+            cpu->setRegister(rd, result);
             break;
         }
         case 0xA: {
             // A: CMP    Rd,Rs     ;compare         Void = Rd - Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
+            result = rdVal - rsVal;
+            signFlag = aluSetsSignBit((uint32_t)result);
+            zeroFlag = aluSetsZeroBit((uint32_t)result);
+            carryFlag = aluSubtractSetsCarryBit(rdVal, rsVal);
+            overflowFlag = aluSubtractSetsOverflowBit(rdVal, rsVal, result);
             break;
         }
         case 0xB: {
             // B: CMN    Rd,Rs     ;neg.compare     Void = Rd + Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
+            result = rdVal + rsVal;
+            signFlag = aluSetsSignBit((uint32_t)result);
+            zeroFlag = aluSetsZeroBit((uint32_t)result);
+            carryFlag = aluAddSetsCarryBit(rdVal, rsVal);
+            overflowFlag = aluAddSetsOverflowBit(rdVal, rsVal, result);
             break;
         }
         case 0xC: {
             // C: ORR{S} Rd,Rs     ;OR logical        Rd = Rd OR Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
+            result = rdVal | rsVal;
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            carryFlag = cpu->cpsr.C;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break;
         }
         case 0xD: {
             // D: MUL{S} Rd,Rs     ;multiply          Rd = Rd * Rs
+            uint64_t rsVal = cpu->getRegister(rs);
+            uint64_t rdVal = cpu->getRegister(rd);
+            uint64_t result;
+            result = rdVal * rsVal;
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            // carry flag destroyed
+            carryFlag = 0;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break;
         }
         case 0xE: {
             // E: BIC{S} Rd,Rs     ;bit clear         Rd = Rd AND NOT Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t rdVal = cpu->getRegister(rd);
+            uint32_t result;
+            result = rdVal & (~rsVal);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            carryFlag = cpu->cpsr.C;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break; 
         }
         case 0xF: {
             // F: MVN{S} Rd,Rs     ;not               Rd = NOT Rs
+            uint32_t rsVal = cpu->getRegister(rs);
+            uint32_t result;
+            result = ~rsVal;
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
+            carryFlag = cpu->cpsr.C;
+            overflowFlag = cpu->cpsr.V;
+            cpu->setRegister(rd, result);
             break;
         }
     }
 
+    cpu->cpsr.N = signFlag;
+    cpu->cpsr.Z = zeroFlag;
+    cpu->cpsr.C = carryFlag;
+    cpu->cpsr.V = overflowFlag;
     return {};
+}
+
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
+                                                           ARM7TDMI *cpu) {
+    assert((instruction & 0xFC00) == 0x4400);
+    uint8_t opcode = (instruction & 0x0300) >> 8;
+    uint8_t rs = thumbGetRs(instruction);
+    uint8_t rd = thumbGetRd(instruction);
+    uint8_t msbd = (instruction & 0x0080) >> 7; // MSBd - Destination Register most significant bit (or BL/BLX flag)
+    uint8_t msbs = (instruction & 0x0040) >> 6; // MSBs - Source Register most significant bit
+
+    rs = rs & (msbs << 3);
+    rd = rd & (msbd << 3);
+
+    uint32_t rsVal = cpu->getRegister(rs);
+    uint32_t rdVal = cpu->getRegister(rd);
+    rsVal = (rsVal == PC_REGISTER) ? rsVal + 4 : rsVal;
+    rdVal = (rdVal == PC_REGISTER) ? rdVal + 4 : rdVal;
+
+    switch(opcode) {
+        case 0: {
+            // 0: ADD Rd,Rs   ;add        Rd = Rd+Rs
+            assert(msbd || msbs);
+            uint32_t result = rdVal + rsVal;
+            cpu->setRegister(rd, result);
+            break;
+        }
+        case 1: {
+            // 1: CMP Rd,Rs   ;compare  Void = Rd-Rs  ;CPSR affected
+            assert(msbd || msbs);
+            uint32_t result;
+            result = rdVal - rsVal;
+            cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
+            cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
+            cpu->cpsr.C = aluSubtractSetsCarryBit(rdVal, rsVal);
+            cpu->cpsr.V = aluSubtractSetsOverflowBit(rdVal, rsVal, result);
+            break;
+        } 
+        case 2: {
+            // 2: MOV Rd,Rs   ;move       Rd = Rs
+            cpu->setRegister(rd, rsVal);
+            assert(msbd || msbs);
+            break;
+        }          
+        case 3: {
+            // 3: BX  Rs      ;jump       PC = Rs     ;may switch THUMB/ARM
+            if(rs == PC_REGISTER) {
+                // R15: CPU switches to ARM state, and PC is auto-aligned as (($+4) AND NOT 2).
+                cpu->cpsr.T = 0;
+                rsVal = rsVal & (~((uint32_t)2));
+            }
+            if(!(rsVal & 0x1)) {
+                // For BX/BLX, when Bit 0 of the value in Rs is zero:
+                // Processor will be switched into ARM mode!
+                // If so, Bit 1 of Rs must be cleared (32bit word aligned).
+                // Thus, BX PC (switch to ARM) may be issued from word-aligned address
+                // only, the destination is PC+4 (ie. the following halfword is skipped).
+                cpu->cpsr.T = 0;
+                rsVal = rsVal & (~((uint32_t)2));
+            }
+            assert(msbd == 0);
+            rsVal &= 0xFFFFFFFE;
+            cpu->setRegister(PC_REGISTER, rsVal);
+            break;
+        }     
+
+    }
+
+
 }

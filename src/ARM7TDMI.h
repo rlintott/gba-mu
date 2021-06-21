@@ -107,6 +107,7 @@ class ARM7TDMI {
                                                    ARM7TDMI *cpu);
         static ARM7TDMI::Cycles immHandler(uint16_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles aluHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles bxHandler(uint16_t instruction, ARM7TDMI *cpu);
 
     };
 
