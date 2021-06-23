@@ -474,7 +474,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             if(rs == PC_REGISTER) {
                 // R15: CPU switches to ARM state, and PC is auto-aligned as (($+4) AND NOT 2).
                 cpu->cpsr.T = 0;
-                rsVal = rsVal & (~((uint32_t)2));
+                rsVal &= 0xFFFFFFFD;
             }
             if(!(rsVal & 0x1)) {
                 // For BX/BLX, when Bit 0 of the value in Rs is zero:
@@ -483,7 +483,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
                 // Thus, BX PC (switch to ARM) may be issued from word-aligned address
                 // only, the destination is PC+4 (ie. the following halfword is skipped).
                 cpu->cpsr.T = 0;
-                rsVal = rsVal & (~((uint32_t)2));
+                rsVal &= 0xFFFFFFFD;
             }
             assert(msbd == 0);
             rsVal &= 0xFFFFFFFE;
@@ -492,6 +492,50 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
         }     
 
     }
+}
 
 
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(uint16_t instruction,
+                                                           ARM7TDMI *cpu) {
+    assert((instruction & 0xF800) == 0x4800);
+    uint8_t offset = (instruction & 0x00FF) << 2;
+    uint8_t rd = (instruction & 0x0700) >> 8;
+    // 
+    uint32_t value = cpu->bus->read32(((cpu->getRegister(PC_REGISTER) + 4) & 0xFFFFFFFD) + offset);
+    cpu->setRegister(rd, value);
+
+    return {};
+}
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(uint16_t instruction,
+                                                           ARM7TDMI *cpu) {
+    assert((instruction & 0x5000) == 0x4800);
+    assert(instruction & 0x0200);
+    uint8_t opcode = (instruction & 0x0C00) >> 10;
+    uint8_t offset = (instruction & 0x00FF) << 2;
+    uint8_t rd = thumbGetRd(instruction);
+    uint8_t rb = thumbGetRb(instruction);
+    uint8_t ro = (instruction & 0x01C0) >> 6;
+
+    switch(opcode) {
+        case 0: {
+            // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd
+            break;
+        }
+        case 1: {
+            // 1: STRB Rd,[Rb,Ro]   ;store  8bit data  BYTE[Rb+Ro] = Rd
+            break;
+        }
+        case 2: {
+            // 2: LDR  Rd,[Rb,Ro]   ;load  32bit data  Rd = WORD[Rb+Ro]
+            break;
+        }
+        case 3: {
+            // 3: LDRB Rd,[Rb,Ro]   ;load   8bit data  Rd = BYTE[Rb+Ro]
+            break;
+        }
+    }
+
+    return {};
 }
