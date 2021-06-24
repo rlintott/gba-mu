@@ -82,7 +82,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
 
     uint8_t opcode = (instruction & 0x0600) >> 9;
 
-    switch(opcode) {
+    switch (opcode) {
         case 0: {
             // 0: ADD{S} Rd,Rs,Rn   ;add register Rd=Rs+Rn
             op2 = cpu->getRegister((instruction & 0x01C0) >> 6);
@@ -114,7 +114,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
             carryFlag = aluSubtractSetsCarryBit(rsVal, op2);
             overflowFlag = aluSubtractSetsOverflowBit(rsVal, op2, result);
             break;
-        }      
+        }
     }
     signFlag = aluSetsSignBit(result);
     zeroFlag = aluSetsZeroBit(result);
@@ -195,7 +195,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
                                                            ARM7TDMI *cpu) {
-
     assert((instruction & 0xFC00) == 0x4000);
 
     uint8_t opcode = (instruction & 0x03C0) >> 6;
@@ -203,7 +202,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
     uint8_t rd = thumbGetRd(instruction);
     bool carryFlag, overflowFlag, signFlag, zeroFlag;
 
-    switch(opcode) {
+    switch (opcode) {
         case 0: {
             // 0: AND{S} Rd,Rs     ;AND logical       Rd = Rd AND Rs
             uint32_t rsVal = cpu->getRegister(rs);
@@ -228,7 +227,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            break; 
+            break;
         }
         case 2: {
             // 2: LSL{S} Rd,Rs     ;log. shift left   Rd = Rd << (Rs AND 0FFh)
@@ -239,7 +238,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             result = aluShiftLsl(rdVal, offset);
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
-            // TODO: 
+            // TODO:
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (32 - offset)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
@@ -254,7 +253,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             result = aluShiftLsr(rdVal, offset);
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
-            // TODO: 
+            // TODO:
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
@@ -269,7 +268,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             result = aluShiftAsr(rdVal, offset);
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
-            // TODO: 
+            // TODO:
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
@@ -284,7 +283,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             signFlag = aluSetsSignBit((uint32_t)result);
             zeroFlag = aluSetsZeroBit((uint32_t)result);
             carryFlag = aluAddWithCarrySetsCarryBit(result);
-            overflowFlag = aluAddWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
+            overflowFlag =
+                aluAddWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
             cpu->setRegister(rd, result);
             break;
         }
@@ -297,7 +297,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             signFlag = aluSetsSignBit((uint32_t)result);
             zeroFlag = aluSetsZeroBit((uint32_t)result);
             carryFlag = aluSubWithCarrySetsCarryBit(result);
-            overflowFlag = aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
+            overflowFlag =
+                aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
             cpu->setRegister(rd, result);
             break;
         }
@@ -311,8 +312,9 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
             overflowFlag = cpu->cpsr.V;
-            // TODO: 
-            carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> ((offset % 32) - 1)) & 1;
+            // TODO:
+            carryFlag =
+                !(offset) ? cpu->cpsr.C : (rdVal >> ((offset % 32) - 1)) & 1;
             cpu->setRegister(rd, result);
             break;
         }
@@ -402,7 +404,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            break; 
+            break;
         }
         case 0xF: {
             // F: MVN{S} Rd,Rs     ;not               Rd = NOT Rs
@@ -425,16 +427,17 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
     return {};
 }
 
-
-
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
-                                                           ARM7TDMI *cpu) {
+                                                          ARM7TDMI *cpu) {
     assert((instruction & 0xFC00) == 0x4400);
     uint8_t opcode = (instruction & 0x0300) >> 8;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
-    uint8_t msbd = (instruction & 0x0080) >> 7; // MSBd - Destination Register most significant bit (or BL/BLX flag)
-    uint8_t msbs = (instruction & 0x0040) >> 6; // MSBs - Source Register most significant bit
+    uint8_t msbd =
+        (instruction & 0x0080) >>
+        7;  // MSBd - Destination Register most significant bit (or BL/BLX flag)
+    uint8_t msbs = (instruction & 0x0040) >>
+                   6;  // MSBs - Source Register most significant bit
 
     rs = rs & (msbs << 3);
     rd = rd & (msbd << 3);
@@ -444,7 +447,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
     rsVal = (rsVal == PC_REGISTER) ? rsVal + 4 : rsVal;
     rdVal = (rdVal == PC_REGISTER) ? rdVal + 4 : rdVal;
 
-    switch(opcode) {
+    switch (opcode) {
         case 0: {
             // 0: ADD Rd,Rs   ;add        Rd = Rd+Rs
             assert(msbd || msbs);
@@ -462,80 +465,225 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             cpu->cpsr.C = aluSubtractSetsCarryBit(rdVal, rsVal);
             cpu->cpsr.V = aluSubtractSetsOverflowBit(rdVal, rsVal, result);
             break;
-        } 
+        }
         case 2: {
             // 2: MOV Rd,Rs   ;move       Rd = Rs
             cpu->setRegister(rd, rsVal);
             assert(msbd || msbs);
             break;
-        }          
+        }
         case 3: {
             // 3: BX  Rs      ;jump       PC = Rs     ;may switch THUMB/ARM
-            if(rs == PC_REGISTER) {
-                // R15: CPU switches to ARM state, and PC is auto-aligned as (($+4) AND NOT 2).
-                cpu->cpsr.T = 0;
-                rsVal &= 0xFFFFFFFD;
-            }
-            if(!(rsVal & 0x1)) {
+            if (rs == PC_REGISTER || !(rsVal & 0x1)) {
+                // R15: CPU switches to ARM state, and PC is auto-aligned as
+                // (($+4) AND NOT 2).
+
                 // For BX/BLX, when Bit 0 of the value in Rs is zero:
                 // Processor will be switched into ARM mode!
                 // If so, Bit 1 of Rs must be cleared (32bit word aligned).
-                // Thus, BX PC (switch to ARM) may be issued from word-aligned address
-                // only, the destination is PC+4 (ie. the following halfword is skipped).
+                // Thus, BX PC (switch to ARM) may be issued from word-aligned
+                // address only, the destination is PC+4 (ie. the following
+                // halfword is skipped).
                 cpu->cpsr.T = 0;
                 rsVal &= 0xFFFFFFFD;
             }
+
             assert(msbd == 0);
             rsVal &= 0xFFFFFFFE;
             cpu->setRegister(PC_REGISTER, rsVal);
             break;
-        }     
-
+        }
     }
 }
 
-
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(uint16_t instruction,
-                                                           ARM7TDMI *cpu) {
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0x4800);
     uint8_t offset = (instruction & 0x00FF) << 2;
     uint8_t rd = (instruction & 0x0700) >> 8;
-    // 
-    uint32_t value = cpu->bus->read32(((cpu->getRegister(PC_REGISTER) + 4) & 0xFFFFFFFD) + offset);
+    uint32_t address =
+        ((cpu->getRegister(PC_REGISTER) + 4) & 0xFFFFFFFD) + offset;
+    uint32_t value =
+        aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC), (address & 3) * 8);
     cpu->setRegister(rd, value);
 
     return {};
 }
 
-
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(uint16_t instruction,
-                                                           ARM7TDMI *cpu) {
-    assert((instruction & 0x5000) == 0x4800);
-    assert(instruction & 0x0200);
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0x5000);
+    assert(!(instruction & 0x0200));
     uint8_t opcode = (instruction & 0x0C00) >> 10;
-    uint8_t offset = (instruction & 0x00FF) << 2;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
     uint8_t ro = (instruction & 0x01C0) >> 6;
+    uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
 
-    switch(opcode) {
+    switch (opcode) {
         case 0: {
             // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
             break;
         }
         case 1: {
             // 1: STRB Rd,[Rb,Ro]   ;store  8bit data  BYTE[Rb+Ro] = Rd
+            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)));
             break;
         }
         case 2: {
             // 2: LDR  Rd,[Rb,Ro]   ;load  32bit data  Rd = WORD[Rb+Ro]
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+                                         (address & 3) * 8);
+            cpu->setRegister(rd, value);
             break;
         }
         case 3: {
             // 3: LDRB Rd,[Rb,Ro]   ;load   8bit data  Rd = BYTE[Rb+Ro]
+            uint32_t value = (uint32_t)cpu->bus->read8(address);
+            cpu->setRegister(rd, value);
             break;
         }
     }
+    return {};
+}
 
+ARM7TDMI::Cycles
+ARM7TDMI::ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0x5000);
+    assert(instruction & 0x0200);
+    uint8_t opcode = (instruction & 0x0C00) >> 10;
+    uint8_t rd = thumbGetRd(instruction);
+    uint8_t rb = thumbGetRb(instruction);
+    uint8_t ro = (instruction & 0x01C0) >> 6;
+    uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
+
+    switch (opcode) {
+        case 0: {
+            // 0: STRH Rd,[Rb,Ro]  ;store 16bit data          HALFWORD[Rb+Ro] =
+            // Rd
+            cpu->bus->write16(address & 0xFFFFFFFE, cpu->getRegister(rd));
+            break;
+        }
+        case 1: {
+            // 1: LDSB Rd,[Rb,Ro]  ;load sign-extended 8bit   Rd = BYTE[Rb+Ro]
+            uint32_t value = cpu->bus->read8(address);
+            value = (value & 0x80) ? (0xFFFFFF00 & value) : value;
+            cpu->setRegister(rd, value);
+            break;
+        }
+        case 2: {
+            // 2: LDRH Rd,[Rb,Ro]  ;load zero-extended 16bit  Rd =
+            // HALFWORD[Rb+Ro]
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+                                         (address & 1) * 8);
+            cpu->setRegister(rd, value);
+            break;
+        }
+        case 3: {
+            // 3: LDSH Rd,[Rb,Ro]  ;load sign-extended 16bit  Rd =
+            // HALFWORD[Rb+Ro]
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+                                         (address & 1) * 8);
+            value = (value & 0x8000) ? (0xFFFF0000 & value) : value;
+            cpu->setRegister(rd, value);
+            break;
+        }
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xE000) == 0x6000);
+    uint8_t opcode = (instruction & 0x1800) >> 11;
+    uint8_t rd = thumbGetRd(instruction);
+    uint8_t rb = thumbGetRb(instruction);
+
+    switch (opcode) {
+        case 0: {
+            // 0: STR  Rd,[Rb,#nn]  ;store 32bit data   WORD[Rb+nn] = Rd
+            uint32_t offset = (instruction & 0x07C0) >> 4;
+            uint32_t address = cpu->getRegister(rb) + offset;
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
+            break;
+        }
+        case 1: {
+            // 1: LDR  Rd,[Rb,#nn]  ;load  32bit data   Rd = WORD[Rb+nn]
+            uint32_t offset = (instruction & 0x07C0) >> 4;
+            uint32_t address = cpu->getRegister(rb) + offset;
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+                                         (address & 3) * 8);
+            cpu->setRegister(rd, value);
+            break;
+        }
+        case 2: {
+            // 2: STRB Rd,[Rb,#nn]  ;store  8bit data   BYTE[Rb+nn] = Rd
+            uint32_t offset = (instruction & 0x07C0) >> 6;
+            uint32_t address = cpu->getRegister(rb) + offset;
+            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)));
+            break;
+        }
+        case 3: {
+            // 3: LDRB Rd,[Rb,#nn]  ;load   8bit data   Rd = BYTE[Rb+nn]
+            uint32_t offset = (instruction & 0x07C0) >> 6;
+            uint32_t address = cpu->getRegister(rb) + offset;
+            cpu->setRegister(rd, (uint32_t)cpu->bus->read8(address));
+            break;
+        }
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0x8000);
+    uint8_t opcode = (instruction & 0x0800) >> 11;
+    uint8_t rd = thumbGetRd(instruction);
+    uint8_t rb = thumbGetRb(instruction);
+    uint32_t offset = (instruction & 0x07C0) >> 5;
+    uint32_t address = cpu->getRegister(rb) + offset;
+
+    switch (opcode) {
+        case 0: {
+            // 0: STRH Rd,[Rb,#nn]  ;store 16bit data   HALFWORD[Rb+nn] = Rd
+            cpu->bus->write16(address & 0xFFFFFFFE,
+                              (uint16_t)cpu->getRegister(rd));
+            break;
+        }
+        case 1: {
+            // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+                                         (address & 1) * 8);
+            cpu->setRegister(rd, value);
+            break;
+        }
+    }
+    return {};
+}
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0x9000);
+    uint8_t opcode = (instruction & 0x0800) >> 11;
+    uint8_t rd = (instruction & 0x0700) >> 8;
+    uint16_t offset = (instruction & 0x00FF) << 2;
+    uint32_t address = cpu->getRegister(SP_REGISTER) + offset;
+
+    switch (opcode) {
+        case 0: {
+            // 0: STR  Rd,[SP,#nn]  ;store 32bit data   WORD[SP+nn] = Rd
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
+            break;
+        }
+        case 1: {
+            // 1: LDR  Rd,[SP,#nn]  ;load  32bit data   Rd = WORD[SP+nn]
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+                                         (address & 3) * 8);
+            cpu->setRegister(rd, value);
+            break;
+        }
+    }
     return {};
 }

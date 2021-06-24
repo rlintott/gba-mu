@@ -110,6 +110,10 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles bxHandler(uint16_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles loadPcRelativeHandler(uint16_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::Cycles loadStoreRegOffsetHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles loadStoreImmediateOffsetHandler(uint16_t instruction, ARM7TDMI *cpu); 
+        static ARM7TDMI::Cycles loadStoreHalfwordHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles loadStoreSpRelativeHandler(uint16_t instruction, ARM7TDMI *cpu);        
     };
 
     union BitPreservedInt32 {
