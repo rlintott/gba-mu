@@ -687,3 +687,52 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
     }
     return {};
 }
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::getRelativeAddressHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0xA000);
+    uint8_t opcode = (instruction & 0x0800) >> 11;
+    uint8_t rd = (instruction & 0x0700) >> 8;
+    uint16_t offset = (instruction & 0x00FF) << 2;
+
+    switch (opcode) {
+        case 0: {
+            // 0: ADD  Rd,PC,#nn    ;Rd = (($+4) AND NOT 2) + nn
+            uint32_t value = ((cpu->getRegister(PC_REGISTER) + 4) & 0xFFFFFFFD) + offset;
+            cpu->setRegister(rd, value);
+            break;
+        }
+        case 1: {
+            // 1: ADD  Rd,SP,#nn    ;Rd = SP + nn
+            uint32_t value = cpu->getRegister(SP_REGISTER) + offset;
+            cpu->setRegister(rd, value);
+            break;
+        }
+    }
+    return {};
+}
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addOffsetToSpHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xFF00) == 0xB000);
+    uint8_t opcode = (instruction & 0x0080) >> 7;
+    uint16_t offset = (instruction & 0x007F) << 2;
+
+    switch (opcode) {
+        case 0: {
+            // 0: ADD  SP,#nn       ;SP = SP + nn
+            uint32_t value = cpu->getRegister(SP_REGISTER) + offset;
+            cpu->setRegister(SP_REGISTER, value);
+            break;
+        }
+        case 1: {
+            // 1: ADD  SP,#-nn      ;SP = SP - nn
+            uint32_t value = cpu->getRegister(SP_REGISTER) - offset;
+            cpu->setRegister(SP_REGISTER, value);
+            break;
+        }
+    }
+    return {};
+}
