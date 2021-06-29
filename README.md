@@ -17,8 +17,7 @@ Still very much a work in progress
 
 :white_circle:  Everything else
 
-## Todos
-There are many `TODO` comments scattered around the code, feel free to implement any of them and make a PR!
+
 
 ## Building 
 * **Dependencies:** cmake, c++17, Curses
@@ -26,3 +25,20 @@ There are many `TODO` comments scattered around the code, feel free to implement
 
 ## Running
 * **To run tests:** `cd build` `./build.sh` `ctest`
+
+
+## Contributing
+
+Thank you for contributing
+
+The emulator is a work in progress and there are many `TODO` comments scattered around the code, feel free make a PR for these or any other code cleanups, style improvements, efficiency improvements. 
+
+
+## Resources
+
+Here are the main resources I am using 
+
+* [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference)
+* [ARM7TDMI Data Sheet](ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf)
+* [Emudev Discord Server](https://discord.gg/xxkAe5xm)
+
