@@ -39,6 +39,6 @@ The emulator is a work in progress and there are many `TODO` comments scattered 
 Here are the main resources I am using 
 
 * [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference)
-* [ARM7TDMI Data Sheet](ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf)
+* ARM7TDMI Data Sheet: ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf
 * [Emudev Discord Server](https://discord.gg/xxkAe5xm)
 
