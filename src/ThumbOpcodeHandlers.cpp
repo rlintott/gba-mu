@@ -736,3 +736,123 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addOffsetToSpHandler(
     }
     return {};
 }
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF000) == 0xC000);
+    uint8_t opcode = (instruction & 0x0800) >> 11;
+    uint8_t rList = instruction & 0x00FF;
+    uint8_t rb = (instruction & 0x0700) >> 8;
+    uint32_t rbValue = cpu->getRegister(rb);
+    uint32_t oldRbValue = rbValue;
+
+    // In THUMB mode stack is always meant to be 'full descending', 
+    // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
+
+    switch (opcode) {
+        case 0: {
+            // 0: STMIA Rb!,{Rlist}   ;store in memory, increments Rb (post-increment store)
+            for(int i = 0; i < 8; i++) {
+                if(rList & 0x01) {
+                    cpu->bus->write32(rbValue, cpu->getRegister(i));
+                    rbValue += 4;
+                }
+                rList >> 1;
+            }
+            if(!rList) {
+                // empty rList
+                // R15 loaded/stored (ARMv4 only), and Rb=Rb+40h (ARMv4-v5).
+                cpu->bus->write32(rbValue, cpu->getRegister(PC_REGISTER));
+                rbValue += 0x40;
+            }
+            if(((uint32_t)rList >> rb) & 0x1) {
+                // if rb included in rList, Store OLD base if Rb is FIRST entry in Rlist, 
+                // otherwise store NEW base (STM/ARMv4)
+                if(!(rList << (8 - rb))) {
+                    // rb is first entry in rList
+                    cpu->setRegister(rb, oldRbValue);   
+                } else {
+                    cpu->setRegister(rb, rbValue);
+                }
+            } else {
+                cpu->setRegister(rb, rbValue);
+            }            
+            break;
+        }
+        case 1: {
+            // 1: LDMIA Rb!,{Rlist}   ;load from memory, increments Rb (post-increment load)
+            for(int i = 0; i < 8; i++) {
+                if(rList & 0x01) {
+                    cpu->setRegister(i, cpu->bus->read32(rbValue));
+                    rbValue += 4;
+                }
+                rList >> 1;
+            }
+            if(!rList) {
+                // empty rList
+                // R15 loaded/stored (ARMv4 only), and Rb=Rb+40h (ARMv4-v5).
+                cpu->setRegister(PC_REGISTER, cpu->bus->read32(rbValue));
+                rbValue += 0x40;
+            }
+            if(((uint32_t)rList >> rb) & 0x1) {
+                // if rb included in rList, no write back for stm
+            } else {
+                cpu->setRegister(rb, rbValue);
+            }
+            break;
+        }
+    }
+    return {};
+}
+
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xFF00) == 0xB000);
+    assert((instruction & 0x0600) == 0x0400);
+    uint8_t opcode = (instruction & 0x0800) >> 11;
+    bool pcLrBit = instruction & 0x0100; // 1: PUSH LR (R14), or POP PC (R15)
+    uint8_t rList = instruction & 0x00FF;
+    uint32_t spValue = cpu->getRegister(SP_REGISTER);
+
+    // In THUMB mode stack is always meant to be 'full descending', 
+    // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
+
+    switch (opcode) {
+        case 0: {
+            // 0: PUSH {Rlist}{LR}   ;store in memory, decrements SP (R13)
+            if(pcLrBit) {
+                spValue -=4;
+                cpu->bus->write32(spValue, cpu->getRegister(LINK_REGISTER));
+            }
+            for(int i = 7; i >= 0; i--) {
+                if(rList & 0x80) {
+                    spValue -= 4;
+                    cpu->bus->write32(spValue, i);
+                }
+                rList << 1;
+            }
+            cpu->setRegister(SP_REGISTER, spValue);
+            break;
+        }
+        case 1: {
+            // 1: POP  {Rlist}{PC}   ;load from memory, increments SP (R13)
+            for(int i = 0; i < 8; i++) {
+                if(rList & 0x01) {
+                    cpu->bus->write32(spValue, i);
+                    spValue += 4;
+                }
+                rList >> 1;
+            }
+            if(pcLrBit) {
+                cpu->bus->write32(spValue, cpu->getRegister(PC_REGISTER));
+                spValue += 4;
+            }
+            cpu->setRegister(SP_REGISTER, spValue);
+            break;
+        }
+    }
+    return {};
+}
