@@ -33,6 +33,12 @@ Thank you for contributing
 
 The emulator is a work in progress and there are many `TODO` comments scattered around the code, feel free make a PR for these or any other code cleanups, style improvements, efficiency improvements. 
 
+[Here](https://guides.github.com/introduction/flow/) is an overview of the workflow to use when contributing. 
+ 
+1. Create a new feature branch off of current master
+2. Implement your feature and test it
+3. Create a PR into master for review
+
 
 ## Resources
 
