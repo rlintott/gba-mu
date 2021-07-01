@@ -117,7 +117,8 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles getRelativeAddressHandler(uint16_t instruction, ARM7TDMI *cpu); 
         static ARM7TDMI::Cycles addOffsetToSpHandler(uint16_t instruction, ARM7TDMI *cpu); 
         static ARM7TDMI::Cycles multipleLoadStorePushPopHandler(uint16_t instruction, ARM7TDMI *cpu);  
-        static ARM7TDMI::Cycles multipleLoadStoreHandler(uint16_t instruction, ARM7TDMI *cpu);         
+        static ARM7TDMI::Cycles multipleLoadStoreHandler(uint16_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::Cycles conditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);         
     };
 
     union BitPreservedInt32 {
@@ -254,8 +255,7 @@ class ARM7TDMI {
     static uint8_t thumbGetRs(uint16_t instruction);
     static uint8_t thumbGetRd(uint16_t instruction);
     static uint8_t thumbGetRb(uint16_t instruction);
-
-
+        
     static bool dataTransGetP(uint32_t instruction);
     static bool dataTransGetU(uint32_t instruction);
     static bool dataTransGetB(uint32_t instruction);

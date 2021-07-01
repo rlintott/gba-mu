@@ -802,3 +802,4 @@ bool ARM7TDMI::dataTransGetW(uint32_t instruction) {
 bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
     return instruction & 0x00100000;
 }
+
