@@ -861,10 +861,6 @@ static uint32_t signExtend16Bit(uint16_t value) {
     return (value & 0x8000) ? (((uint32_t)value) | 0xFFFF0000) : value;
 }
 
-// TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
-static bool conditionalBranchIsOffsetNegative(uint16_t offset) {
-    return offset & 0x0100;
-}
 
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
@@ -968,17 +964,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
 }
 
 
-static uint16_t unconditionalBranchGetSubtractMagnitude(uint16_t offset) {
-    return 0x0800 - offset;
-}
-
-// TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
-static bool unconditionalBranchIsOffsetNegative(uint16_t offset) {
-    return offset & 0x0400;
-}
-
-
-
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0xE000);
@@ -987,15 +972,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 4 + offset) & 0xFFFFFFFE);
 
     return {};
-}
-
-static uint32_t longBranchGetSubtractMagnitude(uint32_t offset) {
-    return 0x00800000 - offset;
-}
-
-// TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
-static bool longBranchIsOffsetNegative(uint32_t offset) {
-    return offset & 0x00400000;
 }
 
 
