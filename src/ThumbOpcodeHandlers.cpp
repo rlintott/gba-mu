@@ -857,8 +857,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
     return {};
 }
 
-static uint16_t conditionalBranchGetSubtractMagnitude(uint16_t offset) {
-    return 0x0200 - offset;
+static uint32_t signExtend16Bit(uint16_t value) {
+    return (value & 0x8000) ? (((uint32_t)value) | 0xFFFF0000) : value;
 }
 
 // TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
@@ -866,12 +866,12 @@ static bool conditionalBranchIsOffsetNegative(uint16_t offset) {
     return offset & 0x0100;
 }
 
-\
+
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xD000);
     uint8_t opcode = (instruction & 0x0F00) >> 8;
-    uint16_t offset = (instruction & 0x00FF) << 1;
+    uint32_t offset = signExtend16Bit((instruction & 0x00FF) << 1);
     bool jump = false;
 
     // Destination address must by halfword aligned (ie. bit 0 cleared)
@@ -961,16 +961,105 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
     }
 
     if(jump) {
-        uint32_t destAddress;
-        if(conditionalBranchIsOffsetNegative(offset)) {
-            uint16_t subtractMagnitude = conditionalBranchGetSubtractMagnitude(offset);
-            destAddress = (cpu->getRegister(PC_REGISTER) + 4 - subtractMagnitude) & 0xFFFFFFFE;
-        } else {
-            destAddress = (cpu->getRegister(PC_REGISTER) + 4 + offset) & 0xFFFFFFFE;
-        }
-        cpu->setRegister(PC_REGISTER, destAddress);
+        cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 4 + offset) & 0xFFFFFFFE);
     }
 
     return {};
 }
+
+
+static uint16_t unconditionalBranchGetSubtractMagnitude(uint16_t offset) {
+    return 0x0800 - offset;
+}
+
+// TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
+static bool unconditionalBranchIsOffsetNegative(uint16_t offset) {
+    return offset & 0x0400;
+}
+
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF800) == 0xE000);
+    uint32_t offset = signExtend16Bit((instruction & 0x03FF) << 1);
+    
+    cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 4 + offset) & 0xFFFFFFFE);
+
+    return {};
+}
+
+static uint32_t longBranchGetSubtractMagnitude(uint32_t offset) {
+    return 0x00800000 - offset;
+}
+
+// TODO: helper funtions like this can be put in ThumbOpcodeHandler.cpp without being declared in the header file
+static bool longBranchIsOffsetNegative(uint32_t offset) {
+    return offset & 0x00400000;
+}
+
+
+static uint32_t signExtend23Bit(uint32_t value) {
+    return (value & 0x00400000) ? (value | 0xFF800000) : value;
+}
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    assert((instruction & 0xF800) == 0xF000);
+    uint8_t opcode = (instruction & 0xF800) >> 11;
+
+    switch(opcode) {
+        case 0x1E: {
+            // First Instruction - LR = PC+4+(nn SHL 12)
+            uint32_t offsetHiBits = signExtend23Bit(((uint32_t)(instruction & 0x07FF)) << 12);            
+            cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER) + 4 + offsetHiBits);
+            break;
+        }
+        case 0x1F: {
+            // Second Instruction - PC = LR + (nn SHL 1), and LR = PC+2 OR 1 (and BLX: T=0)
+            // 11111b: BL label   ;branch long with link
+            uint32_t offsetLoBits = (((uint32_t)(instruction & 0x07FF)) << 1);
+            uint32_t temp = (cpu->getRegister(PC_REGISTER) + 2) | 0x1;
+            // The destination address range is (PC+4)-400000h..+3FFFFEh, 
+            cpu->setRegister(PC_REGISTER, cpu->getRegister(LINK_REGISTER) + offsetLoBits);
+            cpu->setRegister(LINK_REGISTER, temp);        
+            break;
+        }
+        case 0x1D: {
+            // 11101b: BLX label  ;branch long with link switch to ARM mode (ARM9)
+            assert(false);
+            break;
+        }
+    }
+
+    return {};
+}
+
+
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    // 11011111b: SWI nn   ;software interrupt
+    // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
+    assert((instruction & 0xFF00) == 0xDF00);
+
+    // R14_svc=PC+2    ;save return address
+    cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 2);
+    
+    // SPSR_svc=CPSR   ;save CPSR flags
+    *(cpu->getCurrentModeSpsr()) = cpu->cpsr;
+    
+    // CPSR=<changed>  ;Enter svc/abt, ARM state, IRQs disabled
+    cpu->cpsr.T = 0;
+    cpu->switchToMode(Mode::SUPERVISOR);
+    cpu->cpsr.I = 1;
+
+    // PC=VVVV0008h    ;jump to SWI/PrefetchAbort vector address
+    // TODO: is base always 0000?
+    // TODO: make vector addresses static members
+    cpu->setRegister(PC_REGISTER, 0x00000008);
+
+    return {};
+}
+
 

@@ -118,7 +118,10 @@ class ARM7TDMI {
         static ARM7TDMI::Cycles addOffsetToSpHandler(uint16_t instruction, ARM7TDMI *cpu); 
         static ARM7TDMI::Cycles multipleLoadStorePushPopHandler(uint16_t instruction, ARM7TDMI *cpu);  
         static ARM7TDMI::Cycles multipleLoadStoreHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::Cycles conditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);         
+        static ARM7TDMI::Cycles conditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);     
+        static ARM7TDMI::Cycles unconditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);         
+        static ARM7TDMI::Cycles longBranchHandler(uint16_t instruction, ARM7TDMI *cpu); 
+        static ARM7TDMI::Cycles softwareInterruptHandler(uint16_t instruction, ARM7TDMI *cpu); 
     };
 
     union BitPreservedInt32 {
