@@ -274,7 +274,7 @@ MulHalfARM9
 
 decoding from highest to lowest specifity to ensure corredct opcode parsed
 
-    case: 000
+    case: 000 (bit 27, 26, 25)
 
         1:  xxxx0001001011111111111100x1xxxx    BX,BLX
         2:  xxxx00010x00xxxxxxxx00001001xxxx    TransSwp12  (15)
@@ -313,7 +313,7 @@ decoding from highest to lowest specifity to ensure corredct opcode parsed
         13: xxxx011xxxxxxxxxxxxxxxxxxxx1xxxx    Undefined   (4)
 
 */
-// TODO: use hex values to make it more concise
+// TODO: use hex values to make it more syntactically concise
 ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
     uint32_t instruction) {
 
@@ -432,32 +432,77 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
  _12_|_1___0___1___0_|Op_|____Rd_____|_____________Word______________|ADD PC/SP
  _13_|_1___0___1___1___0___0___0___0_|_S_|___________Word____________|ADD SP,nn
  _14_|_1___0___1___1_|Op_|_1___0_|_R_|____________Rlist______________|PUSH/POP
- _17_|_1___0___1___1___1___1___1___0_|___________User_Data___________|ARM9:BKPT
- _X__|_1___0___1___1___   ..............................             |ARM11...
-  0110 011 Change Processor State        CPS on page B4-2
-  0001 xxx Compare and Branch on Zero    CBNZ, CBZ on page A6-52
-  1011 xxx Compare and Branch on Nonzero CBNZ, CBZ on page A6-52
-  0011 xxx Compare and Branch on Zero    CBNZ, CBZ on page A6-52
-  1001 xxx Compare and Branch on Nonzero CBNZ, CBZ on page A6-52
-  0010 00x Signed Extend Halfword        SXTH on page A6-256
-  0010 01x Signed Extend Byte            SXTB on page A6-254
-  0010 10x Unsigned Extend Halfword      UXTH on page A6-274
-  0010 11x Unsigned Extend Byte          UXTB on page A6-272
-  1010 00x Byte-Reverse Word             REV on page A6-191
-  1010 01x Byte-Reverse Packed Halfword  REV16 on page A6-192
-  1010 11x Byte-Reverse Signed Halfword  REVSH on page A6-193
-  1111 xxx If-Then, and hints If-Then, and hints on page A5-11
  _15_|_1___1___0___0_|Op_|____Rb_____|____________Rlist______________|STM/LDM
  _16_|_1___1___0___1_|_____Cond______|_________Signed_Offset_________|B{cond}
- _U__|_1___1___0___1___1___1___1___0_|_____________var_______________|UndefARM9
  _17_|_1___1___0___1___1___1___1___1_|___________User_Data___________|SWI
  _18_|_1___1___1___0___0_|________________Offset_____________________|B
- _19_|_1___1___1___0___1_|_________________________var___________|_0_|BLX.ARM9
- _U__|_1___1___1___0___1_|_________________________var___________|_1_|UndefARM9
  _19_|_1___1___1___1_|_H_|______________Offset_Low/High______________|BL,BLX
 
+ decoding from highest to lowest specifity to ensure correct opcode parsed
+
+    case 000:
+        2: 00011xxxxxxxxxxx ADD/SUB
+        1: 000xxxxxxxxxxxxx Shifted
+    case 001:
+        3: 001xxxxxxxxxxxxx Immedi.
+    case 010:
+        4: 010000xxxxxxxxxx AluOp
+`       5: 010001xxxxxxxxxx HiReg/BX
+
+        6: 01001xxxxxxxxxxx LDR PC
+
+        7: 0101xx0xxxxxxxxx LDR/STR
+        8: 0101xx1xxxxxxxxx ""H/SB/SH
+    case 011:
+        9: 011xxxxxxxxxxxxx ""{B}
+    case 100:
+       10: 1000xxxxxxxxxxxx "H
+       11: 1001xxxxxxxxxxxx "" SP
+    case 101: 
+       13: 10110000xxxxxxxx ADD SP,nn
+       14: 1011x10xxxxxxxxx PUSH/POP
+
+       12: 1010xxxxxxxxxxxx ADD PC/SP
+    case 110: 
+       17: 11011111xxxxxxxx SWI
+
+       15: 1100xxxxxxxxxxxx STM/LDM
+       16: 1101xxxxxxxxxxxx B{cond}
+    case 111:
+       18: 11100xxxxxxxxxxx B
+       19: 1111xxxxxxxxxxxx BL,BLX
 */
 ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instruction) {
+    switch (instruction & 0b1110000000000000) {  // mask 1
+        case 0b0000000000000000: { // case 000
+            break;
+        }
+        case 0b0010000000000000: { // case 001
+            break;
+        }
+        case 0b0100000000000000: { // case 010
+            break;
+        }
+        case 0b0110000000000000: { // case 011
+            break;
+        }
+        case 0b1000000000000000: { // case 100
+            break;
+        }
+        case 0b1010000000000000: { // case 101
+            break;
+        }
+        case 0b1100000000000000: { // case 110
+            break;
+        }
+        case 0b1110000000000000: { // case 111
+            break;
+        }        
+        default: {
+            break;
+        }
+    }
+
     return ThumbOpcodeHandlers::undefinedOpHandler;
 }
 
