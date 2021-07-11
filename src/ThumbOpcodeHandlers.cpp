@@ -1045,6 +1045,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::undefinedOpHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string()
                                << std::endl);
-    cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
+    // cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     return {};
 }
