@@ -2,6 +2,7 @@
 
 #include "ARM7TDMI.h"
 #include "Bus.h"
+#include "assert.h"
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
@@ -638,6 +639,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
         }
     }
 
+    return {};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
@@ -682,8 +684,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
         uint32_t data = aluShiftRor(cpu->bus->read32(rnVal & 0xFFFFFFFC), (rnVal & 3) * 8);
         cpu->setRegister(rd, data);
         cpu->bus->write32(rnVal & 0xFFFFFFFC, rmVal);
-
     }
+    return {};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
@@ -821,6 +823,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
         cpu->switchToMode(ARM7TDMI::Mode(cpu->cpsr.Mode));
     }
+    return {};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
@@ -856,6 +859,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
     }
 
     cpu->setRegister(PC_REGISTER, branchAddr._unsigned);
+    return {};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
@@ -902,13 +906,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
     }
     DEBUG(rnVal << "\n");
     cpu->setRegister(PC_REGISTER, rnVal);
+
+    return {};
 }
+
+
 
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED OPCODE! " << std::bitset<32>(instruction).to_string()
+    DEBUG("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string()
                                << std::endl);
     cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     return {};

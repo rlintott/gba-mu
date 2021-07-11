@@ -494,6 +494,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             break;
         }
     }
+    return {};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(
@@ -758,7 +759,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
                     cpu->bus->write32(rbValue, cpu->getRegister(i));
                     rbValue += 4;
                 }
-                rList >> 1;
+                rList >>= 1;
             }
             if(!rList) {
                 // empty rList
@@ -787,7 +788,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
                     cpu->setRegister(i, cpu->bus->read32(rbValue));
                     rbValue += 4;
                 }
-                rList >> 1;
+                rList >>= 1;
             }
             if(!rList) {
                 // empty rList
@@ -832,7 +833,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
                     spValue -= 4;
                     cpu->bus->write32(spValue, i);
                 }
-                rList << 1;
+                rList <<= 1;
             }
             cpu->setRegister(SP_REGISTER, spValue);
             break;
@@ -844,7 +845,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
                     cpu->bus->write32(spValue, i);
                     spValue += 4;
                 }
-                rList >> 1;
+                rList >>= 1;
             }
             if(pcLrBit) {
                 cpu->bus->write32(spValue, cpu->getRegister(PC_REGISTER));
@@ -1038,4 +1039,12 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHandler(
     return {};
 }
 
+/* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
+ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::undefinedOpHandler(
+    uint16_t instruction, ARM7TDMI *cpu) {
+    DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string()
+                               << std::endl);
+    cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
+    return {};
+}
