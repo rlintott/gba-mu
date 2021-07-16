@@ -448,7 +448,6 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
     case 010:
         4: 010000xxxxxxxxxx AluOp
 `       5: 010001xxxxxxxxxx HiReg/BX
-
         6: 01001xxxxxxxxxxx LDR PC
 
         7: 0101xx0xxxxxxxxx LDR/STR
@@ -475,32 +474,95 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
 ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instruction) {
     switch (instruction & 0b1110000000000000) {  // mask 1
         case 0b0000000000000000: { // case 000
+            if((instruction & 0b0001100000000000) == 0b0001100000000000) {
+                // 2: 00011xxxxxxxxxxx ADD/SUB
+            } else {
+                // 1: 000xxxxxxxxxxxxx Shifted
+            }
             break;
         }
         case 0b0010000000000000: { // case 001
+            // 3: 001xxxxxxxxxxxxx Immedi.
             break;
         }
         case 0b0100000000000000: { // case 010
+            switch(instruction & 0b0001000000000000) {
+                case 0b0000000000000000: {
+                    switch(instruction & 0b0001110000000000) {
+                        case 0b0000000000000000: {
+                            // 4: 010000xxxxxxxxxx AluOp                   
+                        }
+                        case 0b0000010000000000: {
+                            // 5: 010001xxxxxxxxxx HiReg/BX
+                        }
+                        default: {
+                            // 6: 01001xxxxxxxxxxx LDR PC
+                        }
+                    }
+                    break;
+                }
+                case 0b0001000000000000: {
+                    if(instruction & 0b0000001000000000) {
+                        // 7: 0101xx0xxxxxxxxx LDR/STR
+                    } else {
+                        // 8: 0101xx1xxxxxxxxx ""H/SB/SH
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }                
+            }
             break;
         }
         case 0b0110000000000000: { // case 011
+            // 9: 011xxxxxxxxxxxxx ""{B}
             break;
         }
         case 0b1000000000000000: { // case 100
+            if(instruction & 0b0001000000000000) {
+                // 11: 1001xxxxxxxxxxxx "" SP
+            } else {
+                // 10: 1000xxxxxxxxxxxx "H
+            }
             break;
         }
         case 0b1010000000000000: { // case 101
+            if(instruction & 0b0001000000000000) {
+                if(instruction & 0b0000010000000000) {
+                    // 13: 10110000xxxxxxxx ADD SP,nn
+                } else {
+                    // 14: 1011x10xxxxxxxxx PUSH/POP
+                }
+            } else {
+                // 12: 1010xxxxxxxxxxxx ADD PC/SP
+            }
             break;
         }
         case 0b1100000000000000: { // case 110
+            if(instruction & 0b0001000000000000) {
+                if((instruction & 0b0001111100000000) == 0b0001111100000000) {
+                    // 17: 11011111xxxxxxxx SWI
+                } else {
+                    // 16: 1101xxxxxxxxxxxx B{cond}
+                }
+            } else {
+                // 15: 1100xxxxxxxxxxxx STM/LDM
+            }           
             break;
         }
         case 0b1110000000000000: { // case 111
+            if(instruction & 0b0001000000000000) {
+                // 19: 1111xxxxxxxxxxxx BL,BLX
+            } else {
+                // 18: 11100xxxxxxxxxxx B
+            }
             break;
         }        
         default: {
             break;
         }
+        // undefined opcode
     }
 
     return ThumbOpcodeHandlers::undefinedOpHandler;
