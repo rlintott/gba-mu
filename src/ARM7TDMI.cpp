@@ -57,7 +57,7 @@ void ARM7TDMI::step() {
         #endif
 
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
-        DEBUG("in thumb state. Going to execute thumb instruction\n");
+        DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
         Cycles cycles = handler(instruction, this);
     }
@@ -479,11 +479,11 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
                 }
                 case 0b0001000000000000: {
                     if(instruction & 0b0000001000000000) {
-                        // 7: 0101xx0xxxxxxxxx LDR/STR
-                        return ThumbOpcodeHandlers::loadStoreRegOffsetHandler;
-                    } else {
                         // 8: 0101xx1xxxxxxxxx ""H/SB/SH
                         return ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler;
+                    } else {
+                        // 7: 0101xx0xxxxxxxxx LDR/STR
+                        return ThumbOpcodeHandlers::loadStoreRegOffsetHandler;
                     }
                 }
                 default: {
@@ -509,11 +509,11 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
         case 0b1010000000000000: { // case 101
             if(instruction & 0b0001000000000000) {
                 if(instruction & 0b0000010000000000) {
-                    // 13: 10110000xxxxxxxx ADD SP,nn
-                    return ThumbOpcodeHandlers::addOffsetToSpHandler;
-                } else {
                     // 14: 1011x10xxxxxxxxx PUSH/POP
                     return ThumbOpcodeHandlers::multipleLoadStorePushPopHandler;
+                } else {
+                    // 13: 10110000xxxxxxxx ADD SP,nn
+                    return ThumbOpcodeHandlers::addOffsetToSpHandler;
                 }
             } else {
                 // 12: 1010xxxxxxxxxxxx ADD PC/SP

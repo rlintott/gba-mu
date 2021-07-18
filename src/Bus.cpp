@@ -53,6 +53,7 @@ uint8_t Bus::read8(uint32_t address) {
 
 uint16_t Bus::read16(uint32_t address) {
     if (0x02000000 <= address && address <= 0x0203FFFF) {
+        // TODO: can optimize to only use one subtraction (use temp var address - 0x02000000U)
         return (uint16_t)wRamBoard->at(address - 0x02000000U) |
                (uint16_t)wRamBoard->at((address + 1) - 0x02000000U) << 8;
     } else if (0x03000000 <= address && address <= 0x03007FFF) {
@@ -100,6 +101,9 @@ void Bus::write8(uint32_t address, uint8_t byte) {
 }
 
 void Bus::write16(uint32_t address, uint16_t halfWord) {
+    if(address == 33554816) {
+        DEBUG("AJHHHUHEIFHEISFHS\n");
+    }
     if (0x02000000 <= address && address <= 0x0203FFFF) {
         (*wRamBoard)[address - 0x02000000U] = (uint8_t)halfWord;
         (*wRamBoard)[(address + 1) - 0x02000000U] = (uint8_t)(halfWord >> 8);
