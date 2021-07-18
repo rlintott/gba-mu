@@ -18,6 +18,8 @@
 #endif
 
 class Bus {
+    // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
+
    public:
     Bus();
     ~Bus();

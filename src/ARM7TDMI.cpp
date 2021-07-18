@@ -30,8 +30,6 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 }
 
 void ARM7TDMI::step() {
-    // read from program counter
-
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
@@ -62,31 +60,6 @@ void ARM7TDMI::step() {
         DEBUG("in thumb state. Going to execute thumb instruction\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
         Cycles cycles = handler(instruction, this);
-
-        // switch(instruction) {
-
-        //     case 8243: {
-        //         setRegister(PC_REGISTER, 134218362);
-        //         setRegister(0, 51);
-        //         break;
-        //     }
-        //     case 18052: {
-        //         setRegister(PC_REGISTER, 134218364);
-        //         setRegister(12, 51);
-        //         break;
-        //     }
-        //     case 40960: {
-        //         setRegister(PC_REGISTER, 134218366);
-        //         setRegister(0, 134218368);
-        //         break;
-        //     }
-        //     case 18176: {
-        //         setRegister(PC_REGISTER, 134218368);
-        //         cpsr.T = 0;
-        //         break;
-        //     }
-
-        // }
     }
 }
 

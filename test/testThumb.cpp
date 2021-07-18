@@ -13,18 +13,17 @@
 
 
 int main() {
-    std::vector<cpu_log> logs = getLogs("arm.log");
+    std::vector<cpu_log> logs = getLogs("thumb.log");
 
     ARM7TDMI cpu;
     Bus bus;
     GameBoyAdvance gba(&cpu, &bus);
-    gba.loadRom("arm.gba");
+    gba.loadRom("thumb.gba");
     int count = 0;
 
     for(cpu_log log : logs) {
-
-        std::cout << "instruction " << count << std::endl;
-        count++;
+        // DEBUG("expected r15:\t" << log.r[15] << std::endl);
+        // DEBUG("actual r15:\t" << cpu.getRegister(15) + 2 << std::endl);
 
         uint32_t instrAddress = cpu.getRegister(15);
         std::cout << "expectedAddr:\t" << log.address << std::endl;
@@ -61,15 +60,18 @@ int main() {
             // in arm state add 4 to PC to account for pipelining
             ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
         }
+
+        std::cout << std::endl;
+        std::cout << "instruction " << count << std::endl;
+        count++;
     
         cpu.step();
 
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
         std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
-        std::cout << "actualInstr bits\t" << std::bitset<32>(cpu.getCurrentInstruction()).to_string() << std::endl;
+        std::cout << "actualInstr bits\t" << std::bitset<16>(cpu.getCurrentInstruction()).to_string() << std::endl;
         ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction())
 
-        std::cout << std::endl;
 
     }
     return 0;

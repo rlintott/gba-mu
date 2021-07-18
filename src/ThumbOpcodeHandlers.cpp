@@ -7,11 +7,15 @@
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0);
+    DEBUG("in thumb shift handler\n");
 
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint8_t offset = (instruction & 0x07C0) >> 6;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
+
+    DEBUG("offset: " << (uint32_t)offset << "\n");
+    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     uint32_t rsVal = cpu->getRegister(rs);
 
@@ -57,12 +61,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
             break;
         }
 
-            cpu->setRegister(rd, result);
-
-            cpu->cpsr.C = carryFlag;
-            cpu->cpsr.Z = (result == 0);
-            cpu->cpsr.N = (result & 0x80000000);
     }
+    cpu->setRegister(rd, result);
+    DEBUG("result: " << std::bitset<32>(result).to_string() << "\n");
+    cpu->cpsr.C = carryFlag;
+    cpu->cpsr.Z = (result == 0);
+    cpu->cpsr.N = (bool)(result & 0x80000000);
+
     return {};
 }
 
@@ -131,10 +136,14 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
                                                            ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0x2000);
+    DEBUG("in thumb compare/add/subtract immediate\n");
     uint8_t opcode = (instruction & 0x1800) >> 11;
-
     uint32_t offset = instruction & 0x00FF;
     uint8_t rd = (instruction & 0x0700) >> 8;
+
+    DEBUG("opcode: " << (uint32_t)opcode << "\n");
+    DEBUG("offset: " << (uint32_t)offset << "\n");
+    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     bool carryFlag;
     bool signFlag;
@@ -155,8 +164,9 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
             // 01b: CMP{S} Rd,#nn      ;compare  Void = Rd - #nn
             uint32_t rdVal = cpu->getRegister(rd);
             uint32_t result = rdVal - offset;
-            signFlag = aluSetsSignBit(offset);
-            zeroFlag = aluSetsZeroBit(offset);
+            DEBUG("result: " << result << "\n");
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
             carryFlag = aluSubtractSetsCarryBit(rdVal, offset);
             overflowFlag = aluSubtractSetsOverflowBit(rdVal, offset, result);
             break;
@@ -165,8 +175,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
             // 10b: ADD{S} Rd,#nn      ;add      Rd   = Rd + #nn
             uint32_t rdVal = cpu->getRegister(rd);
             uint32_t result = rdVal + offset;
-            signFlag = aluSetsSignBit(offset);
-            zeroFlag = aluSetsZeroBit(offset);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
             carryFlag = aluAddSetsCarryBit(rdVal, offset);
             overflowFlag = aluAddSetsOverflowBit(rdVal, offset, result);
             cpu->setRegister(rd, result);
@@ -176,8 +186,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
             // 11b: SUB{S} Rd,#nn      ;subtract Rd   = Rd - #nn
             uint32_t rdVal = cpu->getRegister(rd);
             uint32_t result = rdVal - offset;
-            signFlag = aluSetsSignBit(offset);
-            zeroFlag = aluSetsZeroBit(offset);
+            signFlag = aluSetsSignBit(result);
+            zeroFlag = aluSetsZeroBit(result);
             carryFlag = aluSubtractSetsCarryBit(rdVal, offset);
             overflowFlag = aluSubtractSetsOverflowBit(rdVal, offset, result);
             cpu->setRegister(rd, result);
@@ -446,8 +456,8 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
 
     uint32_t rsVal = cpu->getRegister(rs);
     uint32_t rdVal = cpu->getRegister(rd);
-    rsVal = (rsVal == PC_REGISTER) ? rsVal + 4 : rsVal;
-    rdVal = (rdVal == PC_REGISTER) ? rdVal + 4 : rdVal;
+    rsVal = (rs == PC_REGISTER) ? (rsVal + 4) & 0xFFFFFFFE : rsVal;
+    rdVal = (rd == PC_REGISTER) ? (rdVal + 4) & 0xFFFFFFFE : rdVal;
 
     DEBUG("opcode: " << (uint32_t)opcode << "\n");
     DEBUG("rs: " << (uint32_t)rs << "\n");
@@ -474,7 +484,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
         }
         case 2: {
             // 2: MOV Rd,Rs   ;move       Rd = Rs
-            cpu->setRegister(rd, rsVal);
+            // TODO: why do we have to do this even if rs != 15? and is tis a special case for nly thisopcode? 
+            if(rd == PC_REGISTER) {
+                cpu->setRegister(rd, rsVal & 0xFFFFFFFE);
+            } else {
+                cpu->setRegister(rd, rsVal);
+            }
+            
             assert(msbd || msbs);
             break;
         }
@@ -604,6 +620,7 @@ ARM7TDMI::ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler(
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0x6000);
+    DEBUG("in THUMB.9: load/store with immediate offset\n");
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
@@ -699,14 +716,20 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::getRelativeAddressHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xA000);
+    DEBUG("in THUMB.12: get relative address\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint16_t offset = (instruction & 0x00FF) << 2;
 
+    DEBUG("opcode: " << (uint32_t)opcode << "\n");
+    DEBUG("rd: " << (uint32_t)rd << "\n");
+    DEBUG("offset: " << (uint32_t)offset << "\n");
+
     switch (opcode) {
         case 0: {
             // 0: ADD  Rd,PC,#nn    ;Rd = (($+4) AND NOT 2) + nn
-            uint32_t value = ((cpu->getRegister(PC_REGISTER) + 4) & 0xFFFFFFFD) + offset;
+            // TODO: why do we have to use +2 to pass the tests, instead of the +4 in gbatek?
+            uint32_t value = ((cpu->getRegister(PC_REGISTER) + 2) & (~2)) + offset;
             cpu->setRegister(rd, value);
             break;
         }
@@ -864,17 +887,15 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
     return {};
 }
 
-static uint32_t signExtend16Bit(uint16_t value) {
-    return (value & 0x8000) ? (((uint32_t)value) | 0xFFFF0000) : value;
+static uint32_t signExtend9Bit(uint16_t value) {
+    return (value & 0x0100) ? (((uint32_t)value) | 0xFFFFFE00) : value;
 }
-
-
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xD000);
     uint8_t opcode = (instruction & 0x0F00) >> 8;
-    uint32_t offset = signExtend16Bit((instruction & 0x00FF) << 1);
+    uint32_t offset = signExtend9Bit((instruction & 0x00FF) << 1);
     bool jump = false;
 
     // Destination address must by halfword aligned (ie. bit 0 cleared)
@@ -970,13 +991,16 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
     return {};
 }
 
+static uint32_t signExtend12Bit(uint32_t value) {
+    return (value & 0x00000800) ? (value | 0xFFFFF000) : value;
+}
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0xE000);
-    uint32_t offset = signExtend16Bit((instruction & 0x03FF) << 1);
+    uint32_t offset = signExtend12Bit((instruction & 0x07FF) << 1);
     
-    cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 4 + offset) & 0xFFFFFFFE);
+    cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
 
     return {};
 }
@@ -985,7 +1009,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
 static uint32_t signExtend23Bit(uint32_t value) {
     return (value & 0x00400000) ? (value | 0xFF800000) : value;
 }
-
 
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
