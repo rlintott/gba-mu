@@ -430,6 +430,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
 ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
                                                           ARM7TDMI *cpu) {
     assert((instruction & 0xFC00) == 0x4400);
+    DEBUG("in thumb HiReg/BX handler\n");
     uint8_t opcode = (instruction & 0x0300) >> 8;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
@@ -439,13 +440,18 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
     uint8_t msbs = (instruction & 0x0040) >>
                    6;  // MSBs - Source Register most significant bit
 
-    rs = rs & (msbs << 3);
-    rd = rd & (msbd << 3);
+
+    rs = rs | (msbs << 3);
+    rd = rd | (msbd << 3);
 
     uint32_t rsVal = cpu->getRegister(rs);
     uint32_t rdVal = cpu->getRegister(rd);
     rsVal = (rsVal == PC_REGISTER) ? rsVal + 4 : rsVal;
     rdVal = (rdVal == PC_REGISTER) ? rdVal + 4 : rdVal;
+
+    DEBUG("opcode: " << (uint32_t)opcode << "\n");
+    DEBUG("rs: " << (uint32_t)rs << "\n");
+    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     switch (opcode) {
         case 0: {
