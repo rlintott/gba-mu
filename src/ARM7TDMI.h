@@ -56,6 +56,14 @@ class ARM7TDMI {
         uint8_t N : 1;  // N - Sign Flag       (0=Not Signed, 1=Signed)
     };
 
+    // struct representing the number of cycles an operation will take
+    struct Cycles {
+        uint8_t nonSequentialCycles : 8;
+        uint8_t sequentialCycles : 8;
+        uint8_t internalCycles : 8;
+        uint8_t waitState : 8;
+    };
+
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister *getCurrentModeSpsr();
 
@@ -67,18 +75,13 @@ class ARM7TDMI {
     uint32_t getUserRegister(uint8_t index);
 
     uint32_t getCurrentInstruction();
+    Cycles getCurrentCycles();
     static uint32_t psrToInt(ProgramStatusRegister psr);
   
    private:
-    uint32_t currentInstruction; // for debugging
 
-   // struct representing the number of cycles an operation will take
-    struct Cycles {
-        uint8_t nonSequentialCycles : 8;
-        uint8_t sequentialCycles : 8;
-        uint8_t internalCycles : 8;
-        uint8_t waitState : 8;
-    };
+    uint32_t currentInstruction; // for debugging
+    Cycles currentCycles; // for debugging
 
     class ArmOpcodeHandlers {
        public:
@@ -266,6 +269,9 @@ class ARM7TDMI {
     static bool dataTransGetL(uint32_t instruction);
 
     static bool sFlagSet(uint32_t instruction);
+
+    static uint8_t mulGetExecutionTimeMVal(uint32_t value);
+    static uint8_t umullGetExecutionTimeMVal(uint32_t value);
 
     
     void transferToPsr(uint32_t value, uint8_t field,

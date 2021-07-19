@@ -18,36 +18,48 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     uint64_t result;
     BitPreservedInt64 longResult;
 
+    Cycles cycles = {.nonSequentialCycles = 0,
+            .sequentialCycles = 1,
+            .internalCycles = 0,
+            .waitState = 0};
+
     switch (opcode) {
         case 0b0000: {  // MUL
+            uint32_t rsVal = cpu->getRegister(rs);
             result =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+                (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
             cpu->setRegister(rd, (uint32_t)result);
+            cycles.internalCycles = mulGetExecutionTimeMVal(rsVal);
             break;
         }
         case 0b0001: {  // MLA
             // rn is different for multiply
             uint8_t rn = (instruction & 0x0000F000) >> 12;
+            uint32_t rsVal = cpu->getRegister(rs);
             assert(rn != PC_REGISTER);
             result = (uint64_t)cpu->getRegister(rm) *
-                         (uint64_t)cpu->getRegister(rs) +
+                         (uint64_t)rsVal +
                      (uint64_t)cpu->getRegister(rn);
             cpu->setRegister(rd, (uint32_t)result);
+            cycles.internalCycles = mulGetExecutionTimeMVal(rsVal) + 1;
             break;
         }
         case 0b0100: {  // UMULL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
             DEBUG("umull\n");
+            uint32_t rsVal = cpu->getRegister(rs);
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             longResult._unsigned =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)cpu->getRegister(rs);
+                (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
             DEBUG(longResult._unsigned << " <- result\n");
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            cycles.internalCycles = umullGetExecutionTimeMVal(rsVal) + 1;
             break;
         }
         case 0b0101: {  // UMLAL {cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs+RdHiLo
+            uint32_t rsVal = cpu->getRegister(rs);
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             longResult._unsigned =
@@ -58,29 +70,33 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            cycles.internalCycles = umullGetExecutionTimeMVal(rsVal) + 2;
             break;
         }
         case 0b0110: {  // SMULL {cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
+            uint32_t rsValRaw = cpu->getRegister(rs);
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             BitPreservedInt32 rmVal;
             BitPreservedInt32 rsVal;
             rmVal._unsigned = cpu->getRegister(rm);
-            rsVal._unsigned = cpu->getRegister(rs);
+            rsVal._unsigned = rsValRaw;
             longResult._signed =
                 (int64_t)rmVal._signed * (int64_t)rsVal._signed;
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            cycles.internalCycles = mulGetExecutionTimeMVal(rsValRaw) + 1;
             break;
         }
         case 0b0111: {  // SMLAL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs+RdHiLo
+            uint32_t rsValRaw = cpu->getRegister(rs);
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             BitPreservedInt32 rmVal;
             BitPreservedInt32 rsVal;
             rmVal._unsigned = cpu->getRegister(rm);
-            rsVal._unsigned = cpu->getRegister(rs);
+            rsVal._unsigned = rsValRaw;
             BitPreservedInt64 accum;
             accum._unsigned = ((((uint64_t)(cpu->getRegister(rdhi))) << 32) |
                                ((uint64_t)(cpu->getRegister(rdlo))));
@@ -89,6 +105,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
+            cycles.internalCycles = mulGetExecutionTimeMVal(rsValRaw) + 2;
             break;
         }
     }
@@ -106,7 +123,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
         // cpu->cpsr.C = 0;
         // cpu->cpsr.V = 0;
     }
-    return {};
+    return cycles;
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PSR Transfer (MRS, MSR) Operations
@@ -164,7 +181,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
         }
     }
 
-    return {};
+    return {.nonSequentialCycles = 0,
+            .sequentialCycles = 1,
+            .internalCycles = 0,
+            .waitState = 0};
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ALU OPERATIONS
@@ -194,9 +214,11 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t instruction,
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     // shift op2
+    bool i = (instruction & 0x02000000);
+    bool r = (instruction & 0x00000010);
 
     AluShiftResult shiftResult = cpu->aluShift(
-        instruction, (instruction & 0x02000000), (instruction & 0x00000010));
+        instruction, i, r);
     uint8_t rd = getRd(instruction);
     uint8_t rn = getRn(instruction);
     uint8_t opcode = getOpcode(instruction);
@@ -219,7 +241,6 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     uint32_t op2 = shiftResult.op2;
 
     DEBUG(op2 << " <- in dataproc, op2 (after shift)\n");
-
 
     switch (opcode) {
         case AND: {  // AND
@@ -384,7 +405,20 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     } else {
     }  // flags not affected, not allowed in CMP
 
-    return {};
+    Cycles cycles = {.nonSequentialCycles = 0,
+                .sequentialCycles = 1,
+                .internalCycles = 0,
+                .waitState = 0};
+    // TODO: can potentially optimize a bit by using already existing condition checks earlier in code
+    if(!i && r) {
+        cycles.internalCycles = 1;
+    }
+    if(rd == PC_REGISTER) {
+        cycles.sequentialCycles = 2;
+        cycles.nonSequentialCycles = 1;
+    }
+
+    return cycles;
 }
 
 /* ~~~~~~~~ SINGLE DATA TRANSFER ~~~~~~~~~*/
@@ -407,6 +441,9 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
     uint32_t offset;
     // I - Immediate Offset Flag (0=Immediate, 1=Shifted Register)
     DEBUG((bool)(instruction & 0x02000000) << " <- imm\n");
+
+    Cycles cycles;
+
     if ((instruction & 0x02000000)) {
         // Register shifted by Immediate as Offset
         assert(!(instruction & 0x00000010));  // bit 4 Must be 0 (Reserved, see
@@ -509,6 +546,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
                     rd, aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
                                     (address & 3) * 8));
             }
+            if(rd == PC_REGISTER) {
+                cycles = {.nonSequentialCycles = 2,
+                            .sequentialCycles = 2,
+                            .internalCycles = 1,
+                            .waitState = 0};
+            } else {
+                cycles = {.nonSequentialCycles = 1,
+                            .sequentialCycles = 1,
+                            .internalCycles = 1,
+                            .waitState = 0};
+            }
         }
     } else {
         DEBUG(" STR \n");
@@ -519,10 +567,12 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandler(
                 DEBUG((address & 0xFFFFFFFC) << " <- writing to addr\n");
             cpu->bus->write32(address & 0xFFFFFFFC, (rdVal));
         }
+        cycles = {.nonSequentialCycles = 2,
+            .sequentialCycles = 0,
+            .internalCycles = 0,
+            .waitState = 0};
     }
-
-
-    return {};
+    return cycles;
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
@@ -577,6 +627,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
 
     }
 
+    Cycles cycles;
+
     uint8_t opcode = (instruction & 0x00000060) >> 5;
     switch (opcode) {
         case 0: {
@@ -591,10 +643,25 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
                     rd, aluShiftRor(
                             (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE)),
                             (address & 1) * 8));
+                if(rd == PC_REGISTER) {
+                    cycles = {.nonSequentialCycles = 2,
+                                .sequentialCycles = 2,
+                                .internalCycles = 1,
+                                .waitState = 0};
+                } else {
+                    cycles = {.nonSequentialCycles = 1,
+                                .sequentialCycles = 1,
+                                .internalCycles = 1,
+                                .waitState = 0};
+                }
             } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
                 DEBUG((address & 0xFFFFFFFE) << " <- address will store halfword to\n");
                 DEBUG((uint16_t)rdVal << " <- will store this\n");
                 cpu->bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal);
+                cycles = {.nonSequentialCycles = 2,
+                            .sequentialCycles = 0,
+                            .internalCycles = 0,
+                            .waitState = 0};
             }
             break;
         }
@@ -607,6 +674,17 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
                 cpu->setRegister(rd, 0xFFFFFF00 | val);
             } else {
                 cpu->setRegister(rd, val);
+            }
+            if(rd == PC_REGISTER) {
+                cycles = {.nonSequentialCycles = 2,
+                            .sequentialCycles = 2,
+                            .internalCycles = 1,
+                            .waitState = 0};
+            } else {
+                cycles = {.nonSequentialCycles = 1,
+                            .sequentialCycles = 1,
+                            .internalCycles = 1,
+                            .waitState = 0};
             }
             break;
         }
@@ -635,11 +713,23 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
             } else {
                 cpu->setRegister(rd, val);
             }
+
+            if(rd == PC_REGISTER) {
+                cycles = {.nonSequentialCycles = 2,
+                            .sequentialCycles = 2,
+                            .internalCycles = 1,
+                            .waitState = 0};
+            } else {
+                cycles = {.nonSequentialCycles = 1,
+                            .sequentialCycles = 1,
+                            .internalCycles = 1,
+                            .waitState = 0};
+            }
             break;
         }
     }
 
-    return {};
+    return cycles;
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
@@ -685,7 +775,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler(
         cpu->setRegister(rd, data);
         cpu->bus->write32(rnVal & 0xFFFFFFFC, rmVal);
     }
-    return {};
+    return {.nonSequentialCycles = 2,
+                .sequentialCycles = 1,
+                .internalCycles = 1,
+                .waitState = 0};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
@@ -699,6 +792,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
     // align memory address;
     uint32_t rnVal = cpu->getRegister(rn);
     assert(rn != 15);
+    uint8_t rlistSize = 0;
 
     bool p = dataTransGetP(instruction);
     bool u = dataTransGetU(instruction);
@@ -728,6 +822,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         for (int reg = 0; reg < 16; reg++) {
             DEBUG("iterating through regs, will add offset\n");
             if (regList & 1) {
+                rlistSize++;
                 DEBUG(reg << " <- reg is in list\n");
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
@@ -768,6 +863,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         for (int reg = 15; reg >= 0; reg--) {
             DEBUG("iterating through regs, will  subtract offset\n");
             if (regList & 0x8000) {
+                rlistSize++;
                 DEBUG(reg << " <- reg is in list\n");
                 if (l) {
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
@@ -823,7 +919,33 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
         cpu->switchToMode(ARM7TDMI::Mode(cpu->cpsr.Mode));
     }
-    return {};
+
+    // cycles
+    Cycles cycles;
+    if(l) {
+        // LDM
+        if(instruction & 0x00008000) {
+            // pc in list
+            cycles = {.nonSequentialCycles = 2,
+                        .sequentialCycles = 0,
+                        .internalCycles = 1,
+                        .waitState = 0};
+            cycles.sequentialCycles = rlistSize + 1;
+        } else {
+            cycles = {.nonSequentialCycles = 1,
+                        .sequentialCycles = rlistSize,
+                        .internalCycles = 1,
+                        .waitState = 0};
+        }
+    } else {
+        // STM
+        cycles = {.nonSequentialCycles = 2,
+                    .sequentialCycles = 0,
+                    .internalCycles = 0,
+                    .waitState = 0};
+        cycles.sequentialCycles = rlistSize - 1;
+    }
+    return cycles;
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
@@ -859,7 +981,11 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchHandler(
     }
 
     cpu->setRegister(PC_REGISTER, branchAddr._unsigned);
-    return {};
+
+    return {.nonSequentialCycles = 1,
+            .sequentialCycles = 2, 
+            .internalCycles = 0,
+            .waitState = 0};
 }
 
 ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
@@ -907,7 +1033,10 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHandler(
     DEBUG(rnVal << "\n");
     cpu->setRegister(PC_REGISTER, rnVal);
 
-    return {};
+    return {.nonSequentialCycles = 1,
+        .sequentialCycles = 2, 
+        .internalCycles = 0,
+        .waitState = 0};
 }
 
 
@@ -919,5 +1048,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
     DEBUG("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string()
                                << std::endl);
     cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
-    return {};
+    return {.nonSequentialCycles = 1,
+        .sequentialCycles = 2, 
+        .internalCycles = 1,
+        .waitState = 0};
 }

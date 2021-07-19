@@ -29,6 +29,10 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
     return currentInstruction;
 }
 
+ARM7TDMI::Cycles ARM7TDMI::getCurrentCycles() {
+    return currentCycles;
+}
+
 void ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
 
@@ -36,30 +40,34 @@ void ARM7TDMI::step() {
         uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
         DEBUG(std::bitset<32>(instruction).to_string() << " <- going to execute \n");
 
-        #ifndef NDEBUG
-        currentInstruction = instruction;
-        #endif
-
         uint8_t cond = (instruction & 0xF0000000) >> 28;
         DEBUG("in arm state\n");
         // increment PC
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
+        Cycles cycles;
         if(conditionalHolds(cond)) {
             ArmOpcodeHandler handler = decodeArmInstruction(instruction);
-            Cycles cycles = handler(instruction, this);
+            cycles = handler(instruction, this);
         }
+
+        #ifndef NDEBUG
+        currentInstruction = instruction;
+        currentCycles = cycles;
+        #endif
+
     } else {  // THUMB state
         // TODO implement thumb instructions. Mocking behaviour to pass ARM tests
         uint16_t instruction = bus->read16(getRegister(PC_REGISTER));
-
-        #ifndef NDEBUG
-        currentInstruction = (uint32_t)instruction;
-        #endif
 
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
         DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
         Cycles cycles = handler(instruction, this);
+
+        #ifndef NDEBUG
+        currentInstruction = (uint32_t)instruction;
+        currentCycles = cycles;
+        #endif
     }
 }
 
@@ -379,9 +387,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
             break;
         }
         default: {
-
             return ArmOpcodeHandlers::undefinedOpHandler;
-
         }
     }
     return ArmOpcodeHandlers::undefinedOpHandler;
@@ -894,3 +900,41 @@ bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
     return instruction & 0x00100000;
 }
 
+
+/*
+Execution Time: 1S+mI for MUL, and 1S+(m+1)I for MLA. 
+Whereas 'm' depends on whether/how many most significant 
+bits of Rs are all zero or all one. That is m=1 for 
+Bit 31-8, m=2 for Bit 31-16, m=3 for Bit 31-24, and m=4 otherwise.
+*/
+uint8_t ARM7TDMI::mulGetExecutionTimeMVal(uint32_t value) {
+    uint32_t masked = value & 0xFFFFFF00;
+    if(masked == 0xFFFFFF00 || !masked) {
+        return 1;
+    }
+    masked >>= 8;
+    if(masked == 0xFFFFFF00 || !masked) {
+        return 2;
+    }
+    masked >>= 8;
+    if(masked == 0xFFFFFF00 || !masked) {
+        return 3;
+    }
+    return 4;
+}
+
+uint8_t ARM7TDMI::umullGetExecutionTimeMVal(uint32_t value) {
+    uint32_t masked = value & 0xFFFFFF00;
+    if(!masked) {
+        return 1;
+    }
+    masked >>= 8;
+    if(!masked) {
+        return 2;
+    }
+    masked >>= 8;
+    if(!masked) {
+        return 3;
+    }
+    return 4;
+}

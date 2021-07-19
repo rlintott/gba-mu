@@ -19,6 +19,9 @@
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
+    
+    // TODO: NOTES: The GBA forcefully uses non-sequential timing at the beginning of each 128K-block of gamepak ROM, 
+    // eg. "LDMIA [801fff8h],r0-r7" will have non-sequential timing at 8020000h.
 
    public:
     Bus();

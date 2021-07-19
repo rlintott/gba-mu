@@ -61,7 +61,13 @@ int main() {
             // in arm state add 4 to PC to account for pipelining
             ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
         }
-    
+
+        // uint32_t nCycles = cpu.getCurrentCycles().internalCycles + 
+        //                     cpu.getCurrentCycles().nonSequentialCycles +
+        //                     cpu.getCurrentCycles().sequentialCycles;  
+        // // ASSERT_EQUAL("cycles", log.cycles, nCycles)
+        // std::cout << "expectedCycles:\t" << log.cycles << std::endl;
+
         cpu.step();
 
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
