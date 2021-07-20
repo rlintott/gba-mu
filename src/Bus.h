@@ -28,21 +28,54 @@ class Bus {
     ~Bus();
 
    public:
-    // work ram! 02000000-0203FFFF (256kB)
-    std::array<uint8_t, 263168>* wRamBoard;
-    // 03000000-03007FFF (32 kB)
-    std::array<uint8_t, 32896>* wRamChip;
+    /* General Internal Memory */
 
-    // Game Pak ROM/FlashROM (max 32MB), 08000000-09FFFFFF
-    std::vector<uint8_t>* gamePakRom;
+    // 00000000-00003FFF   BIOS - System ROM (16 KBytes) 16448
+    std::vector<uint8_t> bios;
+    // work ram! 02000000-0203FFFF (256kB) 263168
+    std::vector<uint8_t> wRamBoard;
+    // 03000000-03007FFF (32 kB) 32896
+    std::vector<uint8_t> wRamChip;
+    // 04000000-040003FE   I/O Registers 1028
+    std::vector<uint8_t> iORegisters;
+
+    /* Internal Display Memory */
+
+    // 05000000-050003FF   BG/OBJ Palette RAM        (1 Kbyte) 1028
+    std::vector<uint8_t> paletteRam;
+    // 06000000-06017FFF   VRAM - Video RAM          (96 KBytes) 98688
+    std::vector<uint8_t> vRam;
+    // 07000000-070003FF   OAM - OBJ Attributes      (1 Kbyte) 1028
+    std::vector<uint8_t> objAttributes;
+
+    /* External Memory (Game Pak) */
+
+    // 08000000-09FFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 0
+    // 0A000000-0BFFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 1
+    // 0C000000-0DFFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 2
+    std::vector<uint8_t> gamePakRom;
+    // 0E000000-0E00FFFF   Game Pak SRAM    (max 64 KBytes) - 8bit Bus width (65792)
+    std::vector<uint8_t> gamePakSram;
+
 
     uint32_t read32(uint32_t address);
-    uint8_t read8(uint32_t address);
     uint16_t read16(uint32_t address);
+    uint8_t read8(uint32_t address);
 
     void write32(uint32_t address, uint32_t word);
-    void write8(uint32_t address, uint8_t byte);
     void write16(uint32_t address, uint16_t halfWord);
+    void write8(uint32_t address, uint8_t byte);
 
     void loadRom(std::string path);
+
+    uint8_t getCurrentNWaitstate();
+    uint8_t getCurrentSWaitstate();
+
+   private:
+    uint8_t currentNWaitstate;
+    uint8_t currentSWaitstate;
+
+    uint32_t read(uint32_t address, uint8_t width);
+    void write(uint32_t address, uint32_t value, uint8_t width);
+
 };

@@ -7,117 +7,627 @@
 #include <iterator>
 
 Bus::Bus() {
-    wRamBoard = new std::array<uint8_t, 263168>();
-    wRamChip = new std::array<uint8_t, 32896>();
-    gamePakRom = new std::vector<uint8_t>();
+    for(int i = 0; i < 16448; i++) {
+        bios.push_back(0);
+    }
+    for(int i = 0; i < 263168; i++) {
+        wRamBoard.push_back(0);
+    }
+    for(int i = 0; i < 32896; i++) {
+        wRamChip.push_back(0);
+    }
+    for(int i = 0; i < 1028; i++) {
+        iORegisters.push_back(0);
+    }
+    for(int i = 0; i < 1028; i++) {
+        paletteRam.push_back(0);
+    }
+    for(int i = 0; i < 98688; i++) {
+        vRam.push_back(0);
+    }
+    for(int i = 0; i < 1028; i++) {
+        objAttributes.push_back(0);
+    }
+    for(int i = 0; i < 65792; i++) {
+        gamePakSram.push_back(0);
+    }
 }
 
 Bus::~Bus() {
-    delete wRamBoard;
-    delete wRamChip;
-    delete gamePakRom;
 }
 
-uint32_t Bus::read32(uint32_t address) {
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        return (uint32_t)wRamBoard->at(address - 0x02000000U) |
-               (uint32_t)wRamBoard->at((address + 1) - 0x02000000U) << 8 |
-               (uint32_t)wRamBoard->at((address + 2) - 0x02000000U) << 16 |
-               (uint32_t)wRamBoard->at((address + 3) - 0x02000000U) << 24;
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        return (uint32_t)wRamChip->at(address - 0x03000000U) |
-               (uint32_t)wRamChip->at((address + 1) - 0x03000000U) << 8 |
-               (uint32_t)wRamChip->at((address + 2) - 0x03000000U) << 16 |
-               (uint32_t)wRamChip->at((address + 3) - 0x03000000U) << 24;
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        return (uint32_t)gamePakRom->at(address - 0x08000000U) |
-               (uint32_t)gamePakRom->at((address + 1) - 0x08000000U) << 8 |
-               (uint32_t)gamePakRom->at((address + 2) - 0x08000000U) << 16 |
-               (uint32_t)gamePakRom->at((address + 3) - 0x08000000U) << 24;
+
+uint32_t readFromArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
+        return (uint32_t)arr->at(address - shift) |
+               (uint32_t)arr->at((address + 1) - shift) << 8 |
+               (uint32_t)arr->at((address + 2) - shift) << 16 |
+               (uint32_t)arr->at((address + 3) - shift) << 24;
+}
+
+uint16_t readFromArray16(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
+        return (uint16_t)arr->at(address - shift) |
+               (uint16_t)arr->at((address + 1) - shift) << 8;
+}
+
+uint8_t readFromArray8(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
+        return (uint8_t)arr->at(address - shift);
+}
+
+void writeToArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint32_t value) {
+        arr->at(address - shift) = (uint8_t)value;
+        arr->at((address + 1) - shift) = (uint8_t)(value >> 8);
+        arr->at((address + 2) - shift) = (uint8_t)(value >> 16);
+        arr->at((address + 3) - shift) = (uint8_t)(value >> 24);
+}
+
+void writeToArray16(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint16_t value) {
+        arr->at(address - shift) = (uint8_t)value;
+        arr->at((address + 1) - shift) = (uint8_t)(value >> 8);
+}
+
+void writeToArray8(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint8_t value) {
+        arr->at(address - shift) = (uint8_t)value;
+}
+
+uint32_t Bus::read(uint32_t address, uint8_t width) {
+    // TODO: can this be made faster (case switch the address?) tradeoff between performance/
+    // readability
+    if(address <= 0x00003FFF) {
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray32(&bios, address, 0);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&bios, address, 0);
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&bios, address, 0);
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }
     }
-    // todo: hack for now to pass the test, why does accessing out of bound memory return this value?
+
+    else if (0x02000000 <= address && address <= 0x0203FFFF) {
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 6;
+                currentSWaitstate = 6;
+                return readFromArray32(&wRamBoard, address, 0x02000000);
+            }
+            case 16: {
+                currentNWaitstate = 3;
+                currentSWaitstate = 3;
+                return readFromArray16(&wRamBoard, address, 0x02000000);            }
+            case 8: {
+                currentNWaitstate = 3;
+                currentSWaitstate = 3;
+                return readFromArray8(&wRamBoard, address, 0x02000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }
+
+    } else if (0x03000000 <= address && address <= 0x03007FFF) {
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray32(&wRamChip, address, 0x03000000);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&wRamChip, address, 0x03000000);            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&wRamChip, address, 0x03000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }     
+
+    } else if (0x04000000 <= address && address <= 0x040003FE) {
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray32(&iORegisters, address, 0x04000000);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&iORegisters, address, 0x04000000);            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&iORegisters, address, 0x04000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }           
+
+    } else if (0x05000000 <= address && address <= 0x050003FF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 2;
+                currentSWaitstate = 2;
+                return readFromArray32(&paletteRam, address, 0x05000000);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&paletteRam, address, 0x05000000);            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&paletteRam, address, 0x05000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x06000000 <= address && address <= 0x06017FFF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 2;
+                currentSWaitstate = 2;
+                return readFromArray32(&vRam, address, 0x06000000);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&vRam, address, 0x06000000);            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&vRam, address, 0x06000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }  
+
+    } else if (0x07000000 <= address && address <= 0x070003FF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray32(&objAttributes, address, 0x07000000);
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray16(&objAttributes, address, 0x07000000);            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                return readFromArray8(&objAttributes, address, 0x07000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }    
+
+    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 0
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                return readFromArray32(&gamePakRom, address, 0x08000000);
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray16(&gamePakRom, address, 0x08000000);            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray8(&gamePakRom, address, 0x08000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x0A000000 <= address && address <= 0x0BFFFFFF) {
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 1
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                return readFromArray32(&gamePakRom, address, 0x0A000000);
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray16(&gamePakRom, address, 0x0A000000);            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray8(&gamePakRom, address, 0x0A000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x0C000000 <= address && address <= 0x0DFFFFFF) {
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 2
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                return readFromArray32(&gamePakRom, address, 0x0C000000);
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray16(&gamePakRom, address, 0x0C000000);            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray8(&gamePakRom, address, 0x0C000000);            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x0E000000 <= address && address <= 0x0E00FFFF) {
+
+        switch(width) {
+            case 32: {
+                assert(false);
+                break;
+            }
+            case 16: {
+                assert(false);
+                break;
+            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                return readFromArray8(&gamePakSram, address, 0x0E000000);           
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        } 
+    }
+
+    // TODO: hack for now to pass the test, why does accessing out of bound memory return this value?
     //  (probably just garbage)
     return 436207618U;
 }
 
-uint8_t Bus::read8(uint32_t address) {
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        return (uint8_t)wRamBoard->at(address - 0x02000000U);
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        return (uint8_t)wRamChip->at(address - 0x03000000U);
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        return (uint8_t)gamePakRom->at(address - 0x08000000U);
-    }
-    return 0x0;
-}
+void Bus::write(uint32_t address, uint32_t value, uint8_t width) {
+    // TODO: can this be made faster (case switch the address?) tradeoff between performance/
+    // readability
+    if(address <= 0x00003FFF) {
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray32(&bios, address, 0, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&bios, address, 0, value);
+                break;
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&bios, address, 0, value);
+                break;
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }
 
-uint16_t Bus::read16(uint32_t address) {
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        // TODO: can optimize to only use one subtraction (use temp var address - 0x02000000U)
-        return (uint16_t)wRamBoard->at(address - 0x02000000U) |
-               (uint16_t)wRamBoard->at((address + 1) - 0x02000000U) << 8;
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        DEBUG("reading halword from wRampChip\n");
-        return ((uint16_t)wRamChip->at(address - 0x03000000U)) |
-               ((uint16_t)wRamChip->at((address + 1) - 0x03000000U) << 8);
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        return (uint16_t)gamePakRom->at(address - 0x08000000U) |
-               (uint16_t)gamePakRom->at((address + 1) - 0x08000000U) << 8;
-    }
-    return 0x0;
-}
+    } else if (0x02000000 <= address && address <= 0x0203FFFF) {
 
-void Bus::write32(uint32_t address, uint32_t word) {
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        (*wRamBoard)[address - 0x02000000U] = (uint8_t)word;
-        (*wRamBoard)[(address + 1) - 0x02000000U] = (uint8_t)(word >> 8);
-        (*wRamBoard)[(address + 2) - 0x02000000U] = (uint8_t)(word >> 16);
-        (*wRamBoard)[(address + 3) - 0x02000000U] = (uint8_t)(word >> 24);
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 6;
+                currentSWaitstate = 6;
+                writeToArray32(&wRamBoard, address, 0x02000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 3;
+                currentSWaitstate = 3;
+                writeToArray16(&wRamBoard, address, 0x02000000, value);    
+                break;        
+            }
+            case 8: {
+                currentNWaitstate = 3;
+                currentSWaitstate = 3;
+                writeToArray8(&wRamBoard, address, 0x02000000, value);    
+                break;       
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }
+
     } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        (*wRamChip)[address - 0x03000000U] = (uint8_t)word;
-        (*wRamChip)[(address + 1) - 0x03000000U] = (uint8_t)(word >> 8);
-        (*wRamChip)[(address + 2) - 0x03000000U] = (uint8_t)(word >> 16);
-        (*wRamChip)[(address + 3) - 0x03000000U] = (uint8_t)(word >> 24);
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray32(&wRamChip, address, 0x03000000, value); 
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&wRamChip, address, 0x03000000, value);       
+                break;     
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&wRamChip, address, 0x03000000, value);             
+                break;
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }     
+
+    } else if (0x04000000 <= address && address <= 0x040003FE) {
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray32(&iORegisters, address, 0x04000000, value); 
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&iORegisters, address, 0x04000000, value);      
+                break;      
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&iORegisters, address, 0x04000000, value);         
+                break;  
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }           
+
+    } else if (0x05000000 <= address && address <= 0x050003FF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 2;
+                currentSWaitstate = 2;
+                writeToArray32(&paletteRam, address, 0x05000000, value); 
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&paletteRam, address, 0x05000000, value);         
+                break;    
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&paletteRam, address, 0x05000000, value);
+                break;            
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x06000000 <= address && address <= 0x06017FFF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 2;
+                currentSWaitstate = 2;
+                writeToArray32(&vRam, address, 0x06000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&vRam, address, 0x06000000, value);    
+                break;        
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&vRam, address, 0x06000000, value);      
+                break;      
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }  
+
+    } else if (0x07000000 <= address && address <= 0x070003FF) {    
+
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray32(&objAttributes, address, 0x07000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray16(&objAttributes, address, 0x07000000, value);          
+                break;  
+            }
+            case 8: {
+                currentNWaitstate = 1;
+                currentSWaitstate = 1;
+                writeToArray8(&objAttributes, address, 0x07000000, value);            
+                break;
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }    
+
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        // shouldnt be writing to ROM
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 0
+        DEBUG("reading from gamepak\n");
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                writeToArray32(&gamePakRom, address, 0x08000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray16(&gamePakRom, address, 0x08000000, value);         
+                break;   
+            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray8(&gamePakRom, address, 0x08000000, value);          
+                break;  
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x0A000000 <= address && address <= 0x0BFFFFFF) {
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 1
         assert(false);
-        (*gamePakRom)[address - 0x08000000U] = (uint8_t)word;
-        (*gamePakRom)[(address + 1) - 0x08000000U] = (uint8_t)(word >> 8);
-        (*gamePakRom)[(address + 2) - 0x08000000U] = (uint8_t)(word >> 16);
-        (*gamePakRom)[(address + 3) - 0x08000000U] = (uint8_t)(word >> 24);
-    }
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                writeToArray32(&gamePakRom, address, 0x0A000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray16(&gamePakRom, address, 0x0A000000, value);         
+                break;   
+            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray8(&gamePakRom, address, 0x0A000000, value);           
+                break;
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        }   
+
+    } else if (0x0C000000 <= address && address <= 0x0DFFFFFF) {
+        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+        // waitstate 2
+        assert(false);
+        switch(width) {
+            case 32: {
+                currentNWaitstate = 8;
+                currentSWaitstate = 8;
+                writeToArray32(&gamePakRom, address, 0x0C000000, value);
+                break;
+            }
+            case 16: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray16(&gamePakRom, address, 0x0C000000, value);            
+                break;
+            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray8(&gamePakRom, address, 0x0C000000, value);            
+                break;
+            }
+            default: {
+                assert(false);
+            }
+        }   
+
+    } else if (0x0E000000 <= address && address <= 0x0E00FFFF) {
+
+        switch(width) {
+            case 32: {
+                assert(false);
+                break;
+            }
+            case 16: {
+                assert(false);
+                break;
+            }
+            case 8: {
+                currentNWaitstate = 5;
+                currentSWaitstate = 5;
+                writeToArray8(&gamePakSram, address, 0x0E000000, value); 
+                break;           
+            }
+            default: {
+                assert(false);
+                break;
+            }
+        } 
+    } 
 }
 
-void Bus::write8(uint32_t address, uint8_t byte) {
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        (*wRamBoard)[address - 0x02000000U] = (uint8_t)byte;
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        (*wRamChip)[address - 0x03000000U] = (uint8_t)byte;
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        // shouldnt be writing to ROM
-        assert(false);
-        (*gamePakRom)[address - 0x08000000U] = (uint8_t)byte;
-    }
-}
-
-void Bus::write16(uint32_t address, uint16_t halfWord) {
-    if(address == 33554816) {
-        DEBUG("AJHHHUHEIFHEISFHS\n");
-    }
-    if (0x02000000 <= address && address <= 0x0203FFFF) {
-        (*wRamBoard)[address - 0x02000000U] = (uint8_t)halfWord;
-        (*wRamBoard)[(address + 1) - 0x02000000U] = (uint8_t)(halfWord >> 8);
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        DEBUG("writing 16 bit to wRamChip\n");
-        (*wRamChip)[address - 0x03000000U] = (uint8_t)halfWord;
-        (*wRamChip)[(address + 1) - 0x03000000U] = (uint8_t)(halfWord >> 8);
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        // shouldnt be writing to ROM
-        assert(false);
-        (*gamePakRom)[address - 0x08000000U] = (uint8_t)halfWord;
-        (*gamePakRom)[(address + 1) - 0x08000000U] = (uint8_t)(halfWord >> 8);
-    }
-}
 
 void Bus::loadRom(std::string path) {
 
@@ -126,6 +636,41 @@ void Bus::loadRom(std::string path) {
 
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
-        gamePakRom->push_back(buffer[i]);
+        gamePakRom.push_back(buffer[i]);
     }
 }
+
+
+uint8_t Bus::getCurrentNWaitstate() {
+    return currentNWaitstate;
+}
+
+uint8_t Bus::getCurrentSWaitstate() {
+    return currentSWaitstate;
+}
+
+
+void Bus::write32(uint32_t address, uint32_t word) {
+    write(address, word, 32);
+}
+
+uint32_t Bus::read32(uint32_t address) {
+    return read(address, 32);
+}
+
+void Bus::write16(uint32_t address, uint16_t halfWord) {
+    write(address, halfWord, 16);
+}
+
+uint16_t Bus::read16(uint32_t address) {
+    return read(address, 16);
+}
+
+void Bus::write8(uint32_t address, uint8_t byte) {
+    write(address, byte, 8);
+}
+
+uint8_t Bus::read8(uint32_t address) {
+    return read(address, 8);
+}
+
