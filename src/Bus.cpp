@@ -233,18 +233,22 @@ uint32_t Bus::read(uint32_t address, uint8_t width) {
         // waitstate 0
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState0NCycles() + 1 + 
+                                    getWaitState0SCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1 + 
+                                    getWaitState0SCycles() + 1;
                 return readFromArray32(&gamePakRom, address, 0x08000000);
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray16(&gamePakRom, address, 0x08000000);            }
+                currentNWaitstate = getWaitState0NCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1;
+                return readFromArray16(&gamePakRom, address, 0x08000000);            
+            }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray8(&gamePakRom, address, 0x08000000);            }
+                currentNWaitstate = getWaitState0NCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1;
+                return readFromArray8(&gamePakRom, address, 0x08000000);           
+            }
             default: {
                 assert(false);
                 break;
@@ -256,18 +260,22 @@ uint32_t Bus::read(uint32_t address, uint8_t width) {
         // waitstate 1
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState1NCycles() + 1 + 
+                                    getWaitState1SCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1 + 
+                                    getWaitState1SCycles() + 1;
                 return readFromArray32(&gamePakRom, address, 0x0A000000);
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray16(&gamePakRom, address, 0x0A000000);            }
+                currentNWaitstate = getWaitState1NCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1;
+                return readFromArray16(&gamePakRom, address, 0x0A000000);            
+            }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray8(&gamePakRom, address, 0x0A000000);            }
+                currentNWaitstate = getWaitState1NCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1;
+                return readFromArray8(&gamePakRom, address, 0x0A000000);            
+            }
             default: {
                 assert(false);
                 break;
@@ -280,18 +288,22 @@ uint32_t Bus::read(uint32_t address, uint8_t width) {
 
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState2NCycles() + 1 + 
+                                    getWaitState2SCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1 + 
+                                    getWaitState2SCycles() + 1;
                 return readFromArray32(&gamePakRom, address, 0x0C000000);
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray16(&gamePakRom, address, 0x0C000000);            }
+                currentNWaitstate = getWaitState2NCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1;
+                return readFromArray16(&gamePakRom, address, 0x0C000000);           
+            }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
-                return readFromArray8(&gamePakRom, address, 0x0C000000);            }
+                currentNWaitstate = getWaitState2NCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1;
+                return readFromArray8(&gamePakRom, address, 0x0C000000);            
+            }
             default: {
                 assert(false);
                 break;
@@ -523,20 +535,22 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width) {
         DEBUG("reading from gamepak\n");
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState0NCycles() + 1 + 
+                                    getWaitState0SCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1 + 
+                                    getWaitState0SCycles() + 1;
                 writeToArray32(&gamePakRom, address, 0x08000000, value);
                 break;
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState0NCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1;
                 writeToArray16(&gamePakRom, address, 0x08000000, value);         
                 break;   
             }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState0NCycles() + 1;
+                currentSWaitstate = getWaitState0SCycles() + 1;
                 writeToArray8(&gamePakRom, address, 0x08000000, value);          
                 break;  
             }
@@ -552,20 +566,22 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width) {
         assert(false);
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState1NCycles() + 1 + 
+                                    getWaitState1SCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1 + 
+                                    getWaitState1SCycles() + 1;
                 writeToArray32(&gamePakRom, address, 0x0A000000, value);
                 break;
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState1NCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1;
                 writeToArray16(&gamePakRom, address, 0x0A000000, value);         
                 break;   
             }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState1NCycles() + 1;
+                currentSWaitstate = getWaitState1SCycles() + 1;
                 writeToArray8(&gamePakRom, address, 0x0A000000, value);           
                 break;
             }
@@ -581,20 +597,22 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width) {
         assert(false);
         switch(width) {
             case 32: {
-                currentNWaitstate = 8;
-                currentSWaitstate = 8;
+                currentNWaitstate = getWaitState2NCycles() + 1 + 
+                                    getWaitState2SCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1 + 
+                                    getWaitState2SCycles() + 1;
                 writeToArray32(&gamePakRom, address, 0x0C000000, value);
                 break;
             }
             case 16: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState2NCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1;
                 writeToArray16(&gamePakRom, address, 0x0C000000, value);            
                 break;
             }
             case 8: {
-                currentNWaitstate = 5;
-                currentSWaitstate = 5;
+                currentNWaitstate = getWaitState2NCycles() + 1;
+                currentSWaitstate = getWaitState2SCycles() + 1;
                 writeToArray8(&gamePakRom, address, 0x0C000000, value);            
                 break;
             }
@@ -674,3 +692,23 @@ uint8_t Bus::read8(uint32_t address) {
     return read(address, 8);
 }
 
+
+uint8_t Bus::getWaitState0NCycles() {
+    return waitStateNVals[(iORegisters.at(waitcntOffset) & 0x0000000C) >> 2];
+}
+uint8_t Bus::getWaitState1NCycles() {
+    return waitStateNVals[(iORegisters.at(waitcntOffset) & 0x00000060) >> 5];
+}
+uint8_t Bus::getWaitState2NCycles() {
+    return waitStateNVals[(iORegisters.at(waitcntOffset) & 0x00000300) >> 8];
+}
+
+uint8_t Bus::getWaitState0SCycles() {
+    return waitState0SVals[(iORegisters.at(waitcntOffset) & 0x00000010) >> 4];
+}
+uint8_t Bus::getWaitState1SCycles() {
+    return waitState1SVals[(iORegisters.at(waitcntOffset) & 0x00000080) >> 7];
+}
+uint8_t Bus::getWaitState2SCycles() {
+    return waitState2SVals[(iORegisters.at(waitcntOffset) & 0x00000400) >> 10];
+}

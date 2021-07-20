@@ -78,4 +78,19 @@ class Bus {
     uint32_t read(uint32_t address, uint8_t width);
     void write(uint32_t address, uint32_t value, uint8_t width);
 
+    static constexpr uint32_t waitcntOffset = 0x204;
+
+    uint8_t getWaitState0NCycles();
+    uint8_t getWaitState1NCycles();
+    uint8_t getWaitState2NCycles();
+
+    uint8_t getWaitState0SCycles();
+    uint8_t getWaitState1SCycles();
+    uint8_t getWaitState2SCycles();
+
+    uint8_t waitStateNVals[4] = {4,3,2,8};
+
+    uint8_t waitState0SVals[2] = {2,1};
+    uint8_t waitState1SVals[2] = {4,1};
+    uint8_t waitState2SVals[2] = {8,1};
 };

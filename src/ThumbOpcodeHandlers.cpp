@@ -1288,12 +1288,18 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = (instruction & 0xF800) >> 11;
 
+    Cycles cycles; 
+
     switch(opcode) {
         case 0x1E: {
             // First Instruction - LR = PC+4+(nn SHL 12)
             assert((instruction & 0xF800) == 0xF000);
             uint32_t offsetHiBits = signExtend23Bit(((uint32_t)(instruction & 0x07FF)) << 12);            
             cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER) + 2 + offsetHiBits);
+            cycles = {.nonSequentialCycles = 0,
+                        .sequentialCycles = 1,
+                        .internalCycles = 0,
+                        .waitState = 0};  
             break;
         }
         case 0x1F: {
@@ -1303,7 +1309,11 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
             uint32_t temp = cpu->getRegister(PC_REGISTER) | 0x1;
             // The destination address range is (PC+4)-400000h..+3FFFFEh, 
             cpu->setRegister(PC_REGISTER, cpu->getRegister(LINK_REGISTER) + offsetLoBits);
-            cpu->setRegister(LINK_REGISTER, temp);        
+            cpu->setRegister(LINK_REGISTER, temp);       
+            cycles = {.nonSequentialCycles = 1,
+                        .sequentialCycles = 2,
+                        .internalCycles = 0,
+                        .waitState = 0};   
             break;
         }
         case 0x1D: {
@@ -1313,10 +1323,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
         }
     }
 
-    return  {.nonSequentialCycles = 1,
-                .sequentialCycles = 3,
-                .internalCycles = 0,
-                .waitState = 0};  
+    return  cycles;
 }
 
 
