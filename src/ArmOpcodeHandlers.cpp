@@ -579,6 +579,8 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0);
     DEBUG("in halfword data trans\n");
+
+
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
         (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
@@ -922,6 +924,7 @@ ARM7TDMI::Cycles ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler(
 
     // cycles
     Cycles cycles;
+    DEBUG("rListSize: " << (uint32_t)rlistSize << "\n");
     if(l) {
         // LDM
         if(instruction & 0x00008000) {

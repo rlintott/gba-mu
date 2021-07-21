@@ -1270,11 +1270,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0xE000);
     uint32_t offset = signExtend12Bit((instruction & 0x07FF) << 1);
-    
     cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
 
-    return  {.nonSequentialCycles = 1,
-                .sequentialCycles = 2,
+    return  {.nonSequentialCycles = 0,
+                .sequentialCycles = 1,
                 .internalCycles = 0,
                 .waitState = 0};    
 }

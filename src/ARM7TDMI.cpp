@@ -33,9 +33,10 @@ ARM7TDMI::Cycles ARM7TDMI::getCurrentCycles() {
     return currentCycles;
 }
 
-void ARM7TDMI::step() {
+uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
 
+    Cycles cycles;
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
         DEBUG(std::bitset<32>(instruction).to_string() << " <- going to execute \n");
@@ -44,7 +45,6 @@ void ARM7TDMI::step() {
         DEBUG("in arm state\n");
         // increment PC
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
-        Cycles cycles;
         if(conditionalHolds(cond)) {
             ArmOpcodeHandler handler = decodeArmInstruction(instruction);
             cycles = handler(instruction, this);
@@ -62,13 +62,20 @@ void ARM7TDMI::step() {
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
         DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
-        Cycles cycles = handler(instruction, this);
+        cycles = handler(instruction, this);
 
         #ifndef NDEBUG
         currentInstruction = (uint32_t)instruction;
         currentCycles = cycles;
         #endif
     }
+    uint32_t nCycles = (cycles.sequentialCycles * bus->getCurrentSWaitstate()) + 
+                        (cycles.nonSequentialCycles * bus->getCurrentNWaitstate()) +
+                        (cycles.internalCycles);
+    // clear waitstate
+    bus->reset();
+
+    return nCycles;
 }
 
 void ARM7TDMI::connectBus(Bus *bus) { 

@@ -11,7 +11,17 @@
 #else
 #define DEBUG(x)        \
     do {                \
-        std::cerr << x; \
+        std::cerr << "INFO: " << x; \
+    } while (0)
+#endif
+
+
+#ifdef NDEBUGWARN
+#define DEBUGWARN(x)
+#else
+#define DEBUGWARN(x)        \
+    do {                \
+        std::cerr << "WARN: " << x; \
     } while (0)
 #endif
 
@@ -24,7 +34,7 @@ class ARM7TDMI {
     ARM7TDMI();
     ~ARM7TDMI();
 
-    void step();
+    uint32_t step();
 
     void clock();
 
@@ -337,8 +347,6 @@ class ARM7TDMI {
     // R14_irq
     void setRegister(uint8_t index, uint32_t value);
     void setUserRegister(uint8_t index, uint32_t value);
-
-
 
     friend class Debugger;
 

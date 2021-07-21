@@ -8,14 +8,6 @@
 
 #include "ARM7TDMI.h"
 
-#ifdef NDEBUG
-#define DEBUG(x)
-#else
-#define DEBUG(x)        \
-    do {                \
-        std::cerr << x; \
-    } while (0)
-#endif
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
@@ -28,6 +20,14 @@ class Bus {
     ~Bus();
 
    public:
+
+    enum CycleType {
+        SEQUENTIAL,
+        NONSEQUENTIAL,
+        INTERNAL
+    };
+
+
     /* General Internal Memory */
 
     // 00000000-00003FFF   BIOS - System ROM (16 KBytes) 16448
@@ -58,25 +58,32 @@ class Bus {
     std::vector<uint8_t> gamePakSram;
 
 
-    uint32_t read32(uint32_t address);
-    uint16_t read16(uint32_t address);
-    uint8_t read8(uint32_t address);
+    uint32_t read32(uint32_t address, CycleType accessType);
+    uint16_t read16(uint32_t address, CycleType accessType);
+    uint8_t read8(uint32_t address, CycleType accessType);
 
-    void write32(uint32_t address, uint32_t word);
-    void write16(uint32_t address, uint16_t halfWord);
-    void write8(uint32_t address, uint8_t byte);
+    void write32(uint32_t address, uint32_t word, CycleType accessType);
+    void write16(uint32_t address, uint16_t halfWord, CycleType accessType);
+    void write8(uint32_t address, uint8_t byte, CycleType accessType);
 
     void loadRom(std::string path);
 
     uint8_t getCurrentNWaitstate();
     uint8_t getCurrentSWaitstate();
 
+    // resets the execution step timeline. 
+    void reset();
+
+    // adds eexecution step to timeline 
+    // use if need to emualte extra exection steps besides the memory access
+    void addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8_t width);
+
    private:
     uint8_t currentNWaitstate;
     uint8_t currentSWaitstate;
 
-    uint32_t read(uint32_t address, uint8_t width);
-    void write(uint32_t address, uint32_t value, uint8_t width);
+    uint32_t read(uint32_t address, uint8_t width, CycleType accessType);
+    void write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType);
 
     static constexpr uint32_t waitcntOffset = 0x204;
 
@@ -93,4 +100,11 @@ class Bus {
     uint8_t waitState0SVals[2] = {2,1};
     uint8_t waitState1SVals[2] = {4,1};
     uint8_t waitState2SVals[2] = {8,1};
+
+    uint8_t executionTimelineSize = 0;
+    std::array<uint8_t, 32> executionTimelineCycles;
+    // TODO: questionable wither this should be owned by bus, could move into a scheduler class?
+    std::array<CycleType, 32> executionTimelineCycleType;
+
+
 };
