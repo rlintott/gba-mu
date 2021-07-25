@@ -71,6 +71,13 @@ void writeToArray8(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, 
 
 
 void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8_t width) {
+    if(cycleType == CycleType::INTERNAL) {
+        executionTimelineCycles[executionTimelineSize] = 1;
+        executionTimelineCycleType[executionTimelineSize] = cycleType;
+        executionTimelineSize++; 
+        return;                        
+    }
+
     switch(shift) {
         case 0: // BIOS
         case 0x03000000:  // CHIP RAM    

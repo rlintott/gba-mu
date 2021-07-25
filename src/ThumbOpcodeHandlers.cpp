@@ -4,7 +4,7 @@
 #include "Bus.h"
 #include "assert.h"
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0);
     DEBUG("in thumb shift handler\n");
@@ -68,13 +68,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
     cpu->cpsr.Z = (result == 0);
     cpu->cpsr.N = (bool)(result & 0x80000000);
    
-    return {.nonSequentialCycles = 0,
-            .sequentialCycles = 1,
-            .internalCycles = 0,
-            .waitState = 0};
+    return SEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0x1800);
     uint8_t rd = thumbGetRd(instruction);
@@ -133,13 +130,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
     cpu->cpsr.N = signFlag;
     cpu->cpsr.V = overflowFlag;
   
-    return {.nonSequentialCycles = 0,
-            .sequentialCycles = 1,
-            .internalCycles = 0,
-            .waitState = 0};
+    return SEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
                                                            ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0x2000);
     DEBUG("in thumb compare/add/subtract immediate\n");
@@ -206,13 +200,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::immHandler(uint16_t instruction,
     cpu->cpsr.N = signFlag;
     cpu->cpsr.V = overflowFlag;
 
-    return {.nonSequentialCycles = 0,
-            .sequentialCycles = 1,
-            .internalCycles = 0,
-            .waitState = 0};
+    return SEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
                                                            ARM7TDMI *cpu) {
     assert((instruction & 0xFC00) == 0x4000);
     DEBUG("thumb in aluhandler\n");
@@ -226,6 +217,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
     DEBUG("rd: " << (uint32_t)rd << "\n");
 
     Cycles cycles;
+    int internalCycles = 0;
 
     switch (opcode) {
         case 0: {
@@ -239,11 +231,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 1: {
@@ -257,10 +244,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 2: {
@@ -276,10 +259,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (32 - offset)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            internalCycles = 1;
             break;
         }
         case 3: {
@@ -295,10 +275,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            internalCycles = 1;
             break;
         }
         case 4: {
@@ -314,10 +291,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            internalCycles = 1;
             break;
         }
         case 5: {
@@ -332,10 +306,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             overflowFlag =
                 aluAddWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 6: {
@@ -350,10 +320,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             overflowFlag =
                 aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 7: {
@@ -370,10 +336,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag =
                 !(offset) ? cpu->cpsr.C : (rdVal >> ((offset % 32) - 1)) & 1;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            internalCycles = 1;
             break;
         }
         case 8: {
@@ -386,10 +349,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             zeroFlag = aluSetsZeroBit(result);
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 9: {
@@ -402,10 +361,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = aluSubtractSetsCarryBit(0, rsVal);
             overflowFlag = aluSubtractSetsOverflowBit(0, rsVal, result);
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 0xA: {
@@ -418,10 +373,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             zeroFlag = aluSetsZeroBit((uint32_t)result);
             carryFlag = aluSubtractSetsCarryBit(rdVal, rsVal);
             overflowFlag = aluSubtractSetsOverflowBit(rdVal, rsVal, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 0xB: {
@@ -434,10 +385,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             zeroFlag = aluSetsZeroBit((uint32_t)result);
             carryFlag = aluAddSetsCarryBit(rdVal, rsVal);
             overflowFlag = aluAddSetsOverflowBit(rdVal, rsVal, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 0xC: {
@@ -451,10 +398,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 0xD: {
@@ -471,11 +414,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             // carryFlag = 0;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            uint8_t m = mulGetExecutionTimeMVal(rdVal);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = m,
-                        .waitState = 0};
+            internalCycles = mulGetExecutionTimeMVal(rdVal);
             break;
         }
         case 0xE: {
@@ -489,10 +428,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
         case 0xF: {
@@ -505,10 +440,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
             carryFlag = cpu->cpsr.C;
             overflowFlag = cpu->cpsr.V;
             cpu->setRegister(rd, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
             break;
         }
     }
@@ -517,10 +448,18 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::aluHandler(uint16_t instruction,
     cpu->cpsr.Z = zeroFlag;
     cpu->cpsr.C = carryFlag;
     cpu->cpsr.V = overflowFlag;
-    return cycles;
+
+    for(int i = 0; i < internalCycles; i++) {
+        cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+    }
+    if(!internalCycles) {
+        return SEQUENTIAL;
+    } else {
+        return NONSEQUENTIAL;
+    }
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
                                                           ARM7TDMI *cpu) {
     assert((instruction & 0xFC00) == 0x4400);
     DEBUG("in thumb HiReg/BX handler\n");
@@ -551,8 +490,6 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
     DEBUG("rs: " << (uint32_t)rs << "\n");
     DEBUG("rd: " << (uint32_t)rd << "\n");
 
-    Cycles cycles;
-
     switch (opcode) {
         case 0: {
             // 0: ADD Rd,Rs   ;add        Rd = Rd+Rs
@@ -560,17 +497,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             uint32_t result = rdVal + rsVal;
             cpu->setRegister(rd, result);
             if(rd == PC_REGISTER) {
-                cycles =  {.nonSequentialCycles = 1,
-                            .sequentialCycles = 2,
-                            .internalCycles = 0,
-                            .waitState = 0};
+                return BRANCH;
             } else {
-                cycles =  {.nonSequentialCycles = 0,
-                            .sequentialCycles = 1,
-                            .internalCycles = 0,
-                            .waitState = 0};
+                return SEQUENTIAL;
             }
-            break;
         }
         case 1: {
             // 1: CMP Rd,Rs   ;compare  Void = Rd-Rs  ;CPSR affected
@@ -581,11 +511,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
             cpu->cpsr.C = aluSubtractSetsCarryBit(rdVal, rsVal);
             cpu->cpsr.V = aluSubtractSetsOverflowBit(rdVal, rsVal, result);
-            cycles =  {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};
-            break;
+            return BRANCH;
         }
         case 2: {
             // 2: MOV Rd,Rs   ;move       Rd = Rs
@@ -593,17 +519,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
     
             assert(msbd || msbs);
             if(rd == PC_REGISTER) {
-                cycles =  {.nonSequentialCycles = 1,
-                            .sequentialCycles = 2,
-                            .internalCycles = 0,
-                            .waitState = 0};
+                return BRANCH;
             } else {
-                cycles =  {.nonSequentialCycles = 0,
-                            .sequentialCycles = 1,
-                            .internalCycles = 0,
-                            .waitState = 0};
+                return SEQUENTIAL;
             }
-            break;
         }
         case 3: {
             // 3: BX  Rs      ;jump       PC = Rs     ;may switch THUMB/ARM
@@ -625,17 +544,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t instruction,
             rsVal &= 0xFFFFFFFE;
             cpu->setRegister(PC_REGISTER, rsVal);
 
-            cycles =  {.nonSequentialCycles = 1,
-                        .sequentialCycles = 2,
-                        .internalCycles = 0,
-                        .waitState = 0};
-            break;
+            return BRANCH;
         }
     }
-    return cycles;
+
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0x4800);
     DEBUG("in THUMB.6: load PC-relative \n");
@@ -644,16 +559,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadPcRelativeHandler(
     uint32_t address =
         ((cpu->getRegister(PC_REGISTER) + 2) & 0xFFFFFFFD) + offset;
     uint32_t value =
-        aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC), (address & 3) * 8);
+        aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL), (address & 3) * 8);
     cpu->setRegister(rd, value);
-
-    return  {.nonSequentialCycles = 1,
-                .sequentialCycles = 1,
-                .internalCycles = 1,
-                .waitState = 0};
+    cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+    return NONSEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0x5000);
     assert(!(instruction & 0x0200));
@@ -664,53 +576,37 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetHandler(
     uint8_t ro = (instruction & 0x01C0) >> 6;
     uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
 
-    Cycles cycles;
-
     switch (opcode) {
         case 0: {
             // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd
-            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: STRB Rd,[Rb,Ro]   ;store  8bit data  BYTE[Rb+Ro] = Rd
-            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};
+            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 2: {
             // 2: LDR  Rd,[Rb,Ro]   ;load  32bit data  Rd = WORD[Rb+Ro]
-            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
         case 3: {
             // 3: LDRB Rd,[Rb,Ro]   ;load   8bit data  Rd = BYTE[Rb+Ro]
-            uint32_t value = (uint32_t)cpu->bus->read8(address);
+            uint32_t value = (uint32_t)cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL);
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
     }
-    return cycles;
+    return NONSEQUENTIAL;
 }
 
-ARM7TDMI::Cycles
+ARM7TDMI::FetchPCMemoryAccess
 ARM7TDMI::ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0x5000);
@@ -731,34 +627,24 @@ ARM7TDMI::ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler(
         case 0: {
             // 0: STRH Rd,[Rb,Ro]  ;store 16bit data          HALFWORD[Rb+Ro] =
             // Rd
-            cpu->bus->write16(address & 0xFFFFFFFE, cpu->getRegister(rd));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};
+            cpu->bus->write16(address & 0xFFFFFFFE, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: LDSB Rd,[Rb,Ro]  ;load sign-extended 8bit   Rd = BYTE[Rb+Ro]
-            uint32_t value = cpu->bus->read8(address);
+            uint32_t value = cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL);
             value = (value & 0x80) ? (0xFFFFFF00 | value) : value;
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};            
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);         
             break;
         }
         case 2: {
             // 2: LDRH Rd,[Rb,Ro]  ;load zero-extended 16bit  Rd =
             // HALFWORD[Rb+Ro]
-            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
         case 3: {
@@ -766,26 +652,23 @@ ARM7TDMI::ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler(
             if(address & 0x1) {
                 // LDRSH Rd,[odd]  -->  LDRSB Rd,[odd]         ;sign-expand BYTE value
                 // if address odd
-                uint32_t value = cpu->bus->read8(address);
+                uint32_t value = cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL);
                 value = (value & 0x80) ? (0xFFFFFF00 | value) : value;
                 cpu->setRegister(rd, value);
             } else {
-                uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+                uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
                 value = (value & 0x8000) ? (0xFFFF0000 | value) : value;
                 cpu->setRegister(rd, value);
             }
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0); 
             break;
         }
     }
-    return cycles;
+    return NONSEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xE000) == 0x6000);
     DEBUG("in THUMB.9: load/store with immediate offset\n");
@@ -793,19 +676,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
 
-    Cycles cycles;
-
     switch (opcode) {
         case 0: {
             // 0: STR  Rd,[Rb,#nn]  ;store 32bit data   WORD[Rb+nn] = Rd
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = cpu->getRegister(rb) + offset;
             DEBUG("str rd: " << (uint32_t)rd << "\n");
-            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};  
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
@@ -813,50 +690,41 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler(
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = cpu->getRegister(rb) + offset;
             DEBUG("address: " << address << "\n");
-            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
-            if(rd == PC_REGISTER) {
-                // For THUMB code, the low bit of the target address may/should/must be set,
-                // the bit is (or is not) interpreted as thumb-bit (depending on the opcode), 
-                // and R15 is then forcibly aligned by clearing the lower bit.
-                // TODO: check that this is applied everywhere
-                cpu->setRegister(rd, value & 0xFFFFFFFE);
-            } else {
-                cpu->setRegister(rd, value);
-            }
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            // if(rd == PC_REGISTER) {
+            //     // For THUMB code, the low bit of the target address may/should/must be set,
+            //     // the bit is (or is not) interpreted as thumb-bit (depending on the opcode), 
+            //     // and R15 is then forcibly aligned by clearing the lower bit.
+            //     // TODO: check that this is applied everywhere
+            //     cpu->setRegister(rd, value & 0xFFFFFFFE);
+            // } else {
+            //     cpu->setRegister(rd, value);
+            // }
+            cpu->setRegister(rd, value);
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
         case 2: {
             // 2: STRB Rd,[Rb,#nn]  ;store  8bit data   BYTE[Rb+nn] = Rd
             uint32_t offset = (instruction & 0x07C0) >> 6;
             uint32_t address = cpu->getRegister(rb) + offset;
-            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};  
+            cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 3: {
             // 3: LDRB Rd,[Rb,#nn]  ;load   8bit data   Rd = BYTE[Rb+nn]
             uint32_t offset = (instruction & 0x07C0) >> 6;
             uint32_t address = cpu->getRegister(rb) + offset;
-            cpu->setRegister(rd, (uint32_t)cpu->bus->read8(address));
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            cpu->setRegister(rd, (uint32_t)cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL));
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
     }
-    return cycles;
+    return NONSEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0x8000);
     uint8_t opcode = (instruction & 0x0800) >> 11;
@@ -865,35 +733,26 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHandler(
     uint32_t offset = (instruction & 0x07C0) >> 5;
     uint32_t address = cpu->getRegister(rb) + offset;
 
-    Cycles cycles;
-
     switch (opcode) {
         case 0: {
             // 0: STRH Rd,[Rb,#nn]  ;store 16bit data   HALFWORD[Rb+nn] = Rd
             cpu->bus->write16(address & 0xFFFFFFFE,
-                              (uint16_t)cpu->getRegister(rd));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};              
+                              (uint16_t)cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
-            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE),
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
     }
-    return cycles;
+    return NONSEQUENTIAL;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0x9000);
     uint8_t opcode = (instruction & 0x0800) >> 11;
@@ -901,35 +760,26 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
     uint16_t offset = (instruction & 0x00FF) << 2;
     uint32_t address = cpu->getRegister(SP_REGISTER) + offset;
 
-    Cycles cycles;
-
     switch (opcode) {
         case 0: {
             // 0: STR  Rd,[SP,#nn]  ;store 32bit data   WORD[SP+nn] = Rd
-            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd));
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};  
+            cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: LDR  Rd,[SP,#nn]  ;load  32bit data   Rd = WORD[SP+nn]
-            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC),
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             cpu->setRegister(rd, value);
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 1,
-                        .internalCycles = 1,
-                        .waitState = 0};  
+            cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             break;
         }
     }
-    return cycles;
+    return NONSEQUENTIAL;
 }
 
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::getRelativeAddressHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::getRelativeAddressHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xA000);
     DEBUG("in THUMB.12: get relative address\n");
@@ -956,14 +806,11 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::getRelativeAddressHandler(
             break;
         }
     }
-    return  {.nonSequentialCycles = 0,
-                .sequentialCycles = 1,
-                .internalCycles = 0,
-                .waitState = 0};  
+    return  SEQUENTIAL;
 }
 
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addOffsetToSpHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::addOffsetToSpHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xFF00) == 0xB000);
     DEBUG("in THUMB.13: add offset to stack pointer\n");
@@ -984,14 +831,11 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::addOffsetToSpHandler(
             break;
         }
     }
-    return  {.nonSequentialCycles = 0,
-                .sequentialCycles = 1,
-                .internalCycles = 0,
-                .waitState = 0};  
+    return SEQUENTIAL;
 }
 
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xC000);
     DEBUG("in THUMB.15: multiple load/store\n");
@@ -1002,8 +846,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
     uint32_t oldRbValue = rbValue;
     DEBUG("rbValue: " << rbValue << "\n");
 
-    uint8_t rlistSize = 0;
-    Cycles cycles;
+    bool firstAccess = true;
 
     // In THUMB mode stack is always meant to be 'full descending', 
     // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
@@ -1013,9 +856,13 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
             // 0: STMIA Rb!,{Rlist}   ;store in memory, increments Rb (post-increment store)
             for(int i = 0; i < 8; i++) {
                 if(rList & 0x01) {
-                    rlistSize++;
                     DEBUG("writing rlist val to mem\n");
-                    cpu->bus->write32(rbValue, cpu->getRegister(i));
+                    if(firstAccess) {
+                        cpu->bus->write32(rbValue, cpu->getRegister(i), Bus::CycleType::NONSEQUENTIAL);
+                        firstAccess = false;
+                    } else {
+                        cpu->bus->write32(rbValue, cpu->getRegister(i), Bus::CycleType::SEQUENTIAL);
+                    }
                     rbValue += 4;
                 }
                 rList >>= 1;
@@ -1023,7 +870,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
             if(!(instruction & 0x00FF)) {
                 // empty rList
                 // R15 loaded/stored (ARMv4 only), and Rb=Rb+40h (ARMv4-v5). 
-                cpu->bus->write32(rbValue, cpu->getRegister(PC_REGISTER) + 4);
+                cpu->bus->write32(rbValue, cpu->getRegister(PC_REGISTER) + 4, Bus::CycleType::NONSEQUENTIAL);
                 rbValue += 0x40;
             }
             if(((uint32_t)rList >> rb) & 0x1) {
@@ -1040,19 +887,18 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
                 DEBUG("rb not included in rlist!\n");
                 cpu->setRegister(rb, rbValue);
             }    
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};    
-            cycles.sequentialCycles = rlistSize - 1; 
             break;
         }
         case 1: {
             // 1: LDMIA Rb!,{Rlist}   ;load from memory, increments Rb (post-increment load)
             for(int i = 0; i < 8; i++) {
                 if(rList & 0x01) {
-                    rlistSize++;
-                    cpu->setRegister(i, cpu->bus->read32(rbValue));
+                    if(firstAccess) {
+                        cpu->setRegister(i, cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL));
+                        firstAccess = false;
+                    } else {
+                        cpu->setRegister(i, cpu->bus->read32(rbValue, Bus::CycleType::SEQUENTIAL));
+                    }
                     rbValue += 4;
                 }
                 rList >>= 1;
@@ -1060,7 +906,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
             if(!(instruction & 0x00FF)) {
                 // empty rList
                 // R15 loaded/stored (ARMv4 only), and Rb=Rb+40h (ARMv4-v5).
-                cpu->setRegister(PC_REGISTER, cpu->bus->read32(rbValue));
+                cpu->setRegister(PC_REGISTER, cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL));
                 rbValue += 0x40;
             }
             if(((uint32_t)rList >> rb) & 0x1) {
@@ -1068,19 +914,16 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStoreHandler(
             } else {
                 cpu->setRegister(rb, rbValue);
             }
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = rlistSize,
-                        .internalCycles = 1,
-                        .waitState = 0};    
             break;
         }
     }
-    return cycles;
+    cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+    return NONSEQUENTIAL;
 }
 
 
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     DEBUG("in THUMB.14: push/pop registers\n");
     assert((instruction & 0xF000) == 0xB000);
@@ -1089,11 +932,10 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
     bool pcLrBit = instruction & 0x0100; // 1: PUSH LR (R14), or POP PC (R15)
     uint8_t rList = instruction & 0x00FF;
     uint32_t spValue = cpu->getRegister(SP_REGISTER);
+    bool firstAccess = true;
+    bool branch = false;
 
     DEBUG("opcode: " << (uint32_t)opcode << "\n");
-
-    uint8_t rlistSize = 0;
-    Cycles cycles;
 
     // In THUMB mode stack is always meant to be 'full descending', 
     // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
@@ -1103,58 +945,64 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::multipleLoadStorePushPopHandler(
             // 0: PUSH {Rlist}{LR}   ;store in memory, decrements SP (R13)
             if(pcLrBit) {
                 spValue -=4;
-                cpu->bus->write32(spValue, cpu->getRegister(LINK_REGISTER));
+                // TODO: just realized! for push, or backwards block memory, 
+                // the first data access in the for loop might be the last memory access in reality
+                cpu->bus->write32(spValue, cpu->getRegister(LINK_REGISTER), Bus::CycleType::NONSEQUENTIAL);
+                firstAccess = false;
             }
             for(int i = 7; i >= 0; i--) {
                 if(rList & 0x80) {
-                    rlistSize++;
                     spValue -= 4;
-                    cpu->bus->write32(spValue, cpu->getRegister(i));
+                    if(firstAccess) {
+                        cpu->bus->write32(spValue, cpu->getRegister(i), Bus::CycleType::NONSEQUENTIAL);
+                        firstAccess = false;
+                    } else {
+                        cpu->bus->write32(spValue, cpu->getRegister(i), Bus::CycleType::SEQUENTIAL);
+                    }
                 }
                 rList <<= 1;
             }
             cpu->setRegister(SP_REGISTER, spValue);
-            cycles = {.nonSequentialCycles = 2,
-                        .sequentialCycles = 0,
-                        .internalCycles = 0,
-                        .waitState = 0};  
-            cycles.sequentialCycles = rlistSize - 1;
             break;
         }
         case 1: {
             // 1: POP  {Rlist}{PC}   ;load from memory, increments SP (R13)
             for(int i = 0; i < 8; i++) {
                 if(rList & 0x01) {
-                    rlistSize++;
-                    cpu->setRegister(i, cpu->bus->read32(spValue));
+                    if(firstAccess) {
+                        cpu->setRegister(i, cpu->bus->read32(spValue, Bus::CycleType::NONSEQUENTIAL));
+                        firstAccess = false;
+                    } else {
+                        cpu->setRegister(i, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL));
+                    }
                     spValue += 4;
                 }
                 rList >>= 1;
-            }
-
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = rlistSize,
-                        .internalCycles = 1,
-                        .waitState = 0};     
+            }  
 
             if(pcLrBit) {
-                cpu->setRegister(PC_REGISTER, cpu->bus->read32(spValue) & 0xFFFFFFFE);
+                // TODO, whether it's sequentiual or not might depend on whether rlist is empty
+                cpu->setRegister(PC_REGISTER, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL) & 0xFFFFFFFE);
                 spValue += 4;
-                cycles.nonSequentialCycles += 1;  
-                cycles.sequentialCycles += 1;  
             } 
             cpu->setRegister(SP_REGISTER, spValue);
             break;
         }
     }
-    return cycles;
+    cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+
+    if(!branch) {
+        return BRANCH;
+    } else {
+        return NONSEQUENTIAL;
+    }
 }
 
 static uint32_t signExtend9Bit(uint16_t value) {
     return (value & 0x0100) ? (((uint32_t)value) | 0xFFFFFE00) : value;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0xD000);
     DEBUG("in THUMB.16: conditional branch\n");
@@ -1250,15 +1098,9 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHandler(
 
     if(jump) {
         cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
-        return  {.nonSequentialCycles = 1,
-                    .sequentialCycles = 2,
-                    .internalCycles = 0,
-                    .waitState = 0};    
+        return BRANCH;
     } else {
-        return  {.nonSequentialCycles = 0,
-                    .sequentialCycles = 1,
-                    .internalCycles = 0,
-                    .waitState = 0};     
+        return SEQUENTIAL;
     }
 }
 
@@ -1266,16 +1108,13 @@ static uint32_t signExtend12Bit(uint32_t value) {
     return (value & 0x00000800) ? (value | 0xFFFFF000) : value;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0xE000);
     uint32_t offset = signExtend12Bit((instruction & 0x07FF) << 1);
     cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
 
-    return  {.nonSequentialCycles = 0,
-                .sequentialCycles = 1,
-                .internalCycles = 0,
-                .waitState = 0};    
+    return BRANCH; 
 }
 
 
@@ -1283,11 +1122,9 @@ static uint32_t signExtend23Bit(uint32_t value) {
     return (value & 0x00400000) ? (value | 0xFF800000) : value;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = (instruction & 0xF800) >> 11;
-
-    Cycles cycles; 
 
     switch(opcode) {
         case 0x1E: {
@@ -1295,11 +1132,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
             assert((instruction & 0xF800) == 0xF000);
             uint32_t offsetHiBits = signExtend23Bit(((uint32_t)(instruction & 0x07FF)) << 12);            
             cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER) + 2 + offsetHiBits);
-            cycles = {.nonSequentialCycles = 0,
-                        .sequentialCycles = 1,
-                        .internalCycles = 0,
-                        .waitState = 0};  
-            break;
+            return SEQUENTIAL;
         }
         case 0x1F: {
             // Second Instruction - PC = LR + (nn SHL 1), and LR = PC+2 OR 1 (and BLX: T=0)
@@ -1309,11 +1142,7 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
             // The destination address range is (PC+4)-400000h..+3FFFFEh, 
             cpu->setRegister(PC_REGISTER, cpu->getRegister(LINK_REGISTER) + offsetLoBits);
             cpu->setRegister(LINK_REGISTER, temp);       
-            cycles = {.nonSequentialCycles = 1,
-                        .sequentialCycles = 2,
-                        .internalCycles = 0,
-                        .waitState = 0};   
-            break;
+            return BRANCH;
         }
         case 0x1D: {
             // 11101b: BLX label  ;branch long with link switch to ARM mode (ARM9)
@@ -1322,11 +1151,11 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
         }
     }
 
-    return  cycles;
+    return SEQUENTIAL;
 }
 
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     // 11011111b: SWI nn   ;software interrupt
     // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
@@ -1348,23 +1177,18 @@ ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHandler(
     // TODO: make vector addresses static members
     cpu->setRegister(PC_REGISTER, 0x00000008);
 
-    return  {.nonSequentialCycles = 1,
-                .sequentialCycles = 2,
-                .internalCycles = 0,
-                .waitState = 0};  
+    return BRANCH; 
 }
 
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
-ARM7TDMI::Cycles ARM7TDMI::ThumbOpcodeHandlers::undefinedOpHandler(
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::undefinedOpHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string()
                                << std::endl);
     
     // cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     // TODO: what is behaviour of thumb undefined instruction?
-    return {.nonSequentialCycles = 1,
-                .sequentialCycles = 2, 
-                .internalCycles = 1,
-                .waitState = 0};
+    cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+    return BRANCH;
 }

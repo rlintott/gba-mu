@@ -36,9 +36,28 @@ ARM7TDMI::Cycles ARM7TDMI::getCurrentCycles() {
 uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
 
-    Cycles cycles;
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        uint32_t instruction = bus->read32(getRegister(PC_REGISTER));
+        uint32_t instruction;
+
+        switch(currentPcAccessType) {
+            case SEQUENTIAL: {
+                instruction = bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
+                break;
+            }
+            case NONSEQUENTIAL: {
+                instruction = bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);
+                break;
+            }
+            case BRANCH: {
+                uint32_t pcAddress = getRegister(PC_REGISTER);
+                instruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                // emulate filling the pipeline
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
+                break;
+            }
+        }
+
         DEBUG(std::bitset<32>(instruction).to_string() << " <- going to execute \n");
 
         uint8_t cond = (instruction & 0xF0000000) >> 28;
@@ -47,35 +66,53 @@ uint32_t ARM7TDMI::step() {
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
         if(conditionalHolds(cond)) {
             ArmOpcodeHandler handler = decodeArmInstruction(instruction);
-            cycles = handler(instruction, this);
+            currentPcAccessType = handler(instruction, this);
+        } else {
+            currentPcAccessType = SEQUENTIAL;
         }
 
         #ifndef NDEBUG
         currentInstruction = instruction;
-        currentCycles = cycles;
+        // currentCycles = cycles;
         #endif
 
     } else {  // THUMB state
         // TODO implement thumb instructions. Mocking behaviour to pass ARM tests
-        uint16_t instruction = bus->read16(getRegister(PC_REGISTER));
+        uint16_t instruction;
+
+        switch(currentPcAccessType) {
+            case SEQUENTIAL: {
+                instruction = bus->read16(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
+                break;
+            }
+            case NONSEQUENTIAL: {
+                instruction = bus->read16(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);
+                break;
+            }
+            case BRANCH: {
+                uint32_t pcAddress = getRegister(PC_REGISTER);
+                instruction = bus->read16(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                // emulate filling the pipeline
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
+                break;
+            }
+        }
 
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
         DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
-        cycles = handler(instruction, this);
+        currentPcAccessType = handler(instruction, this);
 
         #ifndef NDEBUG
         currentInstruction = (uint32_t)instruction;
-        currentCycles = cycles;
+        // currentCycles = cycles;
         #endif
     }
-    uint32_t nCycles = (cycles.sequentialCycles * bus->getCurrentSWaitstate()) + 
-                        (cycles.nonSequentialCycles * bus->getCurrentNWaitstate()) +
-                        (cycles.internalCycles);
     // clear waitstate
     bus->reset();
 
-    return nCycles;
+    return 0;
 }
 
 void ARM7TDMI::connectBus(Bus *bus) { 
