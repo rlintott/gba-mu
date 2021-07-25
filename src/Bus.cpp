@@ -745,3 +745,13 @@ void Bus::reset() {
     currentSWaitstate = 1;
     executionTimelineSize = 0;
 }
+
+void Bus::printCurrentExecutionTimeline() {
+    std::cout << "[";
+    for(int i = 0; i < executionTimelineSize; i++) {
+        std::cout << "(" << cycleTypesSerialized[executionTimelineCycleType[i]] << ","
+                         << (uint32_t)executionTimelineCycles[i] << "),";
+    
+    }
+    std::cout << "]\n";
+}

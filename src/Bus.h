@@ -77,6 +77,7 @@ class Bus {
     // adds eexecution step to timeline 
     // use if need to emualte extra exection steps besides the memory access
     void addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8_t width);
+    void printCurrentExecutionTimeline();
 
    private:
     uint8_t currentNWaitstate;
@@ -100,6 +101,8 @@ class Bus {
     uint8_t waitState0SVals[2] = {2,1};
     uint8_t waitState1SVals[2] = {4,1};
     uint8_t waitState2SVals[2] = {8,1};
+
+    std::array<std::string, 3> cycleTypesSerialized = {"S", "N", "I"};
 
     uint8_t executionTimelineSize = 0;
     std::array<uint8_t, 32> executionTimelineCycles;

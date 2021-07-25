@@ -16,7 +16,7 @@ ARM7TDMI::ARM7TDMI() {
     cpsr.Z = 1; // why? TODO: find out
     cpsr.C = 1;
     setRegister(PC_REGISTER, BOOT_LOCATION); 
-    currentPcAccessType = NONSEQUENTIAL;
+    currentPcAccessType = BRANCH;
     // TODO: find out why setting register 0 and 1
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
@@ -57,6 +57,9 @@ uint32_t ARM7TDMI::step() {
                 break;
             }
         }
+
+        bus->printCurrentExecutionTimeline();
+        bus->reset();
 
         DEBUG(std::bitset<32>(instruction).to_string() << " <- going to execute \n");
 
@@ -99,6 +102,9 @@ uint32_t ARM7TDMI::step() {
             }
         }
 
+        bus->printCurrentExecutionTimeline();
+        bus->reset();
+
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
         DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
@@ -109,8 +115,6 @@ uint32_t ARM7TDMI::step() {
         // currentCycles = cycles;
         #endif
     }
-    // clear waitstate
-    bus->reset();
 
     return 0;
 }

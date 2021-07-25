@@ -7,6 +7,7 @@
 #include <assert.h>
 
 
+
 #define ASSERT_EQUAL(message, expected, actual) \
     if (expected != actual) { \
         DEBUG("ASSERTION FAILED: " << message <<  \
@@ -78,3 +79,4 @@ std::vector<cpu_log> getLogs(std::string path) {
     }
     return logs;
 };
+
