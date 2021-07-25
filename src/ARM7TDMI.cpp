@@ -16,7 +16,7 @@ ARM7TDMI::ARM7TDMI() {
     cpsr.Z = 1; // why? TODO: find out
     cpsr.C = 1;
     setRegister(PC_REGISTER, BOOT_LOCATION); 
-
+    currentPcAccessType = NONSEQUENTIAL;
     // TODO: find out why setting register 0 and 1
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
@@ -37,7 +37,7 @@ uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        uint32_t instruction;
+        uint32_t instruction = 0;
 
         switch(currentPcAccessType) {
             case SEQUENTIAL: {
@@ -73,12 +73,12 @@ uint32_t ARM7TDMI::step() {
 
         #ifndef NDEBUG
         currentInstruction = instruction;
-        // currentCycles = cycles;
+        // currentCycles = 0;
         #endif
 
     } else {  // THUMB state
         // TODO implement thumb instructions. Mocking behaviour to pass ARM tests
-        uint16_t instruction;
+        uint16_t instruction = 0;
 
         switch(currentPcAccessType) {
             case SEQUENTIAL: {

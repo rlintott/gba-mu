@@ -21,7 +21,6 @@ int main() {
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("arm.gba");
     int count = 0;
-    uint32_t cycles = 0;
 
     for(cpu_log log : logs) {
 
@@ -63,10 +62,6 @@ int main() {
             // in arm state add 4 to PC to account for pipelining
             ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
         }
-        std::cout << "actual cycles:\t" << cycles << std::endl;
-        std::cout << "expected cycles:\t" << log.cycles << std::endl;
-
-
 
         // uint32_t nCycles = cpu.getCurrentCycles().internalCycles + 
         //                     cpu.getCurrentCycles().nonSequentialCycles +
@@ -74,7 +69,7 @@ int main() {
         // // ASSERT_EQUAL("cycles", log.cycles, nCycles)
         // std::cout << "expectedCycles:\t" << log.cycles << std::endl;
 
-        cycles = cpu.step();
+        cpu.step();
 
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
         std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
@@ -84,5 +79,6 @@ int main() {
         std::cout << std::endl;
 
     }
+    std::cout << "tests passed!\n";
     return 0;
 }

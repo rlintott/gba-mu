@@ -70,9 +70,9 @@ int main() {
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
         std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
         std::cout << "actualInstr bits\t" << std::bitset<16>(cpu.getCurrentInstruction()).to_string() << std::endl;
-        ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction())
-
+        ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction());
 
     }
+
     return 0;
 }

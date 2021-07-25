@@ -743,4 +743,5 @@ uint8_t Bus::getWaitState2SCycles() {
 void Bus::reset() {
     currentNWaitstate = 1;
     currentSWaitstate = 1;
+    executionTimelineSize = 0;
 }
