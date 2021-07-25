@@ -34,6 +34,7 @@ class ARM7TDMI {
     ARM7TDMI();
     ~ARM7TDMI();
 
+    void initializeWithRom();
     uint32_t step();
 
     void clock();
@@ -98,8 +99,7 @@ class ARM7TDMI {
 
     FetchPCMemoryAccess currentPcAccessType;
 
-    uint32_t currentInstruction; // for debugging
-    Cycles currentCycles; // for debugging
+    uint32_t currInstruction; 
 
     class ArmOpcodeHandlers {
        public:

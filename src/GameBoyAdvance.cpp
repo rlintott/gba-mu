@@ -15,4 +15,7 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
 
 GameBoyAdvance::~GameBoyAdvance() {}
 
-void GameBoyAdvance::loadRom(std::string path) { bus->loadRom(path); }
+void GameBoyAdvance::loadRom(std::string path) { 
+    bus->loadRom(path); 
+    arm7tdmi->initializeWithRom();
+}

@@ -11,6 +11,9 @@
 
 
 ARM7TDMI::ARM7TDMI() {
+}
+
+void ARM7TDMI::initializeWithRom() {
     switchToMode(SYSTEM);
     cpsr.T = 0; // set CPU to ARM state
     cpsr.Z = 1; // why? TODO: find out
@@ -21,99 +24,85 @@ ARM7TDMI::ARM7TDMI() {
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
     setRegister(13, 0x03007F00); // stack pointer
+
+    bus->reset();
+    uint32_t pcAddress = getRegister(PC_REGISTER);
+    currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+    DEBUG(std::bitset<32>(currInstruction).to_string() << " <- boot location instruction \n");
+    // emulate filling the pipeline
+    bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
+    bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
 }
 
 ARM7TDMI::~ARM7TDMI() {}
 
 uint32_t ARM7TDMI::getCurrentInstruction() {
-    return currentInstruction;
+    return currInstruction;
 }
 
-ARM7TDMI::Cycles ARM7TDMI::getCurrentCycles() {
-    return currentCycles;
-}
 
 uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
-
+    bus->reset();
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        uint32_t instruction = 0;
+        DEBUG(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
 
-        switch(currentPcAccessType) {
-            case SEQUENTIAL: {
-                instruction = bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
-                break;
-            }
-            case NONSEQUENTIAL: {
-                instruction = bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);
-                break;
-            }
-            case BRANCH: {
-                uint32_t pcAddress = getRegister(PC_REGISTER);
-                instruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
-                // emulate filling the pipeline
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-                break;
-            }
-        }
-
-        bus->printCurrentExecutionTimeline();
-        bus->reset();
-
-        DEBUG(std::bitset<32>(instruction).to_string() << " <- going to execute \n");
-
-        uint8_t cond = (instruction & 0xF0000000) >> 28;
+        uint8_t cond = (currInstruction & 0xF0000000) >> 28;
         DEBUG("in arm state\n");
-        // increment PC
+
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
         if(conditionalHolds(cond)) {
-            ArmOpcodeHandler handler = decodeArmInstruction(instruction);
-            currentPcAccessType = handler(instruction, this);
+            ArmOpcodeHandler handler = decodeArmInstruction(currInstruction);
+            currentPcAccessType = handler(currInstruction, this);
         } else {
             currentPcAccessType = SEQUENTIAL;
         }
 
-        #ifndef NDEBUG
-        currentInstruction = instruction;
-        // currentCycles = 0;
-        #endif
+        // increment PC
+        // setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
 
     } else {  // THUMB state
-        // TODO implement thumb instructions. Mocking behaviour to pass ARM tests
-        uint16_t instruction = 0;
 
-        switch(currentPcAccessType) {
-            case SEQUENTIAL: {
-                instruction = bus->read16(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
-                break;
-            }
-            case NONSEQUENTIAL: {
-                instruction = bus->read16(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);
-                break;
-            }
-            case BRANCH: {
+        DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
+        ThumbOpcodeHandler handler = decodeThumbInstruction(currInstruction);
+        setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
+        currentPcAccessType = handler(currInstruction, this);
+
+        // setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
+    }
+
+
+    switch(currentPcAccessType) {
+        case SEQUENTIAL: {
+            currInstruction = 
+                cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL) :
+                            bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
+            break;
+        }
+        case NONSEQUENTIAL: {
+            currInstruction = 
+                cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL) :
+                            bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);                
+            break;
+        }
+        case BRANCH: {
+            if(cpsr.T) {
                 uint32_t pcAddress = getRegister(PC_REGISTER);
-                instruction = bus->read16(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                currInstruction = bus->read16(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
                 // emulate filling the pipeline
                 bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
                 bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
-                break;
+            } else {
+                uint32_t pcAddress = getRegister(PC_REGISTER);
+                currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
+                // emulate filling the pipeline
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
+                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
             }
+            break;
         }
-
-        bus->printCurrentExecutionTimeline();
-        bus->reset();
-
-        setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
-        DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(instruction).to_string() << "\n");
-        ThumbOpcodeHandler handler = decodeThumbInstruction(instruction);
-        currentPcAccessType = handler(instruction, this);
-
-        #ifndef NDEBUG
-        currentInstruction = (uint32_t)instruction;
-        // currentCycles = cycles;
-        #endif
     }
 
     return 0;

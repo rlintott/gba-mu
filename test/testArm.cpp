@@ -16,8 +16,8 @@ int main() {
     // TODO: put this function in testCommon.cpp for both arm and thumb to use
     std::vector<cpu_log> logs = getLogs("arm.log");
 
-    ARM7TDMI cpu;
     Bus bus;
+    ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("arm.gba");
     int count = 0;
@@ -63,18 +63,21 @@ int main() {
             ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
         }
 
+        bus.printCurrentExecutionTimeline();
+
         // uint32_t nCycles = cpu.getCurrentCycles().internalCycles + 
         //                     cpu.getCurrentCycles().nonSequentialCycles +
         //                     cpu.getCurrentCycles().sequentialCycles;  
         // // ASSERT_EQUAL("cycles", log.cycles, nCycles)
         // std::cout << "expectedCycles:\t" << log.cycles << std::endl;
 
-        cpu.step();
-
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
         std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
         std::cout << "actualInstr bits\t" << std::bitset<32>(cpu.getCurrentInstruction()).to_string() << std::endl;
         ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction())
+
+        cpu.step();
+
 
         std::cout << std::endl;
 

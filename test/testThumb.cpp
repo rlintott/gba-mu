@@ -15,8 +15,8 @@
 int main() {
     std::vector<cpu_log> logs = getLogs("thumb.log");
 
-    ARM7TDMI cpu;
     Bus bus;
+    ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("thumb.gba");
     int count = 0;
@@ -60,17 +60,18 @@ int main() {
             // in arm state add 4 to PC to account for pipelining
             ASSERT_EQUAL("r15", log.r[15], cpu.getRegister(15) + 4)
         }
-
+        bus.printCurrentExecutionTimeline();
+        
         std::cout << std::endl;
         std::cout << "instruction " << count << std::endl;
         count++;
-    
-        cpu.step();
 
         std::cout << "expectedInstr:\t" << log.instruction << std::endl;
         std::cout << "actualInstr:\t" << cpu.getCurrentInstruction() << std::endl;
         std::cout << "actualInstr bits\t" << std::bitset<16>(cpu.getCurrentInstruction()).to_string() << std::endl;
         ASSERT_EQUAL("instruction", (uint32_t)log.instruction, (uint32_t)cpu.getCurrentInstruction());
+
+        cpu.step();
 
     }
 
