@@ -3,17 +3,27 @@ Still very much a work in progress
 
 
 ## Progress
+:white_circle:  CPU - Clean up / refactor code
+
 :white_check_mark: CPU - 32bit ARM Instructions passing jsmolka's gba-suite test rom
 
 :white_check_mark:  CPU - 16bit THUMB Instructions passing jsmolka's gba-suite test rom
 
-:white_circle:  CPU - Clean up / refactor code
+:white_check_mark:  CPU - Cycle counting
 
-:white_circle:  CPU - Cycle counting
+:white_circle: Gamepak Prefetch Buffer Emulation
+
+:white_circle: Picture processing unit (PPU) / LCD screen
+
+:white_circle: CPU - Interrupt handling
 
 :white_check_mark: Bus - basic read / write capabilites
 
 :white_check_mark: Bus - can load a ROM. 
+
+:white_circle: Everything else
+
+
 
 :white_circle:  Everything else
 
@@ -25,19 +35,6 @@ Still very much a work in progress
 
 ## Running
 * **To run tests:** `cd build` `./build.sh` `ctest`
-
-
-## Contributing
-
-Thank you for wanting to contribute!
-
-The emulator is a work in progress and there are many `TODO` comments scattered around the code, and there is alot to do besides that as well 
-
-[Here](https://guides.github.com/introduction/flow/) is an overview of the workflow to use when contributing. 
- 
-1. Create a new feature branch off of current master
-2. Implement your feature and test it
-3. Create a PR back into master for review
 
 
 ## Resources
