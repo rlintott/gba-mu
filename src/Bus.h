@@ -27,6 +27,11 @@ class Bus {
         INTERNAL
     };
 
+    enum IORegister {
+        IE = 0x04000200 - 0x04000000,
+        IF = 0x04000202 - 0x04000000,
+        IME = 0x04000208 - 0x04000000
+    };
 
     /* General Internal Memory */
 

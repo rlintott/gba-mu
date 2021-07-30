@@ -91,6 +91,8 @@ class ARM7TDMI {
   
    private:
 
+    bool interruptsEnabled();
+
     enum FetchPCMemoryAccess {
         NONSEQUENTIAL,
         SEQUENTIAL,
@@ -100,6 +102,8 @@ class ARM7TDMI {
     FetchPCMemoryAccess currentPcAccessType;
 
     uint32_t currInstruction; 
+
+    void getNextInstruction(FetchPCMemoryAccess currentPcAccessType);
 
     class ArmOpcodeHandlers {
        public:

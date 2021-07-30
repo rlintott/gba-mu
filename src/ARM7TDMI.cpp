@@ -43,7 +43,14 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 
 uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
+    // TODO: give this method a better name
     bus->reset();
+
+    if(false /* TODO: if events */) {
+        irq();
+        return 0;
+    }
+
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         DEBUG(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
 
@@ -57,9 +64,7 @@ uint32_t ARM7TDMI::step() {
         } else {
             currentPcAccessType = SEQUENTIAL;
         }
-
         // increment PC
-        // setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
 
     } else {  // THUMB state
 
@@ -67,11 +72,14 @@ uint32_t ARM7TDMI::step() {
         ThumbOpcodeHandler handler = decodeThumbInstruction(currInstruction);
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
         currentPcAccessType = handler(currInstruction, this);
-
-        // setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
     }
 
+    getNextInstruction(currentPcAccessType);
 
+    return 0;
+}
+
+void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
     switch(currentPcAccessType) {
         case SEQUENTIAL: {
             currInstruction = 
@@ -104,8 +112,18 @@ uint32_t ARM7TDMI::step() {
             break;
         }
     }
+}
 
-    return 0;
+void ARM7TDMI::irq() {
+    if((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) && 
+        bus->iORegisters[Bus::IORegister::IME] && !cpsr.I) {
+        
+        switchToMode(Mode::IRQ);
+        // switch to ARM mode
+        cpsr.T = 0;
+        setRegister(PC_REGISTER, 0x00000018);
+        getNextInstruction(FetchPCMemoryAccess::BRANCH);
+    }
 }
 
 void ARM7TDMI::connectBus(Bus *bus) { 
