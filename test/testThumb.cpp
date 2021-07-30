@@ -11,7 +11,6 @@
 #include "../src/GameBoyAdvance.h"
 #include "testCommon.h"
 
-
 int main() {
     std::vector<cpu_log> logs = getLogs("thumb.log");
 

@@ -7,7 +7,6 @@ add_test(test_arm test_arm)
 target_link_libraries(test_thumb gba_lib)
 add_test(test_thumb test_thumb)
 
-
 configure_file(arm.log arm.log COPYONLY)
 configure_file(arm.gba arm.gba COPYONLY)
 configure_file(thumb.log thumb.log COPYONLY)
