@@ -755,3 +755,11 @@ void Bus::printCurrentExecutionTimeline() {
     }
     std::cout << "]\n";
 }
+
+void Bus::enterHBlank() {
+
+}
+
+void Bus::enterVBlank() {
+    
+}

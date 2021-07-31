@@ -3,6 +3,7 @@
 class ARM7TDMI;
 class Bus;
 class LCD;
+class PPU;
 
 class GameBoyAdvance {
    public:
@@ -12,6 +13,7 @@ class GameBoyAdvance {
 
     void loadRom(std::string path);
     void startRom();
+    void loop();
 
     void testDisplay();
 
@@ -19,4 +21,9 @@ class GameBoyAdvance {
     ARM7TDMI* arm7tdmi;
     Bus* bus;
     LCD* screen;
+    PPU* ppu;
+
+    bool hBlankInterruptCompleted;
+    bool scanlineRendered;
+    bool vBlankInterruptCompleted;
 };

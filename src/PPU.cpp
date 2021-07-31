@@ -3,7 +3,7 @@
 #include "assert.h"
 
 void PPU::renderScanline(uint16_t scanline) {
-    uint8_t bgMode;
+    uint8_t bgMode = (bus->iORegisters[Bus::DISPCNT] & 0x7);
 
     switch(bgMode) {
         case 0: {

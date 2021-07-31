@@ -19,8 +19,6 @@ class Bus {
     Bus();
     ~Bus();
 
-   public:
-
     enum CycleType {
         SEQUENTIAL,
         NONSEQUENTIAL,
@@ -88,6 +86,9 @@ class Bus {
     // use if need to emualte extra exection steps besides the memory access
     void addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8_t width);
     void printCurrentExecutionTimeline();
+
+    void enterVBlank();
+    void enterHBlank();
 
    private:
     uint8_t currentNWaitstate;
