@@ -16,7 +16,10 @@ for each scanline:
         mark object as clean
 ```
 #### to render (do this once per frame):
+
 ```
 for each object from lowest to highest priority
     display object pixels on screen
 ```
+
+- render the each scanline at the end of the 1232 cycles one scan takes

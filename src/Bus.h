@@ -28,9 +28,12 @@ class Bus {
     };
 
     enum IORegister {
-        IE = 0x04000200 - 0x04000000,
-        IF = 0x04000202 - 0x04000000,
-        IME = 0x04000208 - 0x04000000
+        IE = 0x04000200 - 0x04000000, // Interrupt Enable Register
+        IF = 0x04000202 - 0x04000000, // Interrupt Request Flags / IRQ Acknowledge
+        IME = 0x04000208 - 0x04000000, // Interrupt Master Enable Register
+        DISPCNT = 0x04000000 - 0x04000000, // LCD control
+        DISPSTAT = 0x04000004 - 0x04000000,  // General LCD Status (STAT,LYC)
+        VCOUNT = 0x04000006 - 0x04000000 // Vertical Counter (LY)
     };
 
     /* General Internal Memory */
@@ -51,6 +54,8 @@ class Bus {
     // 06000000-06017FFF   VRAM - Video RAM          (96 KBytes) 98688
     std::vector<uint8_t> vRam;
     // 07000000-070003FF   OAM - OBJ Attributes      (1 Kbyte) 1028
+    // TODO: VRAM and Palette RAM may be accessed during H-Blanking. 
+    // OAM can accessed only if "H-Blank Interval Free" bit in DISPCNT register is set.
     std::vector<uint8_t> objAttributes;
 
     /* External Memory (Game Pak) */

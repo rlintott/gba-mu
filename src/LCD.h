@@ -8,6 +8,7 @@ class LCD {
 
     private: 
         void drawPixel();
+        
 
 
 };
