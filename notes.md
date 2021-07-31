@@ -9,12 +9,14 @@
 
 ### PPU flow
 
+```
 for each scanline:
     for each dirty object:
         update transformation on object for all x-coords >= current scanline
         mark object as clean
-
+```
 #### to render (do this once per frame):
-
+```
 for each object from lowest to highest priority
     display pixels on screen
+```
