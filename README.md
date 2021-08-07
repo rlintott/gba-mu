@@ -30,7 +30,7 @@ Still very much a work in progress
 
 
 ## Building 
-* **Dependencies:** cmake, c++17, Curses
+* **Dependencies:** cmake, c++17, Curses, sfml
 * `cd build` `./build.sh`
 
 ## Running
