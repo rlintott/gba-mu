@@ -26,7 +26,7 @@ Still very much a work in progress
 :white_circle: Everything else
 
 
-![Alt text](meda/m3_demo.png?raw=true "Running TONC's m3 demo")
+![Alt text](media/m3_demo.png?raw=true "Running TONC's m3 demo")
 
 
 ## Building 
