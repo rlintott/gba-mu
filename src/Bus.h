@@ -1,7 +1,7 @@
 #pragma once
 
 // define ndebug to suppress debug logs
-// #define NDEBUG 1;
+// #define NDEBUG 0;
 
 #include <array>
 #include <vector>
@@ -89,6 +89,8 @@ class Bus {
 
     void enterVBlank();
     void enterHBlank();
+    void leaveVBlank();
+    void leaveHBlank();
 
    private:
     uint8_t currentNWaitstate;

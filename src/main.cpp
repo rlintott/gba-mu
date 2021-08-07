@@ -1,19 +1,18 @@
 #include "Bus.h"
-#include "Debugger.h"
 #include "GameBoyAdvance.h"
 #include "LCD.h"
-
-
+#include "PPU.h"
 
 
 int main() {
     Bus bus;
     ARM7TDMI cpu;
     LCD screen;
+    PPU ppu;
 
-    GameBoyAdvance gba(&cpu, &bus, &screen);
-
-    gba.testDisplay();
+    GameBoyAdvance gba(&cpu, &bus, &screen, &ppu);
+    gba.loadRom("/Users/ryanlintott/Desktop/bin/m3_demo.gba");
+    gba.loop();
 
     std::cout << "completed!" << "\n";
     return 0;

@@ -7,7 +7,7 @@ class PPU;
 
 class GameBoyAdvance {
    public:
-    GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen);
+    GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu);
     GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus);
     ~GameBoyAdvance();
 
@@ -23,7 +23,7 @@ class GameBoyAdvance {
     LCD* screen;
     PPU* ppu;
 
-    bool hBlankInterruptCompleted;
-    bool scanlineRendered;
-    bool vBlankInterruptCompleted;
+    bool hBlankInterruptCompleted = false;
+    bool scanlineRendered = false;
+    bool vBlankInterruptCompleted = false;
 };

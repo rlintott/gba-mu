@@ -6,7 +6,6 @@
 #include <iostream>
 
 #include "Bus.h"
-#include "Debugger.h"
 #include "assert.h"
 
 
@@ -23,7 +22,9 @@ void ARM7TDMI::initializeWithRom() {
     // TODO: find out why setting register 0 and 1
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
-    setRegister(13, 0x03007F00); // stack pointer
+    setRegister(SP_REGISTER, 0x03007F00); // stack pointer
+    r13_svc = 0x03007FE0; // SP_svc=03007FE0h
+    r13_irq = 0x03007FA0; // SP_irq=03007FA0h
 
     bus->reset();
     uint32_t pcAddress = getRegister(PC_REGISTER);
@@ -46,18 +47,17 @@ uint32_t ARM7TDMI::step() {
     // TODO: give this method a better name
     bus->reset();
 
-    if(false /* TODO: if events */) {
+    if(true /* TODO: if events */) {
         irq();
-        return 0;
     }
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        DEBUG(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
-
+        //DEBUGWARN(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;
         DEBUG("in arm state\n");
 
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
+
         if(conditionalHolds(cond)) {
             ArmOpcodeHandler handler = decodeArmInstruction(currInstruction);
             currentPcAccessType = handler(currInstruction, this);
@@ -67,16 +67,38 @@ uint32_t ARM7TDMI::step() {
         // increment PC
 
     } else {  // THUMB state
-
         DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(currInstruction);
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
+
+
         currentPcAccessType = handler(currInstruction, this);
     }
 
+    // #ifndef NDEBUGWARN
+    // if(!cpsr.T) {
+    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+    //         currInstruction, 
+    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
+    //         psrToInt(getCpsr()));
+    // } else {
+    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+    //         currInstruction, 
+    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
+    //         psrToInt(getCpsr()));      
+    // }
+    // #endif
+
     getNextInstruction(currentPcAccessType);
 
-    return 0;
+    // TODO: just return one cycle per instr for now
+    return 1;
 }
 
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
@@ -117,7 +139,7 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
 void ARM7TDMI::irq() {
     if((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) && 
         bus->iORegisters[Bus::IORegister::IME] && !cpsr.I) {
-        
+        DEBUGWARN("irq\n");
         switchToMode(Mode::IRQ);
         // switch to ARM mode
         cpsr.T = 0;
@@ -130,9 +152,6 @@ void ARM7TDMI::connectBus(Bus *bus) {
     this->bus = bus; 
 }
 
-void ARM7TDMI::addDebugger(Debugger * debugger) {
-    this->debugger = debugger;
-}
 
 void ARM7TDMI::switchToMode(Mode mode) {
     DEBUG((uint32_t)mode << " <- switching to mode\n");
@@ -992,4 +1011,9 @@ uint8_t ARM7TDMI::umullGetExecutionTimeMVal(uint32_t value) {
         return 3;
     }
     return 4;
+}
+
+
+void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
+    currInstruction = instruction;
 }

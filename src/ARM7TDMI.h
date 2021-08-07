@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+#define NDEBUG 1;
+//#define NDEBUGWARN 1;
+
 #ifdef NDEBUG
 #define DEBUG(x)
 #else
@@ -26,7 +29,6 @@
 #endif
 
 class Bus;
-class Debugger;
 
 class ARM7TDMI {
 
@@ -46,8 +48,6 @@ class ARM7TDMI {
 
     // dependency injection
     void connectBus(Bus *bus);
-
-    void addDebugger(Debugger * debugger);
 
     // struct representing program status register (xPSR)
     struct ProgramStatusRegister {
@@ -85,9 +85,21 @@ class ARM7TDMI {
     uint32_t getRegister(uint8_t index);
     uint32_t getUserRegister(uint8_t index);
 
+    void setRegister(uint8_t index, uint32_t value);
+
+    void setCurrInstruction(uint32_t instruction);
+
     uint32_t getCurrentInstruction();
     Cycles getCurrentCycles();
     static uint32_t psrToInt(ProgramStatusRegister psr);
+
+    ProgramStatusRegister cpsr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ProgramStatusRegister SPSR_fiq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ProgramStatusRegister SPSR_svc = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ProgramStatusRegister SPSR_abt = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ProgramStatusRegister SPSR_irq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
   
    private:
 
@@ -237,12 +249,6 @@ class ARM7TDMI {
         SYSTEM = 31
     };
 
-    ProgramStatusRegister cpsr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ProgramStatusRegister SPSR_fiq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ProgramStatusRegister SPSR_svc = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ProgramStatusRegister SPSR_abt = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ProgramStatusRegister SPSR_irq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     ProgramStatusRegister *currentSpsr;
 
@@ -351,13 +357,10 @@ class ARM7TDMI {
 
     bool conditionalHolds(uint8_t cond);
 
-    Debugger * debugger;
-
     Cycles executeInstruction(uint32_t rawInstruction);
 
     // accounts for modes, ex in IRQ mode, setting register 14 will set value of
     // R14_irq
-    void setRegister(uint8_t index, uint32_t value);
     void setUserRegister(uint8_t index, uint32_t value);
 
     friend class Debugger;

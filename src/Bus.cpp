@@ -7,6 +7,9 @@
 #include <iterator>
 
 Bus::Bus() {
+    for(int i = 0; i < 98688; i++) {
+        vRam.push_back(0);
+    }
     for(int i = 0; i < 16448; i++) {
         bios.push_back(0);
     }
@@ -22,15 +25,14 @@ Bus::Bus() {
     for(int i = 0; i < 1028; i++) {
         paletteRam.push_back(0);
     }
-    for(int i = 0; i < 98688; i++) {
-        vRam.push_back(0);
-    }
     for(int i = 0; i < 1028; i++) {
         objAttributes.push_back(0);
     }
     for(int i = 0; i < 65792; i++) {
         gamePakSram.push_back(0);
     }
+
+
 }
 
 Bus::~Bus() {
@@ -300,7 +302,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         }           
 
     } else if (0x05000000 <= address && address <= 0x050003FF) {    
-
         switch(width) {
             case 32: {
                 return readFromArray32(&paletteRam, address, 0x05000000);
@@ -315,10 +316,9 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                 assert(false);
                 break;
             }
-        }   
+        } 
 
     } else if (0x06000000 <= address && address <= 0x06017FFF) {    
-
         switch(width) {
             case 32: {
                 return readFromArray32(&vRam, address, 0x06000000);
@@ -333,9 +333,9 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                 assert(false);
                 break;
             }
-        }  
+        }    
 
-    } else if (0x07000000 <= address && address <= 0x070003FF) {    
+    } else if (0x07000000 <= address && address <= 0x070003FF) {   
         switch(width) {
             case 32: {
                 return readFromArray32(&objAttributes, address, 0x07000000);
@@ -350,7 +350,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                 assert(false);
                 break;
             }
-        }    
+        }
 
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
         //  TODO: *** Separate timings for sequential, and non-sequential accesses.
@@ -503,7 +503,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         }     
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {
-
         switch(width) {
             case 32: {
                 writeToArray32(&iORegisters, address, 0x04000000, value); 
@@ -524,7 +523,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         }           
 
     } else if (0x05000000 <= address && address <= 0x050003FF) {    
-
         switch(width) {
             case 32: {
                 writeToArray32(&paletteRam, address, 0x05000000, value); 
@@ -542,10 +540,10 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 assert(false);
                 break;
             }
-        }   
+        } 
 
     } else if (0x06000000 <= address && address <= 0x06017FFF) {    
-
+        // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
         switch(width) {
             case 32: {
                 writeToArray32(&vRam, address, 0x06000000, value);
@@ -563,10 +561,10 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 assert(false);
                 break;
             }
-        }  
+        }
 
     } else if (0x07000000 <= address && address <= 0x070003FF) {    
-
+        // TODO: there are more hblank rules to implement
         switch(width) {
             case 32: {
                 writeToArray32(&objAttributes, address, 0x07000000, value);
@@ -584,7 +582,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 assert(false);
                 break;
             }
-        }    
+        }   
 
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
         //  TODO: *** Separate timings for sequential, and non-sequential accesses.
@@ -756,10 +754,3 @@ void Bus::printCurrentExecutionTimeline() {
     std::cout << "]\n";
 }
 
-void Bus::enterHBlank() {
-
-}
-
-void Bus::enterVBlank() {
-    
-}

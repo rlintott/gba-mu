@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 #include <iterator>
 
 #include "ARM7TDMI.h"
@@ -9,11 +10,13 @@
 #include "LCD.h"
 #include "PPU.h"
 
-GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen) {
+GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu) {
     this->arm7tdmi = _arm7tdmi;
     this->bus = _bus;
     this->screen = _screen;
     arm7tdmi->connectBus(bus);
+    this->ppu = _ppu;
+    ppu->connectBus(bus);
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
@@ -35,35 +38,45 @@ void GameBoyAdvance::testDisplay() {
 
 
 void GameBoyAdvance::loop() {
-    uint32_t totalCycles = 0;
+    screen->initWindow();
+    uint64_t totalCycles = 0;
     uint32_t cpuCycles = 0;
     uint32_t hScanProgress = 0;
+    uint32_t vScanProgress = 0;
     uint16_t currentScanline = 0;
+    
     while(true) {
         cpuCycles = arm7tdmi->step();
         totalCycles += cpuCycles;
         hScanProgress = totalCycles % PPU::H_TOTAL;
-        
-        if(!hBlankInterruptCompleted && hScanProgress >= PPU::H_VISIBLE_CYCLES) {
+        vScanProgress = totalCycles % PPU::V_TOTAL;
+
+        if(hScanProgress >= PPU::H_VISIBLE_CYCLES) {
             // TODO: h blank interrupt if enabled
-            hBlankInterruptCompleted = true;
-            bus->enterHBlank();
         }
 
-        if(hScanProgress <= cpuCycles) {
+        if(hScanProgress < cpuCycles) {
             // just started a new scanline, so render it
+            //DEBUGWARN(hScanProgress << "\n");
+            //DEBUGWARN(totalCycles << "\n");
             currentScanline++;
-            currentScanline %= 228;
+            currentScanline = currentScanline % 228;
             ppu->renderScanline(currentScanline);
-            hBlankInterruptCompleted = false;
         }
 
-        if(!vBlankInterruptCompleted && currentScanline > 159) {
+        if(currentScanline >= 159) {
             // TODO: h blank interrupt if enabled
-            vBlankInterruptCompleted = true;
-            bus->enterVBlank();
         }
 
+        if(vScanProgress < cpuCycles) {
+            // finished all scanlines, render the whole screen
+            //DEBUGWARN(vScanProgress << "\n");
+            //DEBUGWARN(totalCycles << "\n");
+            DEBUG("time to draw window!\n");
+            screen->drawWindow(ppu->pixelBuffer);
+            
+              
+        }
 
     }
 
