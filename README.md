@@ -21,14 +21,14 @@ Still very much a work in progress
 
 :white_check_mark: `m3_demo.gba` TONC rom
 
-:white_check_mark: `key_press.gba` TONC rom
+:white_check_mark: `key_pad.gba` TONC rom
 
 :white_circle: Everything else
 
 
 ![Alt text](media/m3_demo.png?raw=true "Running TONC's m3 demo")
 
-![Alt text](media/key_press.png?raw=true "Running TONC's key press demo")
+![Alt text](media/key_pad.png?raw=true "Running TONC's key pad demo")
 
 ## Building 
 * **Dependencies:** cmake, c++17, Curses, sfml
