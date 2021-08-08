@@ -522,7 +522,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             }
         }           
 
-    } else if (0x05000000 <= address && address <= 0x050003FF) {    
+    } else if (0x05000000 <= address && address <= 0x050003FF) { 
+        //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");
         switch(width) {
             case 32: {
                 writeToArray32(&paletteRam, address, 0x05000000, value); 

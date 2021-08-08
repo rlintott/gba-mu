@@ -25,10 +25,13 @@ class PPU {
         static const uint32_t SCREEN_WIDTH = 240;
         static const uint32_t SCREEN_HEIGHT = 160;
 
-        std::array<uint16_t, 38400> pixelBuffer = {};
+        std::array<uint16_t, SCREEN_WIDTH * SCREEN_HEIGHT> pixelBuffer = {};
 
         void connectBus(Bus* bus);
 
     private:
         Bus* bus; 
+
+        uint16_t indexBgPalette(uint8_t index);
+        uint16_t indexObjPalette(uint8_t index);
 };

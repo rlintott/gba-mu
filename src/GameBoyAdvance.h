@@ -26,4 +26,11 @@ class GameBoyAdvance {
     bool hBlankInterruptCompleted = false;
     bool scanlineRendered = false;
     bool vBlankInterruptCompleted = false;
+
+    long previousTime = 0;
+    long currentTime = 0;
+    long frames = 0;
+    double startTimeSeconds = 0.0;
+    
+
 };

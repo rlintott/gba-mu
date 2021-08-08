@@ -4,12 +4,16 @@
 #include <iostream>
 #include <unistd.h>
 #include <iterator>
+#include <chrono>
+#include <algorithm> 
 
 #include "ARM7TDMI.h"
 #include "Bus.h"
 #include "LCD.h"
 #include "PPU.h"
 #include "Gamepad.h"
+
+using milliseconds = std::chrono::milliseconds;
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu) {
     this->arm7tdmi = _arm7tdmi;
@@ -38,6 +42,10 @@ void GameBoyAdvance::testDisplay() {
 }
 
 
+long getCurrentTime() {
+    return  std::chrono::duration_cast<milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 void GameBoyAdvance::loop() {
     screen->initWindow();
     uint64_t totalCycles = 0;
@@ -45,7 +53,13 @@ void GameBoyAdvance::loop() {
     uint32_t hScanProgress = 0;
     uint32_t vScanProgress = 0;
     uint16_t currentScanline = 0;
-    
+    previousTime = getCurrentTime();
+    startTimeSeconds = getCurrentTime() / 1000.0;
+
+    // TODO: initialize this somewhere else
+    bus->iORegisters[Bus::IORegister::KEYINPUT] = 0xFF;
+    bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
+
     while(true) {
         cpuCycles = arm7tdmi->step();
         totalCycles += cpuCycles;
@@ -64,7 +78,9 @@ void GameBoyAdvance::loop() {
             //DEBUGWARN(totalCycles << "\n");
             currentScanline++;
             currentScanline = currentScanline % 228;
-            ppu->renderScanline(currentScanline);
+            bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+            
+            ppu->renderScanline(currentScanline);            
         }
 
         if(currentScanline >= PPU::SCREEN_HEIGHT - 1) {
@@ -75,10 +91,24 @@ void GameBoyAdvance::loop() {
             // finished all scanlines, render the whole screen
             //DEBUGWARN(vScanProgress << "\n");
             //DEBUGWARN(totalCycles << "\n");
+            // TODO: clean this up
             DEBUG("time to draw window!\n");
             screen->drawWindow(ppu->pixelBuffer);  
             Gamepad::getInput(bus);
+            
+            while(getCurrentTime() - previousTime < 17) {
+                usleep(500);
+            }
+            previousTime = getCurrentTime();
+
+            frames++;
+
+            if((frames % 60) == 0) {
+                //DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
+            }
         }
+
     }
 
 }
+

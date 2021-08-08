@@ -6,7 +6,7 @@ class LCD {
 
     public: 
         void initWindow();
-        void drawWindow(std::array<uint16_t, 38400>& pixelBuffer);
+        void drawWindow(std::array<uint16_t, 38400 /* width x height */>& pixelBuffer);
 
     private: 
         static void drawPixel();

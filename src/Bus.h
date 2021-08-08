@@ -34,6 +34,7 @@ class Bus {
         VCOUNT = 0x04000006 - 0x04000000, // Vertical Counter (LY)
         KEYINPUT = 0x04000130 - 0x04000000, // KEYINPUT - Key Status (R)
         KEYCNT = 0x04000132 - 0x04000000 // R/W  KEYCNT    Key Interrupt Control
+        // 4000130
     };
 
     /* General Internal Memory */

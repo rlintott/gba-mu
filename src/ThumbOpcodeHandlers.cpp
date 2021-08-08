@@ -728,7 +728,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreImmediateO
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
+
     assert((instruction & 0xF000) == 0x8000);
+    DEBUG("in load store halfword\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
@@ -743,11 +745,14 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHa
             break;
         }
         case 1: {
+            DEBUG("load\n");
+            DEBUG("rd " << (uint32_t)rd << "\n");
             // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
             uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
             cpu->setRegister(rd, value);
             cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
+
             break;
         }
     }
@@ -1012,6 +1017,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHa
     uint32_t offset = signExtend9Bit((instruction & 0x00FF) << 1);
     bool jump = false;
 
+    DEBUG("opcode: " << (uint64_t)opcode << "\n");
+
     // Destination address must by halfword aligned (ie. bit 0 cleared)
     // Return: No flags affected, PC adjusted if condition true
 
@@ -1058,7 +1065,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::conditionalBranchHa
         }
         case 0x8: {
             // 8: BHI label        ;C=1 and Z=0 ;unsigned higher
-            jump = !(cpu->cpsr.C) && cpu->cpsr.C;
+            jump = !cpu->cpsr.Z && cpu->cpsr.C;
             break;
         }
         case 0x9: {

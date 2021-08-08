@@ -12,7 +12,7 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
     float newAspectRatio = xRes / yRes;
 
     float xScale = xRes / PPU::SCREEN_WIDTH;
-    float yScale = yRes / PPU::SCREEN_HEIGHT
+    float yScale = yRes / PPU::SCREEN_HEIGHT;
 
     DEBUG(newAspectRatio << "\n");
     if(newAspectRatio <= aspectRatio) {
@@ -67,13 +67,18 @@ void LCD::initWindow() {
 
 }
 
+/*
+  0-4   Red Intensity   (0-31)
+  5-9   Green Intensity (0-31)
+  10-14 Blue Intensity  (0-31)
+*/
 
 void LCD::drawWindow(std::array<uint16_t, 38400>& pixelBuffer) {
     for(int i = 0; i < (pixelBuffer.size() * 4); i += 4) {
         uint16_t val = pixelBuffer[i >> 2];
-        sf::Color colour = sf::Color((val & 0x1f) << 3, 
-                                     (val & 0x3E0) >> 2, 
-                                     (val & 0x7C00) >> 7, 255);
+        sf::Color colour = sf::Color((val & 0x1f) << 3, /* R */
+                                     (val & 0x3E0) >> 2,  /* G */
+                                     (val & 0x7C00) >> 7, 255); /* B */
         pixels[i].color = colour;
         pixels[i + 1].color = colour;
         pixels[i + 2].color = colour;

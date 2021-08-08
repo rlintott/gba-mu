@@ -9,7 +9,7 @@ Still very much a work in progress
 
 :white_check_mark:  CPU - 16bit THUMB Instructions passing jsmolka's gba-suite test rom
 
-:white_check_mark:  CPU - Cycle counting
+:white_check_mark:  CPU - Cycle counting (sort of)
 
 :white_circle: Gamepak Prefetch Buffer Emulation
 
@@ -17,17 +17,18 @@ Still very much a work in progress
 
 :white_circle: CPU - Interrupt handling
 
-:white_check_mark: Bus - basic read / write capabilites
-
-:white_check_mark: Bus - can load a ROM. 
+:white_check_mark: Bus - read / write capabilites
 
 :white_check_mark: `m3_demo.gba` TONC rom
+
+:white_check_mark: `key_press.gba` TONC rom
 
 :white_circle: Everything else
 
 
 ![Alt text](media/m3_demo.png?raw=true "Running TONC's m3 demo")
 
+![Alt text](media/key_press.png?raw=true "Running TONC's key press demo")
 
 ## Building 
 * **Dependencies:** cmake, c++17, Curses, sfml

@@ -11,7 +11,7 @@ int main() {
     PPU ppu;
 
     GameBoyAdvance gba(&cpu, &bus, &screen, &ppu);
-    gba.loadRom("/Users/ryanlintott/Desktop/bin/m3_demo.gba");
+    gba.loadRom("/Users/ryanlintott/Desktop/bin/key_demo.gba");
     gba.loop();
 
     std::cout << "completed!" << "\n";

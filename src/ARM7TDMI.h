@@ -14,7 +14,7 @@
 #else
 #define DEBUG(x)        \
     do {                \
-        std::cerr << "INFO: " << x; \
+        std::cout << "INFO: " << x; \
     } while (0)
 #endif
 
@@ -24,7 +24,7 @@
 #else
 #define DEBUGWARN(x)        \
     do {                \
-        std::cerr << "WARN: " << x; \
+        std::cout << "WARN: " << x; \
     } while (0)
 #endif
 
@@ -61,8 +61,7 @@ class ARM7TDMI {
         uint8_t Q : 1;  // Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and
                         // up only)
         uint8_t V : 1;  // V - Overflow Flag   (0=No Overflow, 1=Overflow)
-        uint8_t
-            C : 1;  // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
+        uint8_t C : 1;  // C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow
         uint8_t Z : 1;  // Z - Zero Flag       (0=Not Zero, 1=Zero)
         uint8_t N : 1;  // N - Sign Flag       (0=Not Signed, 1=Signed)
     };

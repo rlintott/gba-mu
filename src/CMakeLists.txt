@@ -1,5 +1,8 @@
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-O3")
+
 find_package(Curses REQUIRED)
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
 
