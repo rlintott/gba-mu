@@ -1,25 +1,26 @@
 #include "LCD.h"
 // TODO: common include file for defines (like DEBUG)
 #include "ARM7TDMI.h"
+#include "PPU.h"
 
 /**
  * Helper function for changing resolution
  * TODO: move this somewere else
  * */
 void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
-    float aspectRatio = 240.0 / 160.0; // 1.5
+    float aspectRatio = (float)PPU::SCREEN_WIDTH / (float)PPU::SCREEN_HEIGHT; // 1.5
     float newAspectRatio = xRes / yRes;
 
-    float xScale = xRes / 240.0;
-    float yScale = yRes / 160.0;
+    float xScale = xRes / PPU::SCREEN_WIDTH;
+    float yScale = yRes / PPU::SCREEN_HEIGHT
 
     DEBUG(newAspectRatio << "\n");
     if(newAspectRatio <= aspectRatio) {
         // xRes is limiting scale factor
-        float yShift = yRes/2.0 - (160.0 * xScale / 2.0);
-        for(int x = 0; x < 240; x++) {
-            for(int y = 0; y < 160; y++) {  
-                sf::Vertex* quad = &pixels[(y * 240 + x) * 4];
+        float yShift = yRes/2.0 - (PPU::SCREEN_HEIGHT * xScale / 2.0);
+        for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
+            for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
+                sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
                 quad[0].position = sf::Vector2f(x * xScale, y * xScale + yShift);
                 quad[1].position = sf::Vector2f((x + 1) * xScale, y * xScale + yShift);
                 quad[2].position = sf::Vector2f((x + 1) * xScale, (y + 1) * xScale + yShift);
@@ -27,10 +28,10 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
             }
         }
     } else {
-        float xShift = xRes/2.0 - (240.0 * yScale / 2.0);
-        for(int x = 0; x < 240; x++) {
-            for(int y = 0; y < 160; y++) {  
-                sf::Vertex* quad = &pixels[(y * 240 + x) * 4];
+        float xShift = xRes/2.0 - (PPU::SCREEN_WIDTH * yScale / 2.0);
+        for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
+            for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
+                sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
                 quad[0].position = sf::Vector2f(x * yScale + xShift, y * yScale);
                 quad[1].position = sf::Vector2f((x + 1) * yScale + xShift, y * yScale);
                 quad[2].position = sf::Vector2f((x + 1) * yScale + xShift, (y + 1) * yScale);
@@ -41,14 +42,14 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
 }
 
 void LCD::initWindow() {
-    gbaWindow = new sf::RenderWindow(sf::VideoMode(240, 160), "GBA Window");
+    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH, PPU::SCREEN_HEIGHT), "GBA Window");
     // TODO: make 240, 160 constant member of lcd class
-    pixels.resize(240 * 160 * 4);
+    pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);
     pixels.setPrimitiveType(sf::Quads);
     
-    for(int x = 0; x < 240; x++) {
-        for(int y = 0; y < 160; y++) {  
-            sf::Vertex* quad = &pixels[(y * 240 + x) * 4];
+    for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
+        for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
+            sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
             sf::Color color = sf::Color(rand());
             quad[0].color = color;
             quad[1].color = color;
@@ -70,7 +71,9 @@ void LCD::initWindow() {
 void LCD::drawWindow(std::array<uint16_t, 38400>& pixelBuffer) {
     for(int i = 0; i < (pixelBuffer.size() * 4); i += 4) {
         uint16_t val = pixelBuffer[i >> 2];
-        sf::Color colour = sf::Color((val & 0x1f) << 3, (val & 0x3E0) >> 2, (val & 0x7C00) >> 7, 255);
+        sf::Color colour = sf::Color((val & 0x1f) << 3, 
+                                     (val & 0x3E0) >> 2, 
+                                     (val & 0x7C00) >> 7, 255);
         pixels[i].color = colour;
         pixels[i + 1].color = colour;
         pixels[i + 2].color = colour;

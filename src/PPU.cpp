@@ -12,7 +12,7 @@ PPU::~PPU() {
 }
 
 void PPU::renderScanline(uint16_t scanline) {
-    if(scanline > 159) {
+    if(scanline > SCREEN_HEIGHT - 1) {
         return;
     }
     uint8_t bgMode = (bus->iORegisters[Bus::DISPCNT] & 0x7);
@@ -35,10 +35,10 @@ void PPU::renderScanline(uint16_t scanline) {
         }
         case 3: {
             //DEBUGWARN("howdy\n");
-            for(int x = 0; x < 240; x++) {
+            for(int x = 0; x < SCREEN_WIDTH; x++) {
                 // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
-                pixelBuffer[scanline * 240 + x] = (bus->vRam[((scanline * 240 + x) * 2) + 1] << 8) | 
-                                                         (bus->vRam[(scanline * 240 + x) * 2]); 
+                pixelBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * SCREEN_WIDTH + x) << 1) + 1] << 8) | 
+                                                           (bus->vRam[(scanline * SCREEN_WIDTH + x) << 1]); 
 
             } 
             break;

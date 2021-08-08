@@ -9,6 +9,7 @@ add_library(gba_lib
     GameBoyAdvance.cpp GameBoyAdvance.h
     LCD.cpp LCD.h
     PPU.cpp PPU.h
+    Gamepad.cpp Gamepad.h
     )
 target_link_libraries(gba_lib ${CURSES_LIBRARIES})
 target_link_libraries(gba_lib sfml-graphics sfml-audio)  

@@ -21,6 +21,9 @@ class PPU {
         static const uint32_t V_VISIBLE_CYCLES = 197120;
         static const uint32_t V_BLANK_CYCLES = 83776;
         static const uint32_t V_TOTAL = 280896;
+        
+        static const uint32_t SCREEN_WIDTH = 240;
+        static const uint32_t SCREEN_HEIGHT = 160;
 
         std::array<uint16_t, 38400> pixelBuffer = {};
 

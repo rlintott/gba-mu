@@ -9,6 +9,7 @@
 #include "Bus.h"
 #include "LCD.h"
 #include "PPU.h"
+#include "Gamepad.h"
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu) {
     this->arm7tdmi = _arm7tdmi;
@@ -51,6 +52,8 @@ void GameBoyAdvance::loop() {
         hScanProgress = totalCycles % PPU::H_TOTAL;
         vScanProgress = totalCycles % PPU::V_TOTAL;
 
+        // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
+
         if(hScanProgress >= PPU::H_VISIBLE_CYCLES) {
             // TODO: h blank interrupt if enabled
         }
@@ -64,7 +67,7 @@ void GameBoyAdvance::loop() {
             ppu->renderScanline(currentScanline);
         }
 
-        if(currentScanline >= 159) {
+        if(currentScanline >= PPU::SCREEN_HEIGHT - 1) {
             // TODO: h blank interrupt if enabled
         }
 
@@ -73,11 +76,9 @@ void GameBoyAdvance::loop() {
             //DEBUGWARN(vScanProgress << "\n");
             //DEBUGWARN(totalCycles << "\n");
             DEBUG("time to draw window!\n");
-            screen->drawWindow(ppu->pixelBuffer);
-            
-              
+            screen->drawWindow(ppu->pixelBuffer);  
+            Gamepad::getInput(bus);
         }
-
     }
 
 }

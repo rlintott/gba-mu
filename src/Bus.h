@@ -31,7 +31,9 @@ class Bus {
         IME = 0x04000208 - 0x04000000, // Interrupt Master Enable Register
         DISPCNT = 0x04000000 - 0x04000000, // LCD control
         DISPSTAT = 0x04000004 - 0x04000000,  // General LCD Status (STAT,LYC)
-        VCOUNT = 0x04000006 - 0x04000000 // Vertical Counter (LY)
+        VCOUNT = 0x04000006 - 0x04000000, // Vertical Counter (LY)
+        KEYINPUT = 0x04000130 - 0x04000000, // KEYINPUT - Key Status (R)
+        KEYCNT = 0x04000132 - 0x04000000 // R/W  KEYCNT    Key Interrupt Control
     };
 
     /* General Internal Memory */
