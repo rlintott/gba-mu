@@ -21,15 +21,12 @@ void PPU::renderScanline(uint16_t scanline) {
     switch(bgMode) {
         case 0: {
             if(dirty) {
-                // render spriteBuffer for [scanline+2, 159]
-                // std::fill(std::next(pixelBuffer.begin() + scanline + 2), 
-                //           std::next(pixelBuffer.begin() + 38399), 
-                //           pixelBuffer);
                 pixelBuffer.fill(0);
-                DEBUGWARN("render on scanline " << scanline << "\n");
+                //DEBUGWARN("render on scanline " << scanline << "\n");
+                // render spritebuffer for [scanline+2, 159]  
                 renderSprites((scanline + 2) % 228);
                 // render bgbuffer for [scanline+1, 159]  
-                renderBg(scanline + 1);
+                renderBg((scanline + 1) % 228);
                 dirty = false;
             }
             break;
@@ -137,6 +134,9 @@ void PPU::setObjectsDirty() {
     06010000-06017FFF  32 KBytes OBJ Tiles
 */
 void PPU::renderSprites(uint16_t scanline) {
+    if(scanline >= SCREEN_HEIGHT - 2) {
+        return;
+    }
     bool mappingMode = bus->iORegisters[Bus::IORegister::DISPCNT] & 0x40;
     // interate through all OAM attributes (object), from lowest priority to highest
     // TODO: get rid of the magic numbers
@@ -186,7 +186,12 @@ void PPU::renderSprites(uint16_t scanline) {
         for(uint32_t x = 0; x < width; x++) {
             for(uint32_t y = 0; y < height; y++) {
                 // 4 bpp
-                uint32_t tile = (y * width + x) * 32 + offset;
+                uint32_t tile;
+                if(mappingMode) {
+                    tile = (y * width + x) * 32 + offset;
+                } else {
+                    tile = (y * 32 + x) * 32 + offset; 
+                }
                 for(uint8_t tileY = 0; tileY < 8; tileY++) {
                     screenY = vFlipOffset + vFlipMultiplier * (y * 8 + tileY) + screenYOffset & 0xFF;
                     if(screenY < scanline) {

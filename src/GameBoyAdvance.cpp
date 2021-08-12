@@ -93,7 +93,7 @@ void GameBoyAdvance::loop() {
             //DEBUGWARN(vScanProgress << "\n");
             //DEBUGWARN(totalCycles << "\n");
             // TODO: clean this up
-            DEBUGWARN("frame!\n");
+            //DEBUGWARN("frame!\n");
             screen->drawWindow(ppu->pixelBuffer);  
             Gamepad::getInput(bus);
 
