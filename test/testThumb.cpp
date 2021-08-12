@@ -9,12 +9,14 @@
 #include "../src/ARM7TDMI.h"
 #include "../src/Bus.h"
 #include "../src/GameBoyAdvance.h"
+#include "../src/PPU.h"
 #include "testCommon.h"
 
 int main() {
     std::vector<cpu_log> logs = getLogs("thumb.log");
 
-    Bus bus;
+    PPU ppu;
+    Bus bus{&ppu};    
     ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("thumb.gba");

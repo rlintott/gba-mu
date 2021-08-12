@@ -23,6 +23,8 @@ Still very much a work in progress
 
 :white_check_mark: `key_pad.gba` TONC rom
 
+:white_circle: Optimization (using profiling)
+
 :white_circle: Everything else
 
 

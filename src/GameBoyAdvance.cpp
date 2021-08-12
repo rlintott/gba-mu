@@ -87,20 +87,27 @@ void GameBoyAdvance::loop() {
             // TODO: h blank interrupt if enabled
         }
 
-        if(vScanProgress < cpuCycles) {
+        if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles && 
+           vScanProgress - PPU::V_VISIBLE_CYCLES >= 0) {
             // finished all scanlines, render the whole screen
             //DEBUGWARN(vScanProgress << "\n");
             //DEBUGWARN(totalCycles << "\n");
             // TODO: clean this up
-            DEBUG("time to draw window!\n");
+            DEBUGWARN("frame!\n");
             screen->drawWindow(ppu->pixelBuffer);  
             Gamepad::getInput(bus);
-            
+
+            // #ifndef NDEBUGWARN
+            // while(!sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
+            //     screen->drawWindow(ppu->pixelBuffer);  
+            // }
+            // while(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter));
+            // #endif
+
             while(getCurrentTime() - previousTime < 17) {
                 usleep(500);
             }
             previousTime = getCurrentTime();
-
             frames++;
 
             if((frames % 60) == 0) {

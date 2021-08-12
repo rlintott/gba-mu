@@ -8,6 +8,7 @@
 
 #include "ARM7TDMI.h"
 
+class PPU;
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
@@ -16,7 +17,7 @@ class Bus {
     // eg. "LDMIA [801fff8h],r0-r7" will have non-sequential timing at 8020000h.
 
    public:
-    Bus();
+    Bus(PPU* ppu);
     ~Bus();
 
     enum CycleType {
@@ -125,5 +126,6 @@ class Bus {
     // TODO: questionable wither this should be owned by bus, could move into a scheduler class?
     std::array<CycleType, 32> executionTimelineCycleType;
 
+    PPU* ppu;
 
 };

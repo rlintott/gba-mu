@@ -2,10 +2,12 @@
 #include "ARM7TDMI.h"
 #include "Bus.h"
 #include "GameBoyAdvance.h"
+#include "PPU.h"
 
 
 void runCpuWithState() {
-    Bus bus;
+    PPU ppu;
+    Bus bus{&ppu};
     ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
 

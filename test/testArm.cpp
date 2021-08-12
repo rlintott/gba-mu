@@ -9,6 +9,7 @@
 #include "../src/ARM7TDMI.h"
 #include "../src/Bus.h"
 #include "../src/GameBoyAdvance.h"
+#include "../src/PPU.h"
 #include "testCommon.h"
 
 
@@ -16,7 +17,8 @@ int main() {
     // TODO: put this function in testCommon.cpp for both arm and thumb to use
     std::vector<cpu_log> logs = getLogs("arm.log");
 
-    Bus bus;
+    PPU ppu;
+    Bus bus{&ppu};
     ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
     gba.loadRom("arm.gba");

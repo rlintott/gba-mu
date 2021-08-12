@@ -23,3 +23,7 @@ for each object from lowest to highest priority
 ```
 
 - render the each scanline at the end of the 1232 cycles one scan takes
+
+### objects
+
+keep sorted onjs v 

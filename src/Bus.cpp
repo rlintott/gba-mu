@@ -1,12 +1,12 @@
 #include "Bus.h"
-
+#include "PPU.h"
 #include <assert.h>
 
 #include <fstream>
 #include <iostream>
 #include <iterator>
 
-Bus::Bus() {
+Bus::Bus(PPU* ppu) {
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
     }
@@ -31,8 +31,7 @@ Bus::Bus() {
     for(int i = 0; i < 65792; i++) {
         gamePakSram.push_back(0);
     }
-
-
+    this->ppu = ppu;
 }
 
 Bus::~Bus() {
@@ -524,6 +523,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x05000000 <= address && address <= 0x050003FF) { 
         //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");
+        ppu->setObjectsDirty();
         switch(width) {
             case 32: {
                 writeToArray32(&paletteRam, address, 0x05000000, value); 
@@ -545,6 +545,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x06000000 <= address && address <= 0x06017FFF) {    
         // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
+        ppu->setObjectsDirty();
         switch(width) {
             case 32: {
                 writeToArray32(&vRam, address, 0x06000000, value);
@@ -566,6 +567,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x07000000 <= address && address <= 0x070003FF) {    
         // TODO: there are more hblank rules to implement
+        ppu->setObjectsDirty();
         switch(width) {
             case 32: {
                 writeToArray32(&objAttributes, address, 0x07000000, value);
