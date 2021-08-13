@@ -37,9 +37,10 @@ class PPU {
     private:
         Bus* bus; 
 
-        uint16_t indexBgPalette(uint8_t index);
-        uint16_t indexObjPalette(uint8_t index);
+        uint16_t indexBgPalette4Bpp(uint8_t index);
+        uint16_t indexBgPalette8Bpp(uint8_t index);
         uint16_t indexObjPalette4Bpp(uint8_t index);        
+        uint16_t indexObjPalette8Bpp(uint8_t index);     
 
         // each element of array: bits 0-15: colour, bits 16-18: priority
         std::array<uint32_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> bgBuffer = {};
@@ -50,19 +51,25 @@ class PPU {
 
         void renderSprites(uint16_t scanline);
         void renderBg(uint16_t scanline);
+        void renderBgX(uint16_t scanline, uint8_t x);
 
-        struct SpriteDimension {
+        struct Dimension {
             uint8_t width;
             uint8_t height;
         };
 
         // in TILES, not pixels
         // [shape][size]
-        SpriteDimension spriteDimensions[3][4] = {
+        Dimension spriteDimensions[3][4] = {
             { {1,1}, {2,2}, {4,4}, {8,8} },
             { {2,1}, {4,1}, {4,2}, {8,4} },
             { {1,2}, {1,4}, {2,4}, {4,8} }
         };
 
-        static SpriteDimension getSpriteDimensions(uint8_t shape, uint8_t size);
+        Dimension textBgDimensions[4] = {
+            {32, 32},
+            {64, 32},
+            {32, 64},
+            {64, 64}
+        };
 };

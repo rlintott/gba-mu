@@ -4,17 +4,15 @@
 #include "PPU.h"
 
 
-int main() {
+int main(int argc, char *argv[]) {
     PPU ppu;
     Bus bus{&ppu};
     ARM7TDMI cpu;
     LCD screen;
 
     GameBoyAdvance gba(&cpu, &bus, &screen, &ppu);
-    gba.loadRom("/Users/ryanlintott/Desktop/gba_dev/bin/obj_demo.gba");
+    gba.loadRom(argv[1]);
     gba.loop();
 
-    std::cout << "completed!" << "\n";
     return 0;
-
 }

@@ -502,6 +502,10 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         }     
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {
+        if(0x04000000 <= address && address < 0x04000056) {
+            ppu->setObjectsDirty();
+        }
+
         switch(width) {
             case 32: {
                 writeToArray32(&iORegisters, address, 0x04000000, value); 

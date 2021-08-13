@@ -89,11 +89,10 @@ void GameBoyAdvance::loop() {
 
         if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles && 
            vScanProgress - PPU::V_VISIBLE_CYCLES >= 0) {
-            // finished all scanlines, render the whole screen
-            //DEBUGWARN(vScanProgress << "\n");
-            //DEBUGWARN(totalCycles << "\n");
             // TODO: clean this up
-            //DEBUGWARN("frame!\n");
+            DEBUGWARN("frame!\n");
+            // force a draw every frame
+            ppu->setObjectsDirty();
             screen->drawWindow(ppu->pixelBuffer);  
             Gamepad::getInput(bus);
 
@@ -111,7 +110,7 @@ void GameBoyAdvance::loop() {
             frames++;
 
             if((frames % 60) == 0) {
-                //DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
+                DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
 
