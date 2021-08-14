@@ -45,11 +45,13 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
     // TODO: give this method a better name
+
     bus->reset();
 
     if(true /* TODO: if events */) {
         irq();
     }
+
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         //DEBUGWARN(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
@@ -97,8 +99,9 @@ uint32_t ARM7TDMI::step() {
 
     getNextInstruction(currentPcAccessType);
 
+
     // TODO: just return one cycle per instr for now
-    return 2;
+    return 1;
 }
 
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
@@ -155,7 +158,6 @@ void ARM7TDMI::connectBus(Bus *bus) {
 
 void ARM7TDMI::switchToMode(Mode mode) {
     DEBUG((uint32_t)mode << " <- switching to mode\n");
-    cpsr.Mode = mode;
     switch (mode) {
         case SYSTEM:
         case USER: {
@@ -205,6 +207,9 @@ void ARM7TDMI::switchToMode(Mode mode) {
             break;
         }
     }
+        // SPSR_svc=CPSR   ;save CPSR flags
+    *(getCurrentModeSpsr()) = cpsr;
+    cpsr.Mode = mode;
 }
 
 bool ARM7TDMI::conditionalHolds(uint8_t cond) {

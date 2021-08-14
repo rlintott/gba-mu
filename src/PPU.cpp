@@ -17,6 +17,8 @@ void PPU::renderScanline(uint16_t scanline) {
     if(scanline > (SCREEN_HEIGHT - 2) && scanline < 226) {
         return;
     }
+    //DEBUGWARN("start of render\n");
+
     uint8_t bgMode = (bus->iORegisters[Bus::DISPCNT] & 0x7);
 
     switch(bgMode) {
@@ -104,6 +106,7 @@ void PPU::renderScanline(uint16_t scanline) {
         }
 
     }
+    // DEBUGWARN("end of render\n");
 
 }
 
@@ -231,7 +234,6 @@ void PPU::renderSprites(uint16_t scanline) {
 
 
 void PPU::renderBg(uint16_t scanline) {
-    DEBUGWARN("rendering bg!\n");
     if(scanline > (SCREEN_HEIGHT - 1)) {
         // for edge case where scanline == 226
         renderBgX(0, 0);
@@ -296,7 +298,7 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
 
             uint8_t paletteBank = (screenEntry & 0xF000) >> 8;
             uint32_t tileIndex = screenEntry & 0x3FF;
-            uint32_t offset = tileBaseBlock * 0x4000 + tileIndex * 64; // TODO: or 64 if in 8bpp mode
+            uint32_t offset = tileBaseBlock * 0x4000 + tileIndex * 32; // TODO: or 64 if in 8bpp mode
 
             uint8_t hFlipMultiplier = 1;
             uint8_t hFlipOffset = 0;

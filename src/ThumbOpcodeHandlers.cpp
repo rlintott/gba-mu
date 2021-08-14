@@ -1169,17 +1169,16 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHa
     // 11011111b: SWI nn   ;software interrupt
     // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
     assert((instruction & 0xFF00) == 0xDF00);
+    
+    // CPSR=<changed>  ;Enter svc/abt
+    cpu->switchToMode(Mode::SUPERVISOR);
+
+    // ARM state, IRQs disabled
+    cpu->cpsr.T = 0;
+    cpu->cpsr.I = 1;
 
     // R14_svc=PC+2    ;save return address
-    cpu->setRegister(14, cpu->getRegister(PC_REGISTER) + 2);
-    
-    // SPSR_svc=CPSR   ;save CPSR flags
-    *(cpu->getCurrentModeSpsr()) = cpu->cpsr;
-    
-    // CPSR=<changed>  ;Enter svc/abt, ARM state, IRQs disabled
-    cpu->cpsr.T = 0;
-    cpu->switchToMode(Mode::SUPERVISOR);
-    cpu->cpsr.I = 1;
+    cpu->setRegister(14, cpu->getRegister(PC_REGISTER));
 
     // PC=VVVV0008h    ;jump to SWI/PrefetchAbort vector address
     // TODO: is base always 0000?

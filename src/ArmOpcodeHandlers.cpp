@@ -180,8 +180,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t i
                 assert(!(instruction & 0x00000FF0));
                 assert(getRm(instruction) != PC_REGISTER);
                 // TODO: refactor this, don't have to pass in a pointer to the psr
-                cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx,
-                                   psr);
+                cpu->transferToPsr(cpu->getRegister(getRm(instruction)), fscx, psr);
             }
             break;
         }
@@ -733,6 +732,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler
     bool u = dataTransGetU(instruction);
     bool l = dataTransGetL(instruction);
     bool w = dataTransGetW(instruction);
+
+    //DEBUGWARN("p: " << p <<  " u: " << u <<  " l: " << l <<  " w: " << w << "\n");
+
     if(!(instruction & 0x0000FFFF)) {
         // Empty Rlist: R15 loaded/stored (ARMv4 only), and Rb=Rb+/-40h (ARMv4-v5).
         instruction |= 0x00008000;

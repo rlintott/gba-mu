@@ -13,5 +13,6 @@ class LCD {
         sf::RenderWindow* gbaWindow;
         sf::VertexArray pixels;
         sf::Event event;
+        int defaultScreenSize = 7;
     
 };

@@ -42,8 +42,9 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
 }
 
 void LCD::initWindow() {
-    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH, PPU::SCREEN_HEIGHT), "GBA Window");
-    // TODO: make 240, 160 constant member of lcd class
+    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH * defaultScreenSize, 
+                                                   PPU::SCREEN_HEIGHT * defaultScreenSize), 
+                                                   "GBA Emu");
     pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);
     pixels.setPrimitiveType(sf::Quads);
     
@@ -62,9 +63,18 @@ void LCD::initWindow() {
             quad[3].position = sf::Vector2f(x, y + 1);
         }
     }
+
+    sf::FloatRect visibleArea(0, 0, PPU::SCREEN_WIDTH * defaultScreenSize, 
+                                    PPU::SCREEN_HEIGHT * defaultScreenSize);
+
+    sf::View view = sf::View(visibleArea);
+    gbaWindow->setView(view);
+    changeResolution(pixels, (float)(PPU::SCREEN_WIDTH * defaultScreenSize), 
+                             (float)(PPU::SCREEN_HEIGHT * defaultScreenSize));
+
+
     gbaWindow->clear(sf::Color::Black);
     gbaWindow->display();
-
 }
 
 /*

@@ -90,7 +90,7 @@ void GameBoyAdvance::loop() {
         if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles && 
            vScanProgress - PPU::V_VISIBLE_CYCLES >= 0) {
             // TODO: clean this up
-            DEBUGWARN("frame!\n");
+            // DEBUGWARN("frame!\n");
             // force a draw every frame
             ppu->setObjectsDirty();
             screen->drawWindow(ppu->pixelBuffer);  

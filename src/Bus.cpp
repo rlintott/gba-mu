@@ -1,5 +1,6 @@
 #include "Bus.h"
 #include "PPU.h"
+#include "BIOS.h"
 #include <assert.h>
 
 #include <fstream>
@@ -7,11 +8,13 @@
 #include <iterator>
 
 Bus::Bus(PPU* ppu) {
+    // TODO: make bios configurable
+
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
     }
-    for(int i = 0; i < 16448; i++) {
-        bios.push_back(0);
+    for(int i = 0; i < BIOS::size; i++) {
+        bios.push_back(BIOS::data[i]);
     }
     for(int i = 0; i < 263168; i++) {
         wRamBoard.push_back(0);
