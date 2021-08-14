@@ -17,15 +17,20 @@ void PPU::renderScanline(uint16_t scanline) {
     if(scanline > (SCREEN_HEIGHT - 2) && scanline < 226) {
         return;
     }
-    //DEBUGWARN("start of render\n");
+    
+    if(scanline > (SCREEN_HEIGHT - 1)) {
+        // for special case where scanline == 226
+        scanlineBackDropColours[0] = getBackdropColour();
+    } else {
+        scanlineBackDropColours[(scanline + 1) % 228] = getBackdropColour();
+    }
 
     uint8_t bgMode = (bus->iORegisters[Bus::DISPCNT] & 0x7);
 
     switch(bgMode) {
         case 0: {
             if(dirty) {
-                pixelBuffer.fill(0);
-                // render spritebuffer for [scanline+2, 159]  
+                // render spritebuffer for [scanline+2, 159] 
                 renderSprites((scanline + 2) % 228);
                 // render bgbuffer for [scanline+1, 159]  
                 renderBg((scanline + 1) % 228);
@@ -49,7 +54,7 @@ void PPU::renderScanline(uint16_t scanline) {
             // simple bitmap mode
             for(int x = 0; x < SCREEN_WIDTH; x++) {
                 // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
-                pixelBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * SCREEN_WIDTH + x) << 1) + 1] << 8) | 
+                bgBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * SCREEN_WIDTH + x) << 1) + 1] << 8) | 
                                                            (bus->vRam[(scanline * SCREEN_WIDTH + x) << 1]); 
             } 
             break;
@@ -60,14 +65,14 @@ void PPU::renderScanline(uint16_t scanline) {
                 // page 0
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
                     // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
-                    pixelBuffer[scanline * SCREEN_WIDTH + x] = 
+                    bgBuffer[scanline * SCREEN_WIDTH + x] = 
                         indexBgPalette8Bpp(bus->vRam[(scanline * SCREEN_WIDTH + x)]);
                 } 
             } else {
                 // page 1
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
                     // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
-                    pixelBuffer[scanline * SCREEN_WIDTH + x] = 
+                    bgBuffer[scanline * SCREEN_WIDTH + x] = 
                         indexBgPalette8Bpp(bus->vRam[(scanline * SCREEN_WIDTH + x + 0xA000)]);
                 }   
             }
@@ -81,9 +86,9 @@ void PPU::renderScanline(uint16_t scanline) {
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
                     // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
                     if(scanline >= 128 || x >= 160) {
-                        pixelBuffer[scanline * SCREEN_WIDTH + x] = indexBgPalette8Bpp(0);
+                        bgBuffer[scanline * SCREEN_WIDTH + x] = indexBgPalette8Bpp(0);
                     } else {
-                        pixelBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * 160 + x) << 1) + 1] << 8) | 
+                        bgBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * 160 + x) << 1) + 1] << 8) | 
                                                                     (bus->vRam[(scanline * 160 + x) << 1]); 
                     }
                 } 
@@ -91,9 +96,9 @@ void PPU::renderScanline(uint16_t scanline) {
                 // page 1
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
                     if(scanline >= 128 || x >= 160) {
-                        pixelBuffer[scanline * SCREEN_WIDTH + x] = indexBgPalette8Bpp(0);
+                        bgBuffer[scanline * SCREEN_WIDTH + x] = indexBgPalette8Bpp(0);
                     } else {
-                        pixelBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * 160 + x) << 1) + 1 + 0xA000] << 8) | 
+                        bgBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * 160 + x) << 1) + 1 + 0xA000] << 8) | 
                                                                     (bus->vRam[((scanline * 160 + x) << 1) + 0xA000]); 
                     }                
                 }   
@@ -115,27 +120,41 @@ void PPU::connectBus(Bus* _bus) {
 }
 
 
-uint16_t PPU::indexBgPalette8Bpp(uint8_t index) {
+uint16_t PPU::getBackdropColour() {
+    return ((uint16_t)bus->paletteRam[0 << 1]) |
+           ((uint16_t)bus->paletteRam[(0 << 1) + 1] << 8);
+}
+
+uint32_t PPU::indexBgPalette8Bpp(uint8_t index) {
+    if(!index) {
+        return transparentColour;
+    }
     return ((uint16_t)bus->paletteRam[index << 1]) |
            ((uint16_t)bus->paletteRam[(index << 1) + 1] << 8);
 }
 
-uint16_t PPU::indexBgPalette4Bpp(uint8_t index) {
+uint32_t PPU::indexBgPalette4Bpp(uint8_t index) {
+    if(!(index & 0x0F)) {
+        return transparentColour;
+    }
     return ((uint16_t)bus->paletteRam[index << 1]) |
            ((uint16_t)bus->paletteRam[(index << 1) + 1] << 8);
 }
 
 
-uint16_t PPU::indexObjPalette4Bpp(uint8_t index) {
+uint32_t PPU::indexObjPalette4Bpp(uint8_t index) {
     // TODO: this is just temporary
     if(!(index & 0x0F)) {
-        return 0;
+        return transparentColour;
     }
     return ((uint16_t)bus->paletteRam[(index << 1) + 0x200]) |
            ((uint16_t)bus->paletteRam[(index << 1) + 1 + 0x200] << 8);    
 }
 
-uint16_t PPU::indexObjPalette8Bpp(uint8_t index) {
+uint32_t PPU::indexObjPalette8Bpp(uint8_t index) {
+    if(!index) {
+        return transparentColour;
+    }
     return ((uint16_t)bus->paletteRam[(index << 1) + 0x200]) |
            ((uint16_t)bus->paletteRam[(index << 1) + 1 + 0x200] << 8);    
 }
@@ -147,10 +166,12 @@ void PPU::setObjectsDirty() {
 /*
     06010000-06017FFF  32 KBytes OBJ Tiles
 */
+// TODO: Maximum Number of Sprites per Line
 void PPU::renderSprites(uint16_t scanline) {
     if(scanline >= SCREEN_HEIGHT - 2) {
         return;
     }
+    spriteBuffer.fill(transparentColour);
     bool mappingMode = bus->iORegisters[Bus::IORegister::DISPCNT] & 0x40;
     // interate through all OAM attributes (object), from lowest priority to highest
     // TODO: get rid of the magic numbers
@@ -174,6 +195,7 @@ void PPU::renderSprites(uint16_t scanline) {
         Dimension dim = spriteDimensions[(objAttr0 & 0xC000) >> 14][(objAttr1 & 0xC000) >> 14];
         uint8_t width = dim.width;
         uint8_t height = dim.height;
+        // implementation detail
         uint32_t priorityOffset = SCREEN_WIDTH * SCREEN_HEIGHT * priority;
         uint32_t screenX = 0;
         uint32_t screenY = 0;
@@ -213,17 +235,18 @@ void PPU::renderSprites(uint16_t scanline) {
                         if(screenX >= SCREEN_WIDTH || screenY >= SCREEN_HEIGHT) {
                             continue;
                         }
+                        uint32_t colour;
                         if(colorMode) {
-                            pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                                indexObjPalette8Bpp(bus->vRam[tile + tileY * 8 + tileX]);
+                            colour = indexObjPalette8Bpp(bus->vRam[tile + tileY * 8 + tileX]);
                         } else {
                             if((tileY * 8 + tileX) % 2) {
-                                pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                                    indexObjPalette4Bpp(((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF0) >> 4) | paletteBank); 
+                                colour = indexObjPalette4Bpp(((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF0) >> 4) | paletteBank); 
                             } else {
-                                pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                                    indexObjPalette4Bpp(bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF | paletteBank);
+                                colour = indexObjPalette4Bpp(bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF | paletteBank);
                             }
+                        }
+                        if(colour != transparentColour) {
+                            spriteBuffer[priorityOffset + screenY * SCREEN_WIDTH + screenX] = colour;
                         }
                     }
                 }        
@@ -234,6 +257,7 @@ void PPU::renderSprites(uint16_t scanline) {
 
 
 void PPU::renderBg(uint16_t scanline) {
+    bgBuffer.fill(transparentColour);
     if(scanline > (SCREEN_HEIGHT - 1)) {
         // for edge case where scanline == 226
         renderBgX(0, 0);
@@ -270,6 +294,7 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
 
     uint16_t bgCnt = bus->iORegisters[0x8 + x * 2] | (bus->iORegisters[0x8 + x * 2 + 1] << 8);
     uint8_t priority = bgCnt & 0x3;
+    uint32_t bgBufferOffset = x * SCREEN_HEIGHT * SCREEN_WIDTH;
     uint8_t tileBaseBlock = (bgCnt & 0xC) >> 2;
     uint8_t screenBaseBlock = (bgCnt & 0x1F00) >> 8;
     uint8_t size = (bgCnt & 0xC000) >> 14;
@@ -287,6 +312,8 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
 
     bool colorMode = bgCnt & 0x0080;
 
+    uint32_t tileWidth = colorMode ? 64 : 32;
+
     for(uint8_t x = 0; x < width; x++) {
         uint8_t screenBlockX = x / 32;
         for(uint8_t y = 0; y < height; y++) {
@@ -298,7 +325,7 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
 
             uint8_t paletteBank = (screenEntry & 0xF000) >> 8;
             uint32_t tileIndex = screenEntry & 0x3FF;
-            uint32_t offset = tileBaseBlock * 0x4000 + tileIndex * 32; // TODO: or 64 if in 8bpp mode
+            uint32_t offset = tileBaseBlock * 0x4000 + tileIndex * tileWidth; // TODO: or 64 if in 8bpp mode
 
             uint8_t hFlipMultiplier = 1;
             uint8_t hFlipOffset = 0;
@@ -328,15 +355,17 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
                     }
                     
                     if(colorMode) {
-                        pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                            indexBgPalette8Bpp(bus->vRam[offset + tileY * 8 + tileX]);
+                        bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
+                            indexBgPalette8Bpp(bus->vRam[offset + tileY * 8 + tileX]) | ((uint32_t)priority << 16);
                     } else {
                         if((tileY * 8 + tileX) % 2) {
-                            pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                                indexBgPalette4Bpp(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4) | paletteBank); 
+                            bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
+                                indexBgPalette4Bpp(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4) | paletteBank) | 
+                                ((uint32_t)priority << 16);
                         } else {
-                            pixelBuffer[screenY * SCREEN_WIDTH + screenX] = 
-                                indexBgPalette4Bpp(bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF | paletteBank);
+                            bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
+                                indexBgPalette4Bpp((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF) | paletteBank) |
+                                ((uint32_t)priority << 16);
                         }                    
                     }
                 }
@@ -344,3 +373,48 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
         }      
     } 
 }
+
+bool PPU::isTransparent(uint32_t pixelData) {
+    return pixelData & transparentColour;
+}
+
+
+// this is only called once per frame
+std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrentScreen() {
+    pixelBuffer.fill(0);
+    // get the priorities of the backgrounds
+    std::vector<std::pair<uint8_t, uint8_t>> bgPriorities;
+    bgPriorities.push_back({(bgBuffer[0 * SCREEN_WIDTH * SCREEN_HEIGHT] & 0x30000) >> 16, 0});
+    bgPriorities.push_back({(bgBuffer[1 * SCREEN_WIDTH * SCREEN_HEIGHT] & 0x30000) >> 16, 1});
+    bgPriorities.push_back({(bgBuffer[2 * SCREEN_WIDTH * SCREEN_HEIGHT] & 0x30000) >> 16, 2});
+    bgPriorities.push_back({(bgBuffer[3 * SCREEN_WIDTH * SCREEN_HEIGHT] & 0x30000) >> 16, 3});
+    std::sort(bgPriorities.begin(), bgPriorities.end());
+    // because going from lowest (3) to highest (0) prioirty
+
+    // In case that the 'Priority relative to BG' is the same than the priority of one of the background layers, 
+    // then the OBJ becomes higher priority and is displayed on top of that BG layer.    
+    for(int x = 0; x < SCREEN_WIDTH; x++) {
+        for(int y = 0; y < SCREEN_HEIGHT; y++) {
+            pixelBuffer[y * SCREEN_WIDTH + x] = scanlineBackDropColours[y];
+
+            for(int priority = 3; priority >= 0; priority-- ) {
+                uint32_t spriteOffset = (bgPriorities[priority].first) * SCREEN_HEIGHT * SCREEN_WIDTH;
+                uint32_t bgOffset = (bgPriorities[priority].second) * SCREEN_HEIGHT * SCREEN_WIDTH;
+                //DEBUGWARN("bg: " << (uint32_t)bgPriorities[priority].second << " prio: " << (uint32_t)bgPriorities[priority].first << "\n");
+
+                uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                uint32_t bgPixel = bgBuffer[bgOffset + y * SCREEN_WIDTH + x];
+
+                if(!isTransparent(bgPixel)) {
+                    pixelBuffer[y * SCREEN_WIDTH + x] = bgPixel & 0xFFFF;
+                } 
+                if(!isTransparent(spritePixel)) {
+                    pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
+                } 
+            }
+        }
+    }
+    return pixelBuffer;
+}
+
+

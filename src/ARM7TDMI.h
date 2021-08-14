@@ -249,7 +249,6 @@ class ARM7TDMI {
         SYSTEM = 31
     };
 
-
     ProgramStatusRegister *currentSpsr;
 
     Bus *bus;

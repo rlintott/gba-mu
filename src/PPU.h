@@ -26,6 +26,8 @@ class PPU {
         static const uint32_t SCREEN_WIDTH = 240;
         static const uint32_t SCREEN_HEIGHT = 160;
 
+        std::array<uint16_t, SCREEN_WIDTH * SCREEN_HEIGHT>& renderCurrentScreen();
+
         std::array<uint16_t, SCREEN_WIDTH * SCREEN_HEIGHT> pixelBuffer = {};
 
         void connectBus(Bus* bus);
@@ -37,16 +39,27 @@ class PPU {
     private:
         Bus* bus; 
 
-        uint16_t indexBgPalette4Bpp(uint8_t index);
-        uint16_t indexBgPalette8Bpp(uint8_t index);
-        uint16_t indexObjPalette4Bpp(uint8_t index);        
-        uint16_t indexObjPalette8Bpp(uint8_t index);     
+        uint32_t indexBgPalette4Bpp(uint8_t index);
+        uint32_t indexBgPalette8Bpp(uint8_t index);
+        uint32_t indexObjPalette4Bpp(uint8_t index);        
+        uint32_t indexObjPalette8Bpp(uint8_t index);  
+        uint16_t getBackdropColour();   
 
-        // each element of array: bits 0-15: colour, bits 16-18: priority
-        std::array<uint32_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> bgBuffer = {};
-        // each element of array: bits 0-15: colour, bits 16-18: priority
+        const uint32_t transparentColour = 0x00040000;
+        bool isTransparent(uint32_t pixelData);
+
+        // each element of array: bits 0-15: colour, bit 18: transparent
+        // to find sprite pixel of priority i at location (x,y) -> [i * SCREEN_WIDTH * SCREEN_HEIGHT + y * SCREEN_WIDTH + x]
         std::array<uint32_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> spriteBuffer = {};
-        
+
+        // each element of array: bits 0-15: colour, bits 16-17: priority, bit 18: transparent
+        // to find pixel of bg#i at location (x,y) -> [i * SCREEN_WIDTH * SCREEN_HEIGHT + y * SCREEN_WIDTH + x]
+        std::array<uint32_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> bgBuffer = {};
+
+        // backdrop colour for each scanline
+        std::array<uint16_t, SCREEN_HEIGHT> scanlineBackDropColours;
+
+
         bool dirty;
 
         void renderSprites(uint16_t scanline);

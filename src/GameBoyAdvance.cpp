@@ -93,7 +93,7 @@ void GameBoyAdvance::loop() {
             // DEBUGWARN("frame!\n");
             // force a draw every frame
             ppu->setObjectsDirty();
-            screen->drawWindow(ppu->pixelBuffer);  
+            screen->drawWindow(ppu->renderCurrentScreen());  
             Gamepad::getInput(bus);
 
             // #ifndef NDEBUGWARN
@@ -113,8 +113,6 @@ void GameBoyAdvance::loop() {
                 DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
-
     }
-
 }
 

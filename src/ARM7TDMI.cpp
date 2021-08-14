@@ -101,7 +101,7 @@ uint32_t ARM7TDMI::step() {
 
 
     // TODO: just return one cycle per instr for now
-    return 1;
+    return 2;
 }
 
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
