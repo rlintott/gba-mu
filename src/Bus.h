@@ -34,8 +34,24 @@ class Bus {
         DISPSTAT = 0x04000004 - 0x04000000,  // General LCD Status (STAT,LYC)
         VCOUNT = 0x04000006 - 0x04000000, // Vertical Counter (LY)
         KEYINPUT = 0x04000130 - 0x04000000, // KEYINPUT - Key Status (R)
-        KEYCNT = 0x04000132 - 0x04000000 // R/W  KEYCNT    Key Interrupt Control
-        // 4000130
+        KEYCNT = 0x04000132 - 0x04000000, // R/W  KEYCNT    Key Interrupt Control
+
+        DMA0SAD = 0x040000B0 - 0x04000000, // DMA 0 Source Address
+        DMA0DAD = 0x040000B4 - 0x04000000, // DMA 0 Destination Address
+        DMA0CNT_L = 0x040000B8 - 0x04000000, // DMA 0 Word Count
+        DMA0CNT_H = 0x040000BA - 0x04000000, // DMA 0 Control
+        DMA1SAD = 0x040000BC - 0x04000000, // DMA 1 Source Address
+        DMA1DAD = 0x040000C0 - 0x04000000, // DMA 1 Destination Address
+        DMA1CNT_L = 0x040000C4 - 0x04000000, // DMA 1 Word Count
+        DMA1CNT_H = 0x040000C6 - 0x04000000, // DMA 1 Control
+        DMA2SAD = 0x040000C8 - 0x04000000, // DMA 2 Source Address
+        DMA2DAD = 0x040000CC - 0x04000000, // DMA 2 Destination Address
+        DMA2CNT_L = 0x040000D0 - 0x04000000, // DMA 2 Word Count
+        DMA2CNT_H = 0x040000D2 - 0x04000000, // DMA 2 Control
+        DMA3SAD = 0x040000D4 - 0x04000000, // DMA 3 Source Address
+        DMA3DAD = 0x040000D8 - 0x04000000, // DMA 3 Destination Address
+        DMA3CNT_L = 0x040000DC - 0x04000000, // DMA 3 Word Count
+        DMA3CNT_H = 0x040000DE - 0x04000000 // DMA 3 Control
     };
 
     /* General Internal Memory */
@@ -84,7 +100,7 @@ class Bus {
     uint8_t getCurrentSWaitstate();
 
     // resets the execution step timeline. 
-    void reset();
+    void resetCycleCountTimeline();
 
     // adds eexecution step to timeline 
     // use if need to emualte extra exection steps besides the memory access

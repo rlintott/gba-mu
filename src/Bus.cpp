@@ -748,7 +748,7 @@ uint8_t Bus::getWaitState2SCycles() {
     return waitState2SVals[(iORegisters.at(waitcntOffset) & 0x00000400) >> 10];
 }
 
-void Bus::reset() {
+void Bus::resetCycleCountTimeline() {
     currentNWaitstate = 1;
     currentSWaitstate = 1;
     executionTimelineSize = 0;

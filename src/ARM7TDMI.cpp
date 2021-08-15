@@ -26,7 +26,7 @@ void ARM7TDMI::initializeWithRom() {
     r13_svc = 0x03007FE0; // SP_svc=03007FE0h
     r13_irq = 0x03007FA0; // SP_irq=03007FA0h
 
-    bus->reset();
+    bus->resetCycleCountTimeline();
     uint32_t pcAddress = getRegister(PC_REGISTER);
     currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
     DEBUG(std::bitset<32>(currInstruction).to_string() << " <- boot location instruction \n");
@@ -46,7 +46,7 @@ uint32_t ARM7TDMI::step() {
     DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
     // TODO: give this method a better name
 
-    bus->reset();
+    bus->resetCycleCountTimeline();
 
     if(true /* TODO: if events */) {
         irq();

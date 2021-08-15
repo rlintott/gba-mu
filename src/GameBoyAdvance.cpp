@@ -61,11 +61,6 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
 
     while(true) {
-        cpuCycles = arm7tdmi->step();
-        totalCycles += cpuCycles;
-        hScanProgress = totalCycles % PPU::H_TOTAL;
-        vScanProgress = totalCycles % PPU::V_TOTAL;
-
         // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
 
         if(hScanProgress >= PPU::H_VISIBLE_CYCLES) {
@@ -84,11 +79,10 @@ void GameBoyAdvance::loop() {
         }
 
         if(currentScanline >= PPU::SCREEN_HEIGHT - 1) {
-            // TODO: h blank interrupt if enabled
+            // TODO: v blank interrupt if enabled
         }
 
-        if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles && 
-           vScanProgress - PPU::V_VISIBLE_CYCLES >= 0) {
+        if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles) {
             // TODO: clean this up
             // DEBUGWARN("frame!\n");
             // force a draw every frame
@@ -113,6 +107,12 @@ void GameBoyAdvance::loop() {
                 DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
+
+        cpuCycles = arm7tdmi->step();
+        totalCycles += cpuCycles;
+        hScanProgress = totalCycles % PPU::H_TOTAL;
+        vScanProgress = totalCycles % PPU::V_TOTAL;
+
     }
 }
 

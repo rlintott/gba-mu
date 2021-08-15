@@ -23,9 +23,9 @@ class GameBoyAdvance {
     LCD* screen;
     PPU* ppu;
 
-    bool hBlankInterruptCompleted = false;
+    bool hBlank = false;
     bool scanlineRendered = false;
-    bool vBlankInterruptCompleted = false;
+    bool vBlank = false;
 
     long previousTime = 0;
     long currentTime = 0;
