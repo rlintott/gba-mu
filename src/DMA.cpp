@@ -4,7 +4,7 @@
 #include "PPU.h"
 
 
-// this method is a mess :(
+// TODO: this DMA is potentially buggy
 uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
