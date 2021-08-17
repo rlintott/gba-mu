@@ -124,15 +124,15 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
                 currInstruction = bus->read16(pcAddress, Bus::CycleType::NONSEQUENTIAL);
                 DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
                 // emulate filling the pipeline
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
+                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
+                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
             } else {
                 uint32_t pcAddress = getRegister(PC_REGISTER);
                 currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
                 DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
                 // emulate filling the pipeline
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
-                bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
+                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
+                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
             }
             break;
         }

@@ -12,16 +12,19 @@
 #include "LCD.h"
 #include "PPU.h"
 #include "Gamepad.h"
+#include "DMA.h"
 
 using milliseconds = std::chrono::milliseconds;
 
-GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu) {
+GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma) {
     this->arm7tdmi = _arm7tdmi;
     this->bus = _bus;
     this->screen = _screen;
     arm7tdmi->connectBus(bus);
     this->ppu = _ppu;
     ppu->connectBus(bus);
+    this->dma = _dma;
+    dma->connectBus(bus);
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
@@ -49,9 +52,9 @@ long getCurrentTime() {
 void GameBoyAdvance::loop() {
     screen->initWindow();
     uint64_t totalCycles = 0;
-    uint32_t cpuCycles = 0;
-    uint32_t hScanProgress = 0;
-    uint32_t vScanProgress = 0;
+    uint32_t cyclesThisStep = 0;
+    uint64_t nextHBlank = PPU::H_VISIBLE_CYCLES;
+    uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;
     uint16_t currentScanline = 0;
     previousTime = getCurrentTime();
     startTimeSeconds = getCurrentTime() / 1000.0;
@@ -62,31 +65,40 @@ void GameBoyAdvance::loop() {
 
     while(true) {
         // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
+        cyclesThisStep = dma->step(hBlank, vBlank, currentScanline);
+        vBlank = false;
+        hBlank = false;
+        if(!cyclesThisStep) {
+            // dma did not occur
+            //DEBUGWARN("cpu\n");
+            //DEGUGWARN(cyclesThisStep << "\n");
+            cyclesThisStep += arm7tdmi->step();
+        }
 
-        if(hScanProgress >= PPU::H_VISIBLE_CYCLES) {
+        totalCycles += cyclesThisStep;
+
+        if(totalCycles >= nextHBlank) {
             // TODO: h blank interrupt if enabled
-        }
-
-        if(hScanProgress < cpuCycles) {
-            // just started a new scanline, so render it
-            //DEBUGWARN(hScanProgress << "\n");
-            //DEBUGWARN(totalCycles << "\n");
-            currentScanline++;
-            currentScanline = currentScanline % 228;
-            bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+            hBlank = true;
+            // in case we have gone through multiple scanlines in a single step somehow
+            uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
+            currentScanline += scanlinesThisStep;
+            currentScanline %= 228;
             
-            ppu->renderScanline(currentScanline);            
+            bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+            nextHBlank += PPU::H_TOTAL;
+            ppu->renderScanline(currentScanline); 
         }
 
-        if(currentScanline >= PPU::SCREEN_HEIGHT - 1) {
+
+        if(totalCycles >= nextVBlank) {
             // TODO: v blank interrupt if enabled
-        }
-
-        if(vScanProgress - PPU::V_VISIBLE_CYCLES < cpuCycles) {
+            nextVBlank += PPU::V_TOTAL; 
+            vBlank = true;
             // TODO: clean this up
             // DEBUGWARN("frame!\n");
             // force a draw every frame
-            ppu->setObjectsDirty();
+            bus->ppuMemDirty = true;
             screen->drawWindow(ppu->renderCurrentScreen());  
             Gamepad::getInput(bus);
 
@@ -97,9 +109,9 @@ void GameBoyAdvance::loop() {
             // while(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter));
             // #endif
 
-            while(getCurrentTime() - previousTime < 17) {
-                usleep(500);
-            }
+            // while(getCurrentTime() - previousTime < 17) {
+            //     usleep(500);
+            // }
             previousTime = getCurrentTime();
             frames++;
 
@@ -107,11 +119,6 @@ void GameBoyAdvance::loop() {
                 DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
-
-        cpuCycles = arm7tdmi->step();
-        totalCycles += cpuCycles;
-        hScanProgress = totalCycles % PPU::H_TOTAL;
-        vScanProgress = totalCycles % PPU::V_TOTAL;
 
     }
 }

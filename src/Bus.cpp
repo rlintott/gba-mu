@@ -232,205 +232,443 @@ void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8
 
 uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
-    addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
+    uint32_t shift = address & 0x0F000000;
+    //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
-    if(address <= 0x00003FFF) {
-        switch(width) {
-            case 32: {
-                return readFromArray32(&bios, address, 0);
-            }
-            case 16: {
-                return readFromArray16(&bios, address, 0);
-            }
-            case 8: {
-                return readFromArray8(&bios, address, 0);
-            }
-            default: {
-                assert(false);
+    switch(shift) {
+        case 0: {
+            if(address > 0x00003FFF) {
                 break;
             }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&bios, address, 0);
+                }
+                case 16: {
+                    return readFromArray16(&bios, address, 0);
+                }
+                case 8: {
+                    return readFromArray8(&bios, address, 0);
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+                break;
+            }
+            break;
         }
-    }
-    else if (0x02000000 <= address && address <= 0x0203FFFF) {
-        DEBUG("reading from wramBoard\n");
-        switch(width) {
-            case 32: {
-                return readFromArray32(&wRamBoard, address, 0x02000000);
-            }
-            case 16: {
-                return readFromArray16(&wRamBoard, address, 0x02000000);            
-            }
-            case 8: {
-                return readFromArray8(&wRamBoard, address, 0x02000000);            
-            }
-            default: {
-                assert(false);
+        case 0x02000000: { // CHIP RAM 
+            DEBUG("reading from wramBoard\n");
+            if(address > 0x0203FFFF) {
                 break;
             }
-        }
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
-        DEBUG("reading from wramChip\n");
-
-        switch(width) {
-            case 32: {
-                return readFromArray32(&wRamChip, address, 0x03000000);
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&wRamBoard, address, 0x02000000);
+                }
+                case 16: {
+                    return readFromArray16(&wRamBoard, address, 0x02000000);            
+                }
+                case 8: {
+                    return readFromArray8(&wRamBoard, address, 0x02000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
             }
-            case 16: {
-                return readFromArray16(&wRamChip, address, 0x03000000);            
-            }
-            case 8: {
-                return readFromArray8(&wRamChip, address, 0x03000000);            
-            }
-            default: {
-                assert(false);
+            break;
+        }   
+        case 0x03000000: {
+            DEBUG("reading from wramChip\n");
+            if(address > 0x03007FFF) {
                 break;
             }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&wRamChip, address, 0x03000000);
+                }
+                case 16: {
+                    return readFromArray16(&wRamChip, address, 0x03000000);            
+                }
+                case 8: {
+                    return readFromArray8(&wRamChip, address, 0x03000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }     
+            break;
+        }      
+        case 0x04000000: {
+            if(address > 0x040003FE) {
+                break;
+            }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&iORegisters, address, 0x04000000);
+                }
+                case 16: {
+                    return readFromArray16(&iORegisters, address, 0x04000000);            }
+                case 8: {
+                    return readFromArray8(&iORegisters, address, 0x04000000);            }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }    
+            break;       
         }     
-
-    } else if (0x04000000 <= address && address <= 0x040003FE) {
-
-        switch(width) {
-            case 32: {
-                return readFromArray32(&iORegisters, address, 0x04000000);
-            }
-            case 16: {
-                return readFromArray16(&iORegisters, address, 0x04000000);            }
-            case 8: {
-                return readFromArray8(&iORegisters, address, 0x04000000);            }
-            default: {
-                assert(false);
+        case 0x05000000: {  
+            if(address > 0x050003FF) {
                 break;
-            }
-        }           
-
-    } else if (0x05000000 <= address && address <= 0x050003FF) {    
-        switch(width) {
-            case 32: {
-                return readFromArray32(&paletteRam, address, 0x05000000);
-            }
-            case 16: {
-                return readFromArray16(&paletteRam, address, 0x05000000);            
-            }
-            case 8: {
-                return readFromArray8(&paletteRam, address, 0x05000000);            
-            }
-            default: {
-                assert(false);
-                break;
-            }
-        } 
-
-    } else if (0x06000000 <= address && address <= 0x06017FFF) {    
-        switch(width) {
-            case 32: {
-                return readFromArray32(&vRam, address, 0x06000000);
-            }
-            case 16: {
-                return readFromArray16(&vRam, address, 0x06000000);            
-            }
-            case 8: {
-                return readFromArray8(&vRam, address, 0x06000000);            
-            }
-            default: {
-                assert(false);
-                break;
-            }
+            }  
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&paletteRam, address, 0x05000000);
+                }
+                case 16: {
+                    return readFromArray16(&paletteRam, address, 0x05000000);            
+                }
+                case 8: {
+                    return readFromArray8(&paletteRam, address, 0x05000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;
         }    
-
-    } else if (0x07000000 <= address && address <= 0x070003FF) {   
-        switch(width) {
-            case 32: {
-                return readFromArray32(&objAttributes, address, 0x07000000);
-            }
-            case 16: {
-                return readFromArray16(&objAttributes, address, 0x07000000);            
-            }
-            case 8: {
-                return readFromArray8(&objAttributes, address, 0x07000000);           
-            }
-            default: {
-                assert(false);
+        case 0x06000000: {    
+            if(address > 0x06017FFF) {
                 break;
             }
-        }
-
-    } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-        // waitstate 0
-        DEBUG("reading from gamepak\n");
-        switch(width) {
-            case 32: {
-                return readFromArray32(&gamePakRom, address, 0x08000000);
-            }
-            case 16: {
-                return readFromArray16(&gamePakRom, address, 0x08000000);            
-            }
-            case 8: {              
-                return readFromArray8(&gamePakRom, address, 0x08000000);           
-            }
-            default: {
-                assert(false);
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&vRam, address, 0x06000000);
+                }
+                case 16: {
+                    return readFromArray16(&vRam, address, 0x06000000);            
+                }
+                case 8: {
+                    return readFromArray8(&vRam, address, 0x06000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }    
+            break;
+        }        
+        case 0x07000000: {   
+            if(address > 0x070003FF) {
                 break;
             }
-        }   
-
-    } else if (0x0A000000 <= address && address <= 0x0BFFFFFF) {
-        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-        // waitstate 1
-        switch(width) {
-            case 32: {
-                return readFromArray32(&gamePakRom, address, 0x0A000000);
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&objAttributes, address, 0x07000000);
+                }
+                case 16: {
+                    return readFromArray16(&objAttributes, address, 0x07000000);            
+                }
+                case 8: {
+                    return readFromArray8(&objAttributes, address, 0x07000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
             }
-            case 16: {
-                return readFromArray16(&gamePakRom, address, 0x0A000000);            
-            }
-            case 8: {
-                return readFromArray8(&gamePakRom, address, 0x0A000000);            
-            }
-            default: {
-                assert(false);
-                break;
-            }
-        }   
-
-    } else if (0x0C000000 <= address && address <= 0x0DFFFFFF) {
-        //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-        // waitstate 2
-        switch(width) {
-            case 32: {
-                return readFromArray32(&gamePakRom, address, 0x0C000000);
-            }
-            case 16: {
-                return readFromArray16(&gamePakRom, address, 0x0C000000);           
-            }
-            case 8: {
-                return readFromArray8(&gamePakRom, address, 0x0C000000);            
-            }
-            default: {
-                assert(false);
-                break;
-            }
-        }   
-
-    } else if (0x0E000000 <= address && address <= 0x0E00FFFF) {
-        switch(width) {
-            case 32: {
-                assert(false);
-                break;
-            }
-            case 16: {
-                assert(false);
-                break;
-            }
-            case 8: {
-                return readFromArray8(&gamePakSram, address, 0x0E000000);           
-            }
-            default: {
-                assert(false);
-                break;
-            }
+            break;
+        }      
+        case 0x08000000:
+        case 0x09000000: {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 0
+            DEBUG("reading from gamepak\n");
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, address, 0x08000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, address, 0x08000000);            
+                }
+                case 8: {              
+                    return readFromArray8(&gamePakRom, address, 0x08000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;  
         } 
+        case 0x0A000000:
+        case 0x0B000000: {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 1
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, address, 0x0A000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, address, 0x0A000000);            
+                }
+                case 8: {
+                    return readFromArray8(&gamePakRom, address, 0x0A000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }   
+            break;
+        } 
+        case 0x0C000000:
+        case 0x0D000000:  {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 2
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, address, 0x0C000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, address, 0x0C000000);           
+                }
+                case 8: {
+                    return readFromArray8(&gamePakRom, address, 0x0C000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;  
+        }
+        case 0x0E000000:  {
+            if(address > 0x0E00FFFF) {
+                break;
+            }
+            switch(width) {
+                case 32: {
+                    assert(false);
+                    break;
+                }
+                case 16: {
+                    assert(false);
+                    break;
+                }
+                case 8: {
+                    return readFromArray8(&gamePakSram, address, 0x0E000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+
+            break;
+        }
     }
+
+    // if(address <= 0x00003FFF) {
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&bios, address, 0);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&bios, address, 0);
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&bios, address, 0);
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }
+    // }
+    // else if (0x02000000 <= address && address <= 0x0203FFFF) {
+    //     DEBUG("reading from wramBoard\n");
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&wRamBoard, address, 0x02000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&wRamBoard, address, 0x02000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&wRamBoard, address, 0x02000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }
+    // } else if (0x03000000 <= address && address <= 0x03007FFF) {
+    //     DEBUG("reading from wramChip\n");
+
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&wRamChip, address, 0x03000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&wRamChip, address, 0x03000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&wRamChip, address, 0x03000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }     
+    // } else if (0x04000000 <= address && address <= 0x040003FE) {
+
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&iORegisters, address, 0x04000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&iORegisters, address, 0x04000000);            }
+    //         case 8: {
+    //             return readFromArray8(&iORegisters, address, 0x04000000);            }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }           
+
+    // } else if (0x05000000 <= address && address <= 0x050003FF) {    
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&paletteRam, address, 0x05000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&paletteRam, address, 0x05000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&paletteRam, address, 0x05000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     } 
+
+    // } else if (0x06000000 <= address && address <= 0x06017FFF) {    
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&vRam, address, 0x06000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&vRam, address, 0x06000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&vRam, address, 0x06000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }    
+
+    // } else if (0x07000000 <= address && address <= 0x070003FF) {   
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&objAttributes, address, 0x07000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&objAttributes, address, 0x07000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&objAttributes, address, 0x07000000);           
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }
+
+    // } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
+    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+    //     // waitstate 0
+    //     DEBUG("reading from gamepak\n");
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&gamePakRom, address, 0x08000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&gamePakRom, address, 0x08000000);            
+    //         }
+    //         case 8: {              
+    //             return readFromArray8(&gamePakRom, address, 0x08000000);           
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }   
+    // } else if (0x0A000000 <= address && address <= 0x0BFFFFFF) {
+    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+    //     // waitstate 1
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&gamePakRom, address, 0x0A000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&gamePakRom, address, 0x0A000000);            
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&gamePakRom, address, 0x0A000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }   
+
+    // } else if (0x0C000000 <= address && address <= 0x0DFFFFFF) {
+    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+    //     // waitstate 2
+    //     switch(width) {
+    //         case 32: {
+    //             return readFromArray32(&gamePakRom, address, 0x0C000000);
+    //         }
+    //         case 16: {
+    //             return readFromArray16(&gamePakRom, address, 0x0C000000);           
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&gamePakRom, address, 0x0C000000);            
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     }   
+
+    // } else if (0x0E000000 <= address && address <= 0x0E00FFFF) {
+    //     switch(width) {
+    //         case 32: {
+    //             assert(false);
+    //             break;
+    //         }
+    //         case 16: {
+    //             assert(false);
+    //             break;
+    //         }
+    //         case 8: {
+    //             return readFromArray8(&gamePakSram, address, 0x0E000000);           
+    //         }
+    //         default: {
+    //             assert(false);
+    //             break;
+    //         }
+    //     } 
+    // }
     // TODO: hack for now to pass the test, why does accessing out of bound memory return this value?
     //  (probably just garbage)
     return 436207618U;
@@ -506,7 +744,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {
         if(0x04000000 <= address && address < 0x04000056) {
-            ppu->setObjectsDirty();
+            ppuMemDirty = true;
         }
 
         switch(width) {
@@ -530,7 +768,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x05000000 <= address && address <= 0x050003FF) { 
         //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");
-        ppu->setObjectsDirty();
+        ppuMemDirty = true;
         switch(width) {
             case 32: {
                 writeToArray32(&paletteRam, address, 0x05000000, value); 
@@ -552,7 +790,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x06000000 <= address && address <= 0x06017FFF) {    
         // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
-        ppu->setObjectsDirty();
+        ppuMemDirty = true;
         switch(width) {
             case 32: {
                 writeToArray32(&vRam, address, 0x06000000, value);
@@ -574,7 +812,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x07000000 <= address && address <= 0x070003FF) {    
         // TODO: there are more hblank rules to implement
-        ppu->setObjectsDirty();
+        ppuMemDirty = true;
         switch(width) {
             case 32: {
                 writeToArray32(&objAttributes, address, 0x07000000, value);

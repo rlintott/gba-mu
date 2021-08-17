@@ -4,10 +4,11 @@ class ARM7TDMI;
 class Bus;
 class LCD;
 class PPU;
+class DMA;
 
 class GameBoyAdvance {
    public:
-    GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu);
+    GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma);
     GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus);
     ~GameBoyAdvance();
 
@@ -22,6 +23,7 @@ class GameBoyAdvance {
     Bus* bus;
     LCD* screen;
     PPU* ppu;
+    DMA* dma;
 
     bool hBlank = false;
     bool scanlineRendered = false;

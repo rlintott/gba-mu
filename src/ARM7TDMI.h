@@ -223,8 +223,8 @@ class ARM7TDMI {
     static const uint8_t LINK_REGISTER = 14;
     static const uint8_t SP_REGISTER = 13;
     // TODO: temporary boot location for testing
-    //static const uint32_t BOOT_LOCATION = 0x08000000;
-    static const uint32_t BOOT_LOCATION = 0x00000000;
+    static const uint32_t BOOT_LOCATION = 0x08000000;
+    //static const uint32_t BOOT_LOCATION = 0x00000000;
 
     uint8_t overflowBit = 0;
     uint8_t carryBit = 0;

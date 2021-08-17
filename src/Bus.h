@@ -51,7 +51,15 @@ class Bus {
         DMA3SAD = 0x040000D4 - 0x04000000, // DMA 3 Source Address
         DMA3DAD = 0x040000D8 - 0x04000000, // DMA 3 Destination Address
         DMA3CNT_L = 0x040000DC - 0x04000000, // DMA 3 Word Count
-        DMA3CNT_H = 0x040000DE - 0x04000000 // DMA 3 Control
+        DMA3CNT_H = 0x040000DE - 0x04000000, // DMA 3 Control
+
+        WIN0H = 0x04000040 - 0x04000000, // Window 0 Horizontal Dimensions (W)
+        WIN1H = 0x04000042 - 0x04000000, // Window 1 Horizontal Dimensions (W)
+        WIN0V = 0x04000044 - 0x04000000, // Window 0 Vertical Dimensions (W)
+        WIN1V = 0x04000046 - 0x04000000, // Window 1 Vertical Dimensions (W)
+        WININ = 0x04000048 - 0x04000000, // WININ - Control of Inside of Window(s) (R/W)
+        WINOUT = 0x0400004A - 0x04000000, // Control of Outside of Windows & Inside of OBJ Window (R/W)
+
     };
 
     /* General Internal Memory */
@@ -111,6 +119,8 @@ class Bus {
     void enterHBlank();
     void leaveVBlank();
     void leaveHBlank();
+
+    bool ppuMemDirty = false;
 
    private:
     uint8_t currentNWaitstate;

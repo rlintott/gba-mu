@@ -48,7 +48,7 @@ class PPU {
         const uint32_t transparentColour = 0x00040000;
         bool isTransparent(uint32_t pixelData);
 
-        // each element of array: bits 0-15: colour, bit 18: transparent
+        // each element of array: bits 0-15: colour, bit 16-17: drawMode, bit 18: transparent,
         // to find sprite pixel of priority i at location (x,y) -> [i * SCREEN_WIDTH * SCREEN_HEIGHT + y * SCREEN_WIDTH + x]
         std::array<uint32_t, SCREEN_WIDTH * SCREEN_HEIGHT * 4> spriteBuffer = {};
 
@@ -71,6 +71,39 @@ class PPU {
             uint8_t height;
         };
 
+        struct BgWindowData {
+            bool enabled;
+            uint8_t right;
+            uint8_t left;
+            uint8_t bottom;
+            uint8_t top;
+            /*
+                Bit   Expl.
+                0-3   Window x BG0-BG3 Enable Bits     (0=No Display, 1=Display)
+                4     Window x OBJ Enable Bit          (0=No Display, 1=Display)
+                5     Window x Color Special Effect    (0=Disable, 1=Enable)
+            */
+            uint8_t metaData;
+        };
+
+        // to find window y data at scanline x: [x * SCREEN_HEIGHT + y]
+        std::array<BgWindowData, SCREEN_HEIGHT * 2> scanlineBgWindowData;
+        /*
+            Bit   Expl.
+            0-3   Outside BG0-BG3 Enable Bits      (0=No Display, 1=Display)
+            4     Outside OBJ Enable Bit           (0=No Display, 1=Display)
+            5     Outside Color Special Effect     (0=Disable, 1=Enable)
+        */
+        std::array<uint8_t, SCREEN_HEIGHT> scanlineOutsideWindowData;
+
+        /*
+            Bit   Expl.
+            8-11  OBJ Window BG0-BG3 Enable Bits   (0=No Display, 1=Display)
+            12    OBJ Window OBJ Enable Bit        (0=No Display, 1=Display)
+            13    OBJ Window Color Special Effect  (0=Disable, 1=Enable)
+        */
+        std::array<uint8_t, SCREEN_HEIGHT> scanlineObjectWindowData;
+
         // in TILES, not pixels
         // [shape][size]
         Dimension spriteDimensions[3][4] = {
@@ -85,4 +118,6 @@ class PPU {
             {32, 64},
             {64, 64}
         };
+
+
 };

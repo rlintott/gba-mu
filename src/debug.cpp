@@ -1,7 +1,7 @@
 #include <string>
+#include "GameBoyAdvance.h"
 #include "ARM7TDMI.h"
 #include "Bus.h"
-#include "GameBoyAdvance.h"
 #include "PPU.h"
 
 

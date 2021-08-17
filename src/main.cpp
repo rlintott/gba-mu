@@ -2,6 +2,7 @@
 #include "GameBoyAdvance.h"
 #include "LCD.h"
 #include "PPU.h"
+#include "DMA.h"
 
 
 int main(int argc, char *argv[]) {
@@ -9,8 +10,9 @@ int main(int argc, char *argv[]) {
     Bus bus{&ppu};
     ARM7TDMI cpu;
     LCD screen;
+    DMA dma;
 
-    GameBoyAdvance gba(&cpu, &bus, &screen, &ppu);
+    GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma);
     gba.loadRom(argv[1]);
     gba.loop();
 
