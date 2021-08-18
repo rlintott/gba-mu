@@ -17,9 +17,18 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     uint8_t startTiming = (control & 0x3000) >> 12;
 
-    if((startTiming == 1 && !vBlank) || (startTiming == 2 && !hBlank)) {
-       return 0;
+    if(startTiming == 1) {
+        if(!vBlank) {
+            return 0;
+        }
     }
+    if(startTiming == 2) {
+        if(!hBlank || scanline > PPU::SCREEN_HEIGHT - 1) {
+            return 0;
+        }
+
+    }
+
 
     //DEBUGWARN(hBlank << "\n");
     //DEBUGWARN("control " << (uint32_t)control << "\n");
@@ -193,7 +202,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         dmaXEnabled[x] = false;
         //DEBUGWARN("imm after setting: " << (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset]) << "\n");
     } else {
-        if((startTiming == 2 && scanline > (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1) {
+        if((startTiming == 2 && scanline >= (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1) {
             dmaXEnabled[x] = false;
         }
         dmaXWordCount[x] = (uint32_t)bus->iORegisters[Bus::IORegister::DMA0CNT_L + ioRegOffset] |

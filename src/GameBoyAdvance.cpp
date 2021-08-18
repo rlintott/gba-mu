@@ -56,6 +56,7 @@ void GameBoyAdvance::loop() {
     uint64_t nextHBlank = PPU::H_VISIBLE_CYCLES;
     uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;
     uint16_t currentScanline = 0;
+    uint16_t nextScanline = 1;
     previousTime = getCurrentTime();
     startTimeSeconds = getCurrentTime() / 1000.0;
 
@@ -65,7 +66,7 @@ void GameBoyAdvance::loop() {
 
     while(true) {
         // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
-        cyclesThisStep = dma->step(hBlank, vBlank, currentScanline);
+        cyclesThisStep = dma->step(hBlank, vBlank, nextScanline);
         vBlank = false;
         hBlank = false;
         if(!cyclesThisStep) {
@@ -84,6 +85,7 @@ void GameBoyAdvance::loop() {
             uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
             currentScanline += scanlinesThisStep;
             currentScanline %= 228;
+            nextScanline = (currentScanline + 1) % 228;
             
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
             nextHBlank += PPU::H_TOTAL;
@@ -109,9 +111,9 @@ void GameBoyAdvance::loop() {
             // while(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter));
             // #endif
 
-            // while(getCurrentTime() - previousTime < 17) {
-            //     usleep(500);
-            // }
+            while(getCurrentTime() - previousTime < 17) {
+                usleep(500);
+            }
             previousTime = getCurrentTime();
             frames++;
 
