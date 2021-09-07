@@ -448,7 +448,8 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
         if(scanlineBgWindowData[y].enabled) {
             windowed = true;
             // WINDOW 0
-            if(scanlineBgWindowData[y].top <= y && y < scanlineBgWindowData[y].bottom) {
+            if((scanlineBgWindowData[y].top <= y && y < scanlineBgWindowData[y].bottom) || 
+               ((int8_t)scanlineBgWindowData[y].top <= y && y < (int8_t)scanlineBgWindowData[y].bottom)) {
                 window0 = true;
                 window0Left = scanlineBgWindowData[y].left;
                 window0Right = scanlineBgWindowData[y].right;
@@ -457,7 +458,8 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
         if(scanlineBgWindowData[SCREEN_HEIGHT + y].enabled) {
             windowed = true;
             // WINDOW 1
-            if(scanlineBgWindowData[SCREEN_HEIGHT + y].top <= y && y < scanlineBgWindowData[SCREEN_HEIGHT + y].bottom) {
+            if((scanlineBgWindowData[SCREEN_HEIGHT + y].top <= y && y < scanlineBgWindowData[SCREEN_HEIGHT + y].bottom) || 
+               ((int8_t)scanlineBgWindowData[SCREEN_HEIGHT + y].top <= y && y < (int8_t)scanlineBgWindowData[SCREEN_HEIGHT + y].bottom)) {
                 window1 = true;
                 window1Left = scanlineBgWindowData[SCREEN_HEIGHT + y].left;
                 window1Right = scanlineBgWindowData[SCREEN_HEIGHT + y].right;
@@ -476,10 +478,14 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                 uint32_t bgPixel = bgBuffer[bgOffset + y * SCREEN_WIDTH + x];
 
                 if(windowed) {
-                    if((window0Left <= x && x < window0Right) && window0) {
+                    if(window0 && 
+                       ((window0Left <= x && x < window0Right) || 
+                        ((int8_t)window0Left <= (int8_t)x && (int8_t)x < (int8_t)window0Right))) {
                         windowBgMask = scanlineBgWindowData[y].metaData; 
                     }   
-                    else if((window1Left <= x && x < window1Right) && window1) {
+                    else if(window1 &&                        
+                           ((window1Left <= x && x < window1Right) || 
+                           ((int8_t)window1Left <= (int8_t)x && (int8_t)x < (int8_t)window1Right))) {
                         windowBgMask = scanlineBgWindowData[SCREEN_HEIGHT + y].metaData; 
                     }
                     else {
@@ -496,6 +502,7 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                             pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
                         } 
                     }
+                    // TODO: sprite window
 
                 } else {
                     if(!isTransparent(bgPixel)) {

@@ -1,5 +1,5 @@
 # Game Boy Advance Emulator (WIP)
-Still very much a work in progress
+Still very much a work in progress! Currently working through the TONC GBA programming tutorial demo roms. I aim to get all these working before trying to run an actual game.
 
 
 ## Progress
@@ -17,20 +17,30 @@ Still very much a work in progress
 
 :white_circle: CPU - Interrupt handling
 
+:white_circle: Timer Hardware
+
 :white_check_mark: Bus - read / write capabilites
+
+:white_check_mark: DMA (mostly, see TODOs)
 
 :white_check_mark: `m3_demo.gba` TONC rom
 
 :white_check_mark: `key_pad.gba` TONC rom
 
-:white_circle: Optimization (using profiling)
+:white_check_mark: `dma_demo.gba` TONC rom
 
-:white_circle: Everything else
+:white_check_mark: `win_demo.gba` TONC rom
+
+:white_check_mark: `obj_demo.gba` TONC rom
+
+:white_circle: Optimization (use profiler)
+
+:white_circle: Everything else!
 
 
-![Alt text](media/m3_demo.png?raw=true "Running TONC's m3 demo")
+![Alt text](media/dma_demo.png?raw=true "Running TONC's dma demo")
 
-![Alt text](media/key_pad.png?raw=true "Running TONC's key pad demo")
+![Alt text](media/obj_demo.png?raw=true "Running TONC's obj demo")
 
 ## Building 
 * **Dependencies:** cmake, c++17, Curses, sfml
