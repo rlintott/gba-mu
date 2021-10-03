@@ -102,7 +102,7 @@ class Bus {
     void write16(uint32_t address, uint16_t halfWord, CycleType accessType);
     void write8(uint32_t address, uint8_t byte, CycleType accessType);
 
-    void loadRom(std::string path);
+    void loadRom(std::vector<uint8_t> &buffer);
 
     uint8_t getCurrentNWaitstate();
     uint8_t getCurrentSWaitstate();

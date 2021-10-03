@@ -921,10 +921,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 }
 
 
-void Bus::loadRom(std::string path) {
-    std::ifstream binFile(path, std::ios::binary);
-    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
-
+void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
         gamePakRom.push_back(buffer[i]);

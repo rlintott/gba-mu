@@ -12,7 +12,7 @@ class GameBoyAdvance {
     GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus);
     ~GameBoyAdvance();
 
-    void loadRom(std::string path);
+    bool loadRom(std::string path);
     void startRom();
     void loop();
 

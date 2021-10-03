@@ -35,9 +35,18 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
 
 GameBoyAdvance::~GameBoyAdvance() {}
 
-void GameBoyAdvance::loadRom(std::string path) { 
-    bus->loadRom(path); 
+// if rom loading successful return true, else return false
+bool GameBoyAdvance::loadRom(std::string path) { 
+    std::ifstream binFile(path, std::ios::binary);
+    if(binFile.fail()) {
+        std::cerr << "could not find file" << std::endl;
+        return false;
+    }
+    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
+
+    bus->loadRom(buffer); 
     arm7tdmi->initializeWithRom();
+    return true;
 }
 
 void GameBoyAdvance::testDisplay() {

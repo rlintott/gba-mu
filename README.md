@@ -49,6 +49,8 @@ Still very much a work in progress! Currently working through the TONC GBA progr
 ## Running
 * **To run tests:** `cd build` `./build.sh` `ctest`
 
+* **To run ROM:** `cd build` `./gba <path_to_rom>`
+
 
 ## Resources
 
