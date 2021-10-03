@@ -6,8 +6,10 @@
 
 
 int main(int argc, char *argv[]) {
+    bool success = true;
     if(argc < 2) {
         std::cerr << "Please include path to a GBA ROM" << std::endl;
+        success = false;
     } else {
         PPU ppu;
         Bus bus{&ppu};
@@ -20,9 +22,8 @@ int main(int argc, char *argv[]) {
             gba.loop();
         }
         else {
-            return 1;
+            success = false;
         }
-
-        return 0;
     }
+    return success;
 }
