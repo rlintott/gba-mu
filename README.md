@@ -1,6 +1,12 @@
 # Game Boy Advance Emulator (WIP)
-Still very much a work in progress! Currently working through the TONC GBA programming tutorial demo roms. I aim to get all these working before trying to run an actual game.
 
+This is a currently unnamed GBA emulator written in C++ and aimed at both performance and reasonable hardware accuracy. 
+
+This is still very much a work in progress. Currently working through the TONC GBA programming tutorial demo roms. I aim to get all these demos working before attempiting to run an actual game.
+
+I am using various resources and documentation from the internet to help build this project (see Resources section)
+
+Thanks for taking a look!
 
 ## Progress
 :white_circle:  CPU - Clean up / refactor code
@@ -9,7 +15,7 @@ Still very much a work in progress! Currently working through the TONC GBA progr
 
 :white_check_mark:  CPU - 16bit THUMB Instructions passing jsmolka's gba-suite test rom
 
-:white_check_mark:  CPU - Cycle counting (sort of)
+:white_check_mark:  CPU - Framework for cycle counting 
 
 :white_circle: Gamepak Prefetch Buffer Emulation
 
@@ -21,19 +27,19 @@ Still very much a work in progress! Currently working through the TONC GBA progr
 
 :white_check_mark: Bus - read / write capabilites
 
-:white_check_mark: DMA (mostly, see TODOs)
-
-:white_check_mark: `m3_demo.gba` TONC rom
-
-:white_check_mark: `key_pad.gba` TONC rom
-
-:white_check_mark: `dma_demo.gba` TONC rom
-
-:white_check_mark: `win_demo.gba` TONC rom
-
-:white_check_mark: `obj_demo.gba` TONC rom
+:white_check_mark: DMA (most of it, see TODOs)
 
 :white_circle: Optimization (use profiler)
+
+:white_check_mark: `m3_demo.gba` test rom 
+
+:white_check_mark: `key_pad.gba` test rom
+
+:white_check_mark: `dma_demo.gba` test rom
+
+:white_check_mark: `win_demo.gba` test rom
+
+:white_check_mark: `obj_demo.gba` test rom
 
 :white_circle: Everything else!
 
