@@ -109,13 +109,13 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
         case SEQUENTIAL: {
             currInstruction = 
                 cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL) :
-                            bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
+                         bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
             break;
         }
         case NONSEQUENTIAL: {
             currInstruction = 
                 cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL) :
-                            bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);                
+                         bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);                
             break;
         }
         case BRANCH: {
@@ -207,7 +207,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
             break;
         }
     }
-        // SPSR_svc=CPSR   ;save CPSR flags
+    // SPSR_svc=CPSR   ;save CPSR flags
     *(getCurrentModeSpsr()) = cpsr;
     cpsr.Mode = mode;
 }
@@ -279,8 +279,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
         psr->C = (bool)(value & 0x20000000);
         psr->V = (bool)(value & 0x10000000);
         psr->Q = (bool)(value & 0x08000000);
-        psr->Reserved = (psr->Reserved & 0b0001111111111111111) |
-                        ((value & 0x07000000) >> 8);
+        psr->Reserved = (psr->Reserved & 0b0001111111111111111) | ((value & 0x07000000) >> 8);
     }
     if (field & 0b0100) {
         // reserved, don't change
@@ -297,8 +296,8 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
             assert(!(bool)(value & 0x00000020));
             psr->T = (bool)(value & 0x00000020);
             uint8_t mode = (value & 0x00000010) | (value & 0x00000008) |
-                        (value & 0x00000004) | (value & 0x00000002) |
-                        (value & 0x00000001);
+                           (value & 0x00000004) | (value & 0x00000002) |
+                           (value & 0x00000001);
             psr->Mode = mode;
             
             // TODO: implemnt less hacky way ti transfer psr
@@ -380,39 +379,25 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
     switch (instruction & 0b00001110000000000000000000000000) {  // mask 1
         case 0b00000000000000000000000000000000: {
 
-            if ((instruction & 0b00001111111111111111111111010000) ==
-                0b00000001001011111111111100010000) {  // BX,BLX
-
+            if ((instruction & 0b00001111111111111111111111010000) == 0b00000001001011111111111100010000) {  // BX,BLX
                 return ArmOpcodeHandlers::branchAndExchangeHandler;
 
-            } else if ((instruction & 0b00001111101100000000111111110000) ==
-                       0b00000001000000000000000010010000) {  // TransSwp12
-
+            } else if ((instruction & 0b00001111101100000000111111110000) == 0b00000001000000000000000010010000) {  // TransSwp12
                 return ArmOpcodeHandlers::singleDataSwapHandler;
 
-            } else if ((instruction & 0b00001111100100000000111111110000) ==
-                       0b00000001000000000000000000000000) {  // PSR Reg
-
+            } else if ((instruction & 0b00001111100100000000111111110000) == 0b00000001000000000000000000000000) {  // PSR Reg
                 return ArmOpcodeHandlers::psrHandler;
 
-            } else if ((instruction & 0b00001111110000000000000011110000) ==
-                                      0b00000000000000000000000010010000) {  // Multiply
-                
+            } else if ((instruction & 0b00001111110000000000000011110000) == 0b00000000000000000000000010010000) {  // Multiply
                 return ArmOpcodeHandlers::multiplyHandler;
 
-            } else if ((instruction & 0b00001110010000000000111110010000) ==
-                       0b00000000000000000000000010010000) {  // TransReg10
-
+            } else if ((instruction & 0b00001110010000000000111110010000) == 0b00000000000000000000000010010000) {  // TransReg10
                 return ArmOpcodeHandlers::halfWordDataTransHandler;
 
-            } else if ((instruction & 0b00001111100000000000000011110000) ==
-                       0b00000000100000000000000010010000) {  // MulLong
-
+            } else if ((instruction & 0b00001111100000000000000011110000) == 0b00000000100000000000000010010000) {  // MulLong
                 return ArmOpcodeHandlers::multiplyHandler;
 
-            } else if ((instruction & 0b00001110010000000000000010010000) ==
-                       0b00000000010000000000000010010000) {  // TransImm10
-                
+            } else if ((instruction & 0b00001110010000000000000010010000) == 0b00000000010000000000000010010000) {  // TransImm10
                 return ArmOpcodeHandlers::halfWordDataTransHandler;
 
             } else {  // dataProc
@@ -422,9 +407,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
             break;
         }
         case 0b00000010000000000000000000000000: {
-            if ((instruction & 0b00001111101100000000000000000000) ==
-                0b00000011001000000000000000000000) {  // PSR Imm
-
+            if ((instruction & 0b00001111101100000000000000000000) == 0b00000011001000000000000000000000) {  // PSR Imm
                 return ArmOpcodeHandlers::psrHandler;
 
             } else {  // DataProc
@@ -433,12 +416,10 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
             }
         }
         case 0b00001000000000000000000000000000: { // block transfer
-
             return ArmOpcodeHandlers::blockDataTransHandler;
 
         }
         case 0b00001010000000000000000000000000: { // B,BL,BLX
-
             return ArmOpcodeHandlers::branchHandler;
 
         }
@@ -448,18 +429,14 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
 
         }
         case 0b00000100000000000000000000000000: {  // transImm9
-
             return ArmOpcodeHandlers::singleDataTransHandler;
 
         }
         case 0b00000110000000000000000000000000: {
-            if ((instruction & 0b00001110000000000000000000010000) ==
-                0b00000110000000000000000000000000) {  // TransReg9
-
+            if ((instruction & 0b00001110000000000000000000010000) == 0b00000110000000000000000000000000) {  // TransReg9
                 return ArmOpcodeHandlers::singleDataTransHandler;
 
             } else {  // Undefined
-
                 return ArmOpcodeHandlers::undefinedOpHandler;
 
             }
@@ -786,7 +763,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
             carryBit = rm & 1;
         }
     }
-
     return {op2, carryBit};
 }
 
@@ -857,7 +833,7 @@ bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
 
 bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                           uint32_t result) {
-    // todo: maybe there is a more efficient way to do this
+    // todo: there is a more efficient way to do this
     return (!(rnValue & 0x80000000) && (op2 & 0x80000000) &&
             (result & 0x80000000)) ||
            ((rnValue & 0x80000000) && !(op2 & 0x80000000) &&
@@ -870,10 +846,10 @@ bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
 
 bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                      uint32_t result) {
-    // todo: maybe there is a more efficient way to do this
+    // todo: there is a more efficient way to do this
     return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
             !(result & 0x80000000)) ||
-           (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
+            (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
             (result & 0x80000000));
 }
 
@@ -883,7 +859,7 @@ bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
 
 bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
-    // todo: maybe there is a more efficient way to do this
+    // todo: there is a more efficient way to do this
     return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
             !((rnValue + op2) & 0x80000000)) ||
            (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
@@ -900,7 +876,7 @@ bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
 
 bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
-    // todo: maybe there is a more efficient way to do this
+    // todo: there is a more efficient way to do this
     return ((rnValue & 0x80000000) && ((~op2) & 0x80000000) &&
             !((rnValue + (~op2)) & 0x80000000)) ||
            (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) &&
