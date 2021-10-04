@@ -14,8 +14,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     uint8_t rd = (instruction & 0x000F0000) >> 16;
     uint8_t rm = getRm(instruction);
     uint8_t rs = getRs(instruction);
-    assert(rd != rm &&
-           (rd != PC_REGISTER && rm != PC_REGISTER && rs != PC_REGISTER));
+    assert(rd != rm && (rd != PC_REGISTER && rm != PC_REGISTER && rs != PC_REGISTER));
     assert((instruction & 0x000000F0) == 0x00000090);
     uint64_t result;
     BitPreservedInt64 longResult;
@@ -24,8 +23,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
     switch (opcode) {
         case 0b0000: {  // MUL
             uint32_t rsVal = cpu->getRegister(rs);
-            result =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
+            result = (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
             cpu->setRegister(rd, (uint32_t)result);
             internalCycles = mulGetExecutionTimeMVal(rsVal);
             break;
@@ -36,7 +34,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             uint32_t rsVal = cpu->getRegister(rs);
             assert(rn != PC_REGISTER);
             result = (uint64_t)cpu->getRegister(rm) *
-                         (uint64_t)rsVal +
+                     (uint64_t)rsVal +
                      (uint64_t)cpu->getRegister(rn);
             cpu->setRegister(rd, (uint32_t)result);
             internalCycles = mulGetExecutionTimeMVal(rsVal) + 1;
@@ -47,8 +45,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             uint32_t rsVal = cpu->getRegister(rs);
             uint8_t rdhi = rd;
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
-            longResult._unsigned =
-                (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
+            longResult._unsigned = (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
             DEBUG(longResult._unsigned << " <- result\n");
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
@@ -62,9 +59,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             uint8_t rdlo = (instruction & 0x0000F000) >> 12;
             longResult._unsigned =
                 (uint64_t)cpu->getRegister(rm) *
-                    (uint64_t)cpu->getRegister(rs) +
-                ((((uint64_t)(cpu->getRegister(rdhi))) << 32) |
-                 ((uint64_t)(cpu->getRegister(rdlo))));
+                (uint64_t)cpu->getRegister(rs) +
+                ((((uint64_t)(cpu->getRegister(rdhi))) << 32) | ((uint64_t)(cpu->getRegister(rdlo))));
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
@@ -97,9 +93,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::multiplyHandler(
             rsVal._unsigned = rsValRaw;
             BitPreservedInt64 accum;
             accum._unsigned = ((((uint64_t)(cpu->getRegister(rdhi))) << 32) |
-                               ((uint64_t)(cpu->getRegister(rdlo))));
-            longResult._signed =
-                (int64_t)rmVal._signed * (int64_t)rsVal._signed + accum._signed;
+                                ((uint64_t)(cpu->getRegister(rdlo))));
+            longResult._signed = (int64_t)rmVal._signed * (int64_t)rsVal._signed + accum._signed;
             // high destination reg
             cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
             cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
@@ -170,8 +165,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t i
             DEBUG("MSR{cond}\n");
             assert((instruction & 0x0000F000) == 0x0000F000);
             uint8_t fscx = (instruction & 0x000F0000) >> 16;
-            ProgramStatusRegister *psr =
-                (!psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
+            ProgramStatusRegister *psr = (!psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
             if (immediate) {
                 uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
                 uint8_t shift = (instruction & 0x00000F00) >> 7;
@@ -219,8 +213,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     bool i = (instruction & 0x02000000);
     bool r = (instruction & 0x00000010);
 
-    AluShiftResult shiftResult = cpu->aluShift(
-        instruction, i, r);
+    AluShiftResult shiftResult = cpu->aluShift(instruction, i, r);
     uint8_t rd = getRd(instruction);
     uint8_t rn = getRn(instruction);
     uint8_t opcode = getOpcode(instruction);
@@ -299,8 +292,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluAddWithCarrySetsCarryBit(result);
-            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
             break;
         }
         case SBC: {  // SBC
@@ -309,8 +301,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
             break;
         }
         case RSC: {  // RSC
@@ -319,8 +310,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
             zeroBit = aluSetsZeroBit((uint32_t)result);
             signBit = aluSetsSignBit((uint32_t)result);
             carryBit = aluSubWithCarrySetsCarryBit(result);
-            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal,
-                                                         (uint32_t)result, cpu);
+            overflowBit = aluSubWithCarrySetsOverflowBit(op2, rnVal, (uint32_t)result, cpu);
             break;
         }
         case TST: {  // TST
@@ -408,9 +398,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     }  // flags not affected, not allowed in CMP
 
     Cycles cycles = {.nonSequentialCycles = 0,
-                .sequentialCycles = 1,
-                .internalCycles = 0,
-                .waitState = 0};
+                     .sequentialCycles = 1,
+                     .internalCycles = 0,
+                     .waitState = 0};
     // TODO: can potentially optimize a bit by using already existing condition checks earlier in code
     if(!i && r) {
         cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -436,15 +426,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
     // ;*** assembler will calculate offset and use PC (R15) as base.
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
-    uint32_t rdVal =
-        (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
+    uint32_t rdVal = (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
     uint8_t rn = getRn(instruction);
-    uint32_t rnVal =
-        (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
+    uint32_t rnVal = (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
 
     uint32_t offset;
     // I - Immediate Offset Flag (0=Immediate, 1=Shifted Register)
-
     if ((instruction & 0x02000000)) {
         // Register shifted by Immediate as Offset
         assert(!(instruction & 0x00000010));  // bit 4 Must be 0 (Reserved, see
@@ -515,24 +502,22 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
         } else {  // transfer 32 bits
             if ((address & 0x00000003) != 0 && (address & 0x00000001) == 0) {
                 // aligned to half-word but not word
-                uint32_t low =
-                    (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
-                uint32_t hi =
-                    (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
+                uint32_t low = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
+                uint32_t hi = (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
                 uint32_t full = ((hi << 16) | low);
-                cpu->setRegister(
-                    rd, aluShiftRor(cpu->bus->read32(full & 0xFFFFFFFC, 
-                                    Bus::CycleType::NONSEQUENTIAL),
-                                    (full & 3) * 8));
+                cpu->setRegister(rd, 
+                                 aluShiftRor(cpu->bus->read32(full & 0xFFFFFFFC, 
+                                 Bus::CycleType::NONSEQUENTIAL),
+                                 (full & 3) * 8));
             } else {
                 // aligned to word
                 // Reads from forcibly aligned address "addr AND (NOT 3)",
                 // and does then rotate the data as "ROR (addr AND 3)*8". T
                 // TODO: move the masking and shifting into the read/write functions
-                cpu->setRegister(
-                    rd, aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC,
-                                    Bus::CycleType::NONSEQUENTIAL),
-                                    (address & 3) * 8));
+                cpu->setRegister(rd, 
+                                 aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC,
+                                 Bus::CycleType::NONSEQUENTIAL),
+                                 (address & 3) * 8));
             }
         }
         cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -552,7 +537,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
         }
         return NONSEQUENTIAL;
     }
-
 }
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
@@ -734,7 +718,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler
     bool w = dataTransGetW(instruction);
 
     //DEBUGWARN("p: " << p <<  " u: " << u <<  " l: " << l <<  " w: " << w << "\n");
-
     if(!(instruction & 0x0000FFFF)) {
         // Empty Rlist: R15 loaded/stored (ARMv4 only), and Rb=Rb+/-40h (ARMv4-v5).
         instruction |= 0x00008000;
@@ -957,7 +940,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHand
         short, R15 will be always forcibly aligned, so mis-aligned branches won't
         have effect on subsequent opcodes that use R15, or [R15+disp] as operand.
     */
-
     bool t = rnVal & 0x1;
     DEBUG(t << " \n");
     cpu->cpsr.T = t;
@@ -979,8 +961,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHand
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string()
-                               << std::endl);
+    DEBUG("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
     cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return BRANCH;

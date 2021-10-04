@@ -741,14 +741,16 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHa
         case 0: {
             // 0: STRH Rd,[Rb,#nn]  ;store 16bit data   HALFWORD[Rb+nn] = Rd
             cpu->bus->write16(address & 0xFFFFFFFE,
-                              (uint16_t)cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+                              (uint16_t)cpu->getRegister(rd), 
+                              Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             DEBUG("load\n");
             DEBUG("rd " << (uint32_t)rd << "\n");
             // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
-            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, 
+                                         Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
             cpu->setRegister(rd, value);
             cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -775,7 +777,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelative
         }
         case 1: {
             // 1: LDR  Rd,[SP,#nn]  ;load  32bit data   Rd = WORD[SP+nn]
-            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, 
+                                         Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             cpu->setRegister(rd, value);
             cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -1192,8 +1195,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHa
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::undefinedOpHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string()
-                               << std::endl);
+    DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string() << std::endl);
     
     // cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     // TODO: what is behaviour of thumb undefined instruction?
