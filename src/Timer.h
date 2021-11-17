@@ -10,6 +10,7 @@ class Timer {
         void step(uint64_t cyclesElapsed);
         uint8_t updateBusToPrepareForTimerRead(uint32_t address, uint8_t width);
         void updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width);
+        void connectBus(Bus* bus);
 
     private:
         void stepTimerX(uint64_t cycles, uint8_t x);

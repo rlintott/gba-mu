@@ -14,6 +14,7 @@ add_library(gba_lib
     PPU.cpp PPU.h
     Gamepad.cpp Gamepad.h
     DMA.cpp DMA.h
+    Timer.cpp Timer.h
     )
 target_link_libraries(gba_lib ${CURSES_LIBRARIES})
 target_link_libraries(gba_lib sfml-graphics sfml-audio)  

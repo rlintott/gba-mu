@@ -13,10 +13,11 @@
 #include "PPU.h"
 #include "Gamepad.h"
 #include "DMA.h"
+#include "Timer.h"
 
 using milliseconds = std::chrono::milliseconds;
 
-GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma) {
+GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer) {
     this->arm7tdmi = _arm7tdmi;
     this->bus = _bus;
     this->screen = _screen;
@@ -25,6 +26,8 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     ppu->connectBus(bus);
     this->dma = _dma;
     dma->connectBus(bus);
+    this->timer = _timer;
+    this->timer->connectBus(bus);
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
@@ -77,17 +80,20 @@ void GameBoyAdvance::loop() {
 
     while(true) {
         // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
-        cyclesThisStep = dma->step(hBlank, vBlank, nextScanline);
+        uint32_t dmaCycles = dma->step(hBlank, vBlank, nextScanline);
+        cyclesThisStep += dmaCycles;
+        timer->step(cyclesThisStep);
+        totalCycles += cyclesThisStep;
+        cyclesThisStep = 0;
+
         vBlank = false;
         hBlank = false;
-        if(!cyclesThisStep) {
+        if(!dmaCycles) {
             // dma did not occur
             //DEBUGWARN("cpu\n");
             //DEGUGWARN(cyclesThisStep << "\n");
             cyclesThisStep += arm7tdmi->step();
         }
-
-        totalCycles += cyclesThisStep;
 
         if(totalCycles >= nextHBlank) {
             // TODO: h blank interrupt if enabled

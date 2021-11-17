@@ -310,6 +310,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             if(0x4000100 <= address && address <= 0x400010E) {
                 // timer addresses
+                timer->updateBusToPrepareForTimerRead(address, width);
             }
 
             switch(width) {
@@ -755,6 +756,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
         if(0x4000100 <= address && address <= 0x400010E) {
             // timer addresses
+            timer->updateTimerUponWrite(address, value, width);
         }
 
         switch(width) {
@@ -1009,3 +1011,6 @@ void Bus::printCurrentExecutionTimeline() {
     std::cout << "]\n";
 }
 
+void Bus::connectTimer(Timer* timer) {
+    this->timer = timer;
+}

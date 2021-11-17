@@ -3,6 +3,7 @@
 #include "LCD.h"
 #include "PPU.h"
 #include "DMA.h"
+#include "Timer.h"
 
 
 int main(int argc, char *argv[]) {
@@ -16,8 +17,9 @@ int main(int argc, char *argv[]) {
         ARM7TDMI cpu;
         LCD screen;
         DMA dma;
+        Timer timer;
 
-        GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma);
+        GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma, &timer);
         if(gba.loadRom(argv[1])) {
             gba.loop();
         }

@@ -21,6 +21,8 @@ class Bus {
     Bus(PPU* ppu);
     ~Bus();
 
+    void connectTimer(Timer* timer);
+
     enum CycleType {
         SEQUENTIAL,
         NONSEQUENTIAL,

@@ -10,16 +10,26 @@ void Timer::step(uint64_t cyclesElapsed) {
 
 void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
     if(timerStart[x] && !timerCountUp[x]) {
+        //DEBUGWARN("cycles elapsed " << cyclesElapsed << "\n");
+        //DEBUGWARN("timer prescaper " << timerPrescaler[x] << "\n");
+        //DEBUGWARN("timer excess " << timerExcessCycles[x] << "\n");
         uint32_t increments = (cyclesElapsed + timerExcessCycles[x]) / timerPrescaler[x];
-        timerExcessCycles[x] = cyclesElapsed - (increments * timerPrescaler[x]); // new excess cycles
+
+        //DEBUGWARN("increments " << increments << "\n");
+        if(increments != 0) {
+            timerExcessCycles[x] = (cyclesElapsed + timerExcessCycles[x]) % timerPrescaler[x];
+        } else {
+            timerExcessCycles[x] += cyclesElapsed;
+        }
         timerCounter[x] += increments; 
 
         if(timerCounter[x] > 0xFFFF) { // if overflow
             // TODO: timer interrupts
+            //DEBUGWARN("howdy!\n");
             timerCounter[x] = timerReload[x];
             uint8_t cascadeX = x + 1;
             bool overflow = true;
-            while(cascadeX <= 3 && timerCountUp[cascadeX] && overflow && timerStart[cascadeX]) {
+            while(overflow && cascadeX <= 3 && timerCountUp[cascadeX] && timerStart[cascadeX]) {
                 timerCounter[cascadeX]++;
                 if(timerCounter[cascadeX] > 0xFFFF) {
                     // TODO: timer interrupts
@@ -106,10 +116,12 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
                 break;
             }            
             case 0x4000108: {
+                DEBUGWARN("LO!" << (uint32_t)byte << "\n");
                 setTimerXReloadLo(byte, 2);
                 break;
             }
             case 0x4000109: {
+                DEBUGWARN("HI!" << (uint32_t)byte << "\n");
                 setTimerXReloadHi(byte, 2);
                 break;
             }
@@ -168,14 +180,21 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
         // reload value is copied into the counter when the timer start bit becomes changed from 0 to 1.
         timerCounter[x] = timerReload[x];
     }
+    //DEBUGWARN("setting timer start " << (uint32_t)x << " " << (bool)(val & 0x80) << "\n");
     timerStart[x] = val & 0x80;
 
 }
 
 void Timer::setTimerXReloadHi(uint8_t val, uint8_t x) {
-    timerReload[x] = (timerReload[x] & 0x00FF) & ((uint16_t)val << 8); 
+    timerReload[x] = (timerReload[x] & 0x00FF) | ((uint16_t)val << 8); 
+    //DEBUGWARN("timer reload hi in fn " << timerReload[x] << "\n");
 }
 
 void Timer::setTimerXReloadLo(uint8_t val, uint8_t x) {
-    timerReload[x] = (timerReload[x] & 0xFF00) & (uint16_t)val; 
+    timerReload[x] = (timerReload[x] & 0xFF00) | (uint16_t)val; 
+}
+
+void Timer::connectBus(Bus* bus) {
+    this->bus = bus;
+    this->bus->connectTimer(this);
 }
