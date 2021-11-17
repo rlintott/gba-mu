@@ -53,14 +53,16 @@ void GameBoyAdvance::testDisplay() {
     screen->initWindow();
 }
 
-
 long getCurrentTime() {
     return  std::chrono::duration_cast<milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+uint64_t GameBoyAdvance::getTotalCyclesElapsed() {
+    return totalCycles;
+}
+
 void GameBoyAdvance::loop() {
     screen->initWindow();
-    uint64_t totalCycles = 0;
     uint32_t cyclesThisStep = 0;
     uint64_t nextHBlank = PPU::H_VISIBLE_CYCLES;
     uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;

@@ -4,12 +4,11 @@
 #include "PPU.h"
 
 
-// TODO: this DMA is potentially buggy
+// TODO: DMA specs not fully implemented yet
 uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
     uint32_t ioRegOffset =  0xC * (uint32_t)x;
-
 
     // 40000BAh - DMA0CNT_H - DMA 0 Control (R/W)
     uint16_t control = (uint16_t)bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset] |
@@ -74,7 +73,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                             (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset] << 8);
 
 
-            // SPECIAL BEHAVIOURS FOR DIFFERENT X
+        // SPECIAL BEHAVIOURS FOR DIFFERENT X
         switch(x) {
             case 0: {
                 dmaXSourceAddr[x] &= internalMemMask;
@@ -131,6 +130,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     uint32_t offset = thirtyTwoBit ? 4 : 2;
 
+    // writing / reading from memeory
     for(uint16_t i = 0; i < dmaXWordCount[x]; i++) {
         if(thirtyTwoBit) {
             if(firstAccess) { 
@@ -154,6 +154,8 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 bus->write16(dmaXDestAddr[x], value, Bus::SEQUENTIAL);
             }
         }
+
+        // iterating source memory pointer
         // (0=Increment,1=Decrement,2=Fixed,3=prohibited)
         switch(srcAdjust) {
             case 0: {
@@ -172,6 +174,8 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
+
+        // iterating dest memory pointer
         // (0=Increment,1=Decrement,2=Fixed,3=Increment/Reload)
         switch(destAdjust) {
             case 0:

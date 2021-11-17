@@ -7,35 +7,32 @@ class Bus;
 class Timer {
 
     public: 
-
-        void step(uint64_t cycles);
-        uint8_t readFromTimer(uint32_t address);
-        void writeToTimer(uint32_t address, uint8_t value);
+        void step(uint64_t cyclesElapsed);
+        uint8_t updateBusToPrepareForTimerRead(uint32_t address, uint8_t width);
+        void updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width);
 
     private:
+        void stepTimerX(uint64_t cycles, uint8_t x);
+
+        void setTimerXReloadLo(uint8_t val, uint8_t x);
+        void setTimerXReloadHi(uint8_t val, uint8_t x);
+
+        void setTimerXControlLo(uint8_t val, uint8_t x);
+        void setTimerXControlHi(uint8_t val, uint8_t x);
+
         Bus* bus;
 
-        uint64_t timer0Start;
-        uint64_t timer1Start;
-        uint64_t timer2Start;
-        uint64_t timer3Start;
+        bool timerStart[4] = {false, false, false, false};
 
-        uint64_t timer0End;
-        uint64_t timer1End;
-        uint64_t timer2End;
-        uint64_t timer3End;
+        uint32_t timerExcessCycles[4] = {0, 0, 0, 0};
 
-        // these counters are not guaranteed to be accurate 
-        // updated on an as needed basis
-        uint32_t timer0Counter;
-        uint32_t timer1Counter;
-        uint32_t timer2Counter;
-        uint32_t timer3Counter;
+        uint32_t timerCounter[4] = {0, 0, 0, 0};
 
-        uint32_t timer0Reload;
-        uint32_t timer1Reload;
-        uint32_t timer2Reload;
-        uint32_t timer3Reload;
+        uint32_t timerReload[4] = {0, 0, 0, 0};
 
+        uint32_t timerPrescaler[4] = {1, 1, 1, 1};
 
+        bool timerCountUp[4] = {false, false, false, false};
+
+        bool timerIrqEnable[4] = {false, false, false, false};
 };

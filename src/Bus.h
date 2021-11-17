@@ -9,6 +9,7 @@
 #include "ARM7TDMI.h"
 
 class PPU;
+class Timer;
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
@@ -59,6 +60,11 @@ class Bus {
         WIN1V = 0x04000046 - 0x04000000, // Window 1 Vertical Dimensions (W)
         WININ = 0x04000048 - 0x04000000, // WININ - Control of Inside of Window(s) (R/W)
         WINOUT = 0x0400004A - 0x04000000, // Control of Outside of Windows & Inside of OBJ Window (R/W)
+
+        TM0CNT_L = 0x04000100 - 0x04000000, // TM0CNT_L  Timer 0 Counter/Reload
+        TM1CNT_L = 0x04000104 - 0x04000000, // TM0CNT_L  Timer 0 Counter/Reload
+        TM2CNT_L = 0x04000108 - 0x04000000, // TM0CNT_L  Timer 0 Counter/Reload
+        TM3CNT_L = 0x0400010C - 0x04000000, // TM0CNT_L  Timer 0 Counter/Reload
 
     };
 
@@ -153,5 +159,6 @@ class Bus {
     std::array<CycleType, 32> executionTimelineCycleType;
 
     PPU* ppu;
+    Timer* timer; 
 
 };

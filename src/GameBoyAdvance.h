@@ -18,6 +18,8 @@ class GameBoyAdvance {
 
     void testDisplay();
 
+    uint64_t getTotalCyclesElapsed();
+
    private:
     ARM7TDMI* arm7tdmi;
     Bus* bus;
@@ -33,6 +35,7 @@ class GameBoyAdvance {
     long currentTime = 0;
     long frames = 0;
     double startTimeSeconds = 0.0;
+    uint64_t totalCycles= 0;
     
 
 };

@@ -1,6 +1,8 @@
 #include "Bus.h"
 #include "PPU.h"
 #include "BIOS.h"
+#include "Timer.h"
+
 #include <assert.h>
 
 #include <fstream>
@@ -306,6 +308,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             if(address > 0x040003FE) {
                 break;
             }
+            if(0x4000100 <= address && address <= 0x400010E) {
+                // timer addresses
+            }
+
             switch(width) {
                 case 32: {
                     return readFromArray32(&iORegisters, address, 0x04000000);
@@ -745,6 +751,10 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
     } else if (0x04000000 <= address && address <= 0x040003FE) {
         if(0x04000000 <= address && address < 0x04000056) {
             ppuMemDirty = true;
+        }
+
+        if(0x4000100 <= address && address <= 0x400010E) {
+            // timer addresses
         }
 
         switch(width) {
