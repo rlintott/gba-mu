@@ -26,8 +26,10 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     ppu->connectBus(bus);
     this->dma = _dma;
     dma->connectBus(bus);
+    dma->connectCpu(arm7tdmi);
     this->timer = _timer;
     this->timer->connectBus(bus);
+    this->timer->connectCpu(arm7tdmi);
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
@@ -69,6 +71,8 @@ void GameBoyAdvance::loop() {
     uint32_t cyclesThisStep = 0;
     uint64_t nextHBlank = PPU::H_VISIBLE_CYCLES;
     uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;
+    uint64_t nextHBlankEnd = 0;
+    uint64_t nextVBlankEnd = 227 * PPU::H_TOTAL;
     uint16_t currentScanline = 0;
     uint16_t nextScanline = 1;
     previousTime = getCurrentTime();
@@ -95,8 +99,18 @@ void GameBoyAdvance::loop() {
             cyclesThisStep += arm7tdmi->step();
         }
 
+        if(totalCycles >= nextHBlankEnd) {
+            // setting hblank flag to 0
+            nextHBlankEnd += PPU::H_TOTAL;
+            bus->iORegisters[Bus::IORegister::DISPSTAT] &= 0xFD;
+        }
+
         if(totalCycles >= nextHBlank) {
             // TODO: h blank interrupt if enabled
+            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
+                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
+            }
+    
             hBlank = true;
             // in case we have gone through multiple scanlines in a single step somehow
             uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
@@ -105,13 +119,24 @@ void GameBoyAdvance::loop() {
             nextScanline = (currentScanline + 1) % 228;
             
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+            // setting hblank flag to 1
+            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
+
             nextHBlank += PPU::H_TOTAL;
             ppu->renderScanline(currentScanline); 
         }
 
+        if(totalCycles >= nextVBlankEnd) {
+            // setting vblank flag to 0
+            nextVBlankEnd += PPU::V_TOTAL;
+            bus->iORegisters[Bus::IORegister::DISPSTAT] &= 0xFE;
+        }
 
         if(totalCycles >= nextVBlank) {
             // TODO: v blank interrupt if enabled
+            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
+                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VBlank);
+            }
             nextVBlank += PPU::V_TOTAL; 
             vBlank = true;
             // TODO: clean this up
@@ -120,6 +145,9 @@ void GameBoyAdvance::loop() {
             bus->ppuMemDirty = true;
             screen->drawWindow(ppu->renderCurrentScreen());  
             Gamepad::getInput(bus);
+
+            // setting vblank flag to 1
+            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
 
             // #ifndef NDEBUGWARN
             // while(!sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {

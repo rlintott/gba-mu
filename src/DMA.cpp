@@ -1,5 +1,6 @@
 #include "DMA.h"
 #include "Bus.h"
+#include "ARM7TDMI.h"
 #include "assert.h"
 #include "PPU.h"
 
@@ -221,7 +222,30 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
 
     }
-    // TODO: IRQ upon end of Word Count   (0=Disable, 1=Enable)
+    if(control & 0x4000) {
+        // irq at end of word count
+        switch(x) {
+            case 0: {
+                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA0);
+                break;
+            }
+            case 1: {
+                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA1);
+                break;
+            }
+            case 2: {
+                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA2);
+                break;
+            }
+            case 3: {
+                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA3);
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
     //DEBUGWARN("temp cycles " << tempCycles << "\n");
     //DEBUGWARN(bus->ppuMemDirty << "\n");
     return tempCycles;
@@ -254,4 +278,8 @@ uint32_t DMA::step(bool hBlank, bool vBlank, uint16_t scanline) {
 
 void DMA::connectBus(Bus* bus) {
     this->bus = bus;
+}
+
+void DMA::connectCpu(ARM7TDMI* cpu) {
+    this->cpu = cpu;
 }

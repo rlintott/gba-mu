@@ -424,6 +424,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
     // used as address
     // ;*** restriction: must be located in range PC+/-4095+8, if so,
     // ;*** assembler will calculate offset and use PC (R15) as base.
+    //DEBUGWARN("in single data transder\n");
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint32_t rdVal = (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
@@ -510,6 +511,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
                                  Bus::CycleType::NONSEQUENTIAL),
                                  (full & 3) * 8));
             } else {
+
                 // aligned to word
                 // Reads from forcibly aligned address "addr AND (NOT 3)",
                 // and does then rotate the data as "ROR (addr AND 3)*8". T

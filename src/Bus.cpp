@@ -284,6 +284,9 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         }   
         case 0x03000000: {
             DEBUG("reading from wramChip\n");
+            // mirrored every 8000 bytes
+            address &= 0x03007FFF;
+
             if(address > 0x03007FFF) {
                 break;
             }
@@ -754,7 +757,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             ppuMemDirty = true;
         }
 
-        if(0x4000100 <= address && address <= 0x400010E) {
+        if(0x4000100 <= address && address <= 0x400010F) {
             // timer addresses
             timer->updateTimerUponWrite(address, value, width);
         }
@@ -776,7 +779,29 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 assert(false);
                 break;
             }
-        }           
+        } 
+
+        // SPECIAL CASE when writing to interrupt request register
+        // setting a bit (acknowledging an interrupt) changes that bit to zero
+        // so do val &= ~val
+        if(0x4000200 <= address && address <= 0x4000203) {
+            //DEBUGWARN("eyo1\n");
+            uint8_t tempWidth = width;
+            uint32_t tempAddress = address;
+            uint32_t tempValue = value;
+            while(tempWidth != 0) {
+                //DEBUGWARN("heyo\n");
+                //DEBUGWARN("before " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
+                if(tempAddress == 0x4000202 || tempAddress == 0x4000203) {
+                    iORegisters[tempAddress - 0x04000000] = iORegisters[tempAddress - 0x04000000] & (~tempValue);
+                }
+                //DEBUGWARN("after " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
+                tempWidth -= 8;
+                tempAddress += 1;
+                tempValue = tempValue >> 8;
+            }
+            //DEBUGWARN("eyo2\n");
+        }          
 
     } else if (0x05000000 <= address && address <= 0x050003FF) { 
         //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");

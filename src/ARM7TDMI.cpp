@@ -4,6 +4,7 @@
 #include <bit>
 #include <bitset>
 #include <iostream>
+#include <type_traits>
 
 #include "Bus.h"
 #include "assert.h"
@@ -47,11 +48,19 @@ uint32_t ARM7TDMI::step() {
     // TODO: give this method a better name
 
     bus->resetCycleCountTimeline();
+   // DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
 
-    if(true /* TODO: if events */) {
+    if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
+        (cpsr.I == 0) &&
+       ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
+       ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
+        // interrupts is enabled
+        //DEBUGWARN("in here irq\n");
+        //DEBUGWARN("IF lo: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF]) << "\n");
+        //DEBUGWARN("IF hi: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF + 1]) << "\n");
         irq();
+        return 2;
     }
-
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
         //DEBUGWARN(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
@@ -97,6 +106,7 @@ uint32_t ARM7TDMI::step() {
     // }
     // #endif
 
+
     getNextInstruction(currentPcAccessType);
 
 
@@ -140,15 +150,22 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
 }
 
 void ARM7TDMI::irq() {
-    if((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) && 
-        bus->iORegisters[Bus::IORegister::IME] && !cpsr.I) {
-        DEBUGWARN("irq\n");
-        switchToMode(Mode::IRQ);
-        // switch to ARM mode
-        cpsr.T = 0;
-        setRegister(PC_REGISTER, 0x00000018);
-        getNextInstruction(FetchPCMemoryAccess::BRANCH);
-    }
+    //DEBUGWARN("hello?\n");
+    //DEBUGWARN("irq1\n");
+    uint32_t returnAddr = getRegister(PC_REGISTER);
+    switchToMode(Mode::IRQ);
+    // switch to ARM mode
+    cpsr.T = 0;
+    cpsr.I = 1; 
+    setRegister(PC_REGISTER, 0x18);
+    setRegister(LINK_REGISTER, returnAddr + 4);
+    getNextInstruction(FetchPCMemoryAccess::BRANCH);
+    //DEBUGWARN("irq2\n");
+}
+
+void ARM7TDMI::queueInterrupt(Interrupt interrupt) {
+    bus->iORegisters[Bus::IORegister::IF] |= (interrupt & 0xFF);
+    bus->iORegisters[Bus::IORegister::IF + 1] |= ((interrupt >> 8) & 0xFF);
 }
 
 void ARM7TDMI::connectBus(Bus *bus) { 

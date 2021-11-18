@@ -1,17 +1,20 @@
 #include <cstdint>
 
 class Bus;
+class ARM7TDMI;
 
 class DMA {
 
     public:
         void connectBus(Bus* bus);
+        void connectCpu(ARM7TDMI* cpu);
 
         // return 0 if DMA did not occur, else return # of cycles DMA took
         uint32_t step(bool hBlank, bool vBlank, uint16_t scanline);
 
     private:
         Bus *bus;
+        ARM7TDMI *cpu;
         
         uint32_t dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
 

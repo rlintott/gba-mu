@@ -1,5 +1,6 @@
 #include "Timer.h"
 #include "Bus.h"
+#include "ARM7TDMI.h"
 
 void Timer::step(uint64_t cyclesElapsed) {
     stepTimerX(cyclesElapsed, 0);
@@ -79,7 +80,7 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
     update Timer state upon write
 */
 void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width) {
-    while(width > 0) {
+    while(width != 0) {
         uint8_t byte = value & 0xFF;
 
         switch(address) {
@@ -197,4 +198,32 @@ void Timer::setTimerXReloadLo(uint8_t val, uint8_t x) {
 void Timer::connectBus(Bus* bus) {
     this->bus = bus;
     this->bus->connectTimer(this);
+}
+
+void Timer::connectCpu(ARM7TDMI* cpu) {
+    this->cpu = cpu;
+}
+
+void Timer::queueTimerInterrupt(uint8_t x) {
+    switch(x) {
+        case 0: {
+            cpu->queueInterrupt(ARM7TDMI::Interrupt::Timer0Overflow);
+            break;
+        }
+        case 1: {
+            cpu->queueInterrupt(ARM7TDMI::Interrupt::Timer1Overflow);
+            break;
+        }
+        case 2: {
+            cpu->queueInterrupt(ARM7TDMI::Interrupt::Timer2Overflow);
+            break;
+        }
+        case 3: {
+            cpu->queueInterrupt(ARM7TDMI::Interrupt::Timer3Overflow);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
 }
