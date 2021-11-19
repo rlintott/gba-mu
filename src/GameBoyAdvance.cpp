@@ -77,8 +77,8 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
 
-    uint16_t currentScanline = 0;
-    uint16_t nextScanline = 1;
+    uint16_t currentScanline = -1;
+    uint16_t nextScanline = 0;
     previousTime = getCurrentTime();
     startTimeSeconds = getCurrentTime() / 1000.0;
 
@@ -103,22 +103,33 @@ void GameBoyAdvance::loop() {
             cyclesThisStep += arm7tdmi->step();
         }
 
-        if(totalCycles >= nextHBlankEnd) {
-            // setting hblank flag to 0
-            nextHBlankEnd += PPU::H_TOTAL;
-            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
-        }
-
-        if(totalCycles >= nextHBlank) {    
-            ppu->renderScanline(currentScanline); 
+        if(totalCycles >= nextHBlank) {     
             // in case we have gone through multiple scanlines in a single step somehow
-            uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
-            currentScanline += scanlinesThisStep;
-            currentScanline %= 228;
-            nextScanline = (currentScanline + 1) % 228;
+            // uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
+            // currentScanline += scanlinesThisStep;
+            // currentScanline %= 228;
+            // nextScanline = (currentScanline + 1) % 228;
             //DEBUGWARN("scanline: " << currentScanline << "\n");
 
+            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
+                    arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
+            }
+            // setting hblank flag to 1
+            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
 
+            nextHBlank += PPU::H_TOTAL;
+        }
+
+        if(totalCycles >= nextHBlankEnd) {
+            ppu->renderScanline(currentScanline);
+            // setting hblank flag to 0
+            currentScanline += 1;
+            currentScanline %= 228;
+            nextScanline = (currentScanline + 1) % 228;
+            
+            //bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+            nextHBlankEnd += PPU::H_TOTAL;
+            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
             if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
                 // current scanline == vcount bits in DISPSTAT
                 // set vcounter flag
@@ -131,17 +142,10 @@ void GameBoyAdvance::loop() {
             } else {
                 // toggle vcounter flag off
                 bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x04);
+
             }
 
-            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
-                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
-            }
-            
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
-            // setting hblank flag to 1
-            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
-
-            nextHBlank += PPU::H_TOTAL;
         }
 
         if(totalCycles >= nextVBlankEnd) {
