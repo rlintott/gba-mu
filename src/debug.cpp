@@ -11,8 +11,8 @@ void runCpuWithState() {
     ARM7TDMI cpu;
     GameBoyAdvance gba(&cpu, &bus);
 
-    cpu.setRegister(0, 0x04000000);
-    cpu.setCurrInstruction(0xE510F004);
+    //cpu.setRegister(0, 0xEA00000C);
+    cpu.setCurrInstruction(0xE25EF004);
 
     cpu.cpsr.T = 0;
 

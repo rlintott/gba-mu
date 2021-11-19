@@ -74,6 +74,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::shiftHandler(
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::addSubHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF800) == 0x1800);
+    DEBUG("in thumb addsub immediate\n");
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rs = thumbGetRs(instruction);
     uint32_t op2;
@@ -577,6 +578,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreRegOffsetH
     uint8_t rb = thumbGetRb(instruction);
     uint8_t ro = (instruction & 0x01C0) >> 6;
     uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
+    DEBUG("rb: " << (uint32_t)rb << "\n");
+    DEBUG("ro: " << (uint32_t)ro << "\n");
+    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     switch (opcode) {
         case 0: {
@@ -748,6 +752,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHa
         case 1: {
             DEBUG("load\n");
             DEBUG("rd " << (uint32_t)rd << "\n");
+            DEBUG("rb " << (uint32_t)rb << "\n");
+            DEBUG("offset " << (uint32_t)offset << "\n");
             // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
             uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, 
                                          Bus::CycleType::NONSEQUENTIAL),
@@ -764,10 +770,16 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHa
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreSpRelativeHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0xF000) == 0x9000);
+    DEBUG("in thumb load store sp relative handler\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint16_t offset = (instruction & 0x00FF) << 2;
     uint32_t address = cpu->getRegister(SP_REGISTER) + offset;
+
+    DEBUG("rd " << (uint32_t)rd << "\n");
+    DEBUG("opcode " << (uint32_t)opcode << "\n");
+    DEBUG("offset " << (uint32_t)offset << "\n");
+    DEBUG("address " << (uint32_t)address << "\n");
 
     switch (opcode) {
         case 0: {
@@ -1122,6 +1134,7 @@ static uint32_t signExtend12Bit(uint32_t value) {
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::unconditionalBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
+    DEBUG("in thumb unconditional branch\n");
     assert((instruction & 0xF800) == 0xE000);
     uint32_t offset = signExtend12Bit((instruction & 0x07FF) << 1);
     cpu->setRegister(PC_REGISTER, (cpu->getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
@@ -1137,6 +1150,7 @@ static uint32_t signExtend23Bit(uint32_t value) {
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::longBranchHandler(
     uint16_t instruction, ARM7TDMI *cpu) {
     uint8_t opcode = (instruction & 0xF800) >> 11;
+    DEBUG("in thumb long branch handler\n");
 
     switch(opcode) {
         case 0x1E: {
@@ -1172,7 +1186,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHa
     // 11011111b: SWI nn   ;software interrupt
     // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
     assert((instruction & 0xFF00) == 0xDF00);
+    //DEBUGWARN("software interrupt!\n");
     
+
     // CPSR=<changed>  ;Enter svc/abt
     cpu->switchToMode(Mode::SUPERVISOR);
 
@@ -1181,7 +1197,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::softwareInterruptHa
     cpu->cpsr.I = 1;
 
     // R14_svc=PC+2    ;save return address
+    // TODO explain why you arent adding 2
     cpu->setRegister(14, cpu->getRegister(PC_REGISTER));
+
 
     // PC=VVVV0008h    ;jump to SWI/PrefetchAbort vector address
     // TODO: is base always 0000?

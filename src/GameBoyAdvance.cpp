@@ -33,6 +33,7 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
+    DEBUG("initializing GBA\n");
     this->arm7tdmi = _arm7tdmi;
     this->bus = _bus;
     arm7tdmi->connectBus(bus);
@@ -73,6 +74,9 @@ void GameBoyAdvance::loop() {
     uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;
     uint64_t nextHBlankEnd = 0;
     uint64_t nextVBlankEnd = 227 * PPU::H_TOTAL;
+    bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
+    bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
+
     uint16_t currentScanline = 0;
     uint16_t nextScanline = 1;
     previousTime = getCurrentTime();
@@ -102,34 +106,48 @@ void GameBoyAdvance::loop() {
         if(totalCycles >= nextHBlankEnd) {
             // setting hblank flag to 0
             nextHBlankEnd += PPU::H_TOTAL;
-            bus->iORegisters[Bus::IORegister::DISPSTAT] &= 0xFD;
+            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
         }
 
-        if(totalCycles >= nextHBlank) {
-            // TODO: h blank interrupt if enabled
-            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
-                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
-            }
-    
-            hBlank = true;
+        if(totalCycles >= nextHBlank) {    
+            ppu->renderScanline(currentScanline); 
             // in case we have gone through multiple scanlines in a single step somehow
             uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
             currentScanline += scanlinesThisStep;
             currentScanline %= 228;
             nextScanline = (currentScanline + 1) % 228;
+            //DEBUGWARN("scanline: " << currentScanline << "\n");
+
+
+            if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
+                // current scanline == vcount bits in DISPSTAT
+                // set vcounter flag
+                bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x04;
+                if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x20) {
+                    // if vcount irq enabled, queue the interrupt!
+                    //DEBUGWARN("VCOUNTER INTERRUPT at scanline " << currentScanline << "\n");
+                    arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VCounterMatch);
+                }
+            } else {
+                // toggle vcounter flag off
+                bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x04);
+            }
+
+            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
+                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
+            }
             
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
             // setting hblank flag to 1
             bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
 
             nextHBlank += PPU::H_TOTAL;
-            ppu->renderScanline(currentScanline); 
         }
 
         if(totalCycles >= nextVBlankEnd) {
             // setting vblank flag to 0
             nextVBlankEnd += PPU::V_TOTAL;
-            bus->iORegisters[Bus::IORegister::DISPSTAT] &= 0xFE;
+            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
         }
 
         if(totalCycles >= nextVBlank) {
@@ -138,7 +156,6 @@ void GameBoyAdvance::loop() {
                 arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VBlank);
             }
             nextVBlank += PPU::V_TOTAL; 
-            vBlank = true;
             // TODO: clean this up
             // DEBUGWARN("frame!\n");
             // force a draw every frame
@@ -163,7 +180,7 @@ void GameBoyAdvance::loop() {
             frames++;
 
             if((frames % 60) == 0) {
-                DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
+                //DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
 

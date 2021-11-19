@@ -167,10 +167,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::psrHandler(uint32_t i
             uint8_t fscx = (instruction & 0x000F0000) >> 16;
             ProgramStatusRegister *psr = (!psrSource ? &(cpu->cpsr) : cpu->getCurrentModeSpsr());
             if (immediate) {
+                //DEBUGWARN("MSR{cond} immediate\n");
                 uint32_t immValue = (uint32_t)(instruction & 0x000000FF);
                 uint8_t shift = (instruction & 0x00000F00) >> 7;
                 cpu->transferToPsr(aluShiftRor(immValue, shift), fscx, psr);
             } else {  // register
+                //DEBUGWARN("MSR{cond} reg\n");
+                //DEBUGWARN("rm: " << (uint32_t)getRm(instruction) << "\n");
                 assert(!(instruction & 0x00000FF0));
                 assert(getRm(instruction) != PC_REGISTER);
                 // TODO: refactor this, don't have to pass in a pointer to the psr
@@ -212,6 +215,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     // shift op2
     bool i = (instruction & 0x02000000);
     bool r = (instruction & 0x00000010);
+    DEBUG("dataProc\n");
 
     AluShiftResult shiftResult = cpu->aluShift(instruction, i, r);
     uint8_t rd = getRd(instruction);
@@ -221,6 +225,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     bool overflowBit = (cpu->cpsr).V;
     bool signBit = (cpu->cpsr).N;
     bool zeroBit = (cpu->cpsr).Z;
+
+    DEBUG((uint32_t)rn << "<- rn\n");
+    DEBUG((uint32_t)rd << "<- rd\n");
+    DEBUG((uint32_t)opcode << "<- opcode\n");
+
+
 
     uint32_t rnVal;
     // if rn == pc regiser, have to add to it to account for pipelining /
@@ -235,7 +245,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
     }
     uint32_t op2 = shiftResult.op2;
 
-    DEBUG(op2 << " <- in dataproc, op2 (after shift)\n");
+    DEBUG(op2 << " <- op2 (after shift)\n");
+
 
     switch (opcode) {
         case AND: {  // AND
@@ -391,7 +402,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::dataProcHandler(
         cpu->cpsr.N = signBit;
         cpu->cpsr.V = overflowBit;
     } else if (rd == PC_REGISTER && sFlagSet(instruction)) {
-        DEBUG("changing cpsr in dataproc\n");
+        DEBUG("changing cpsr / mode in dataproc\n");
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
         cpu->switchToMode(ARM7TDMI::Mode((*(cpu->getCurrentModeSpsr())).Mode));
     } else {
@@ -424,7 +435,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
     // used as address
     // ;*** restriction: must be located in range PC+/-4095+8, if so,
     // ;*** assembler will calculate offset and use PC (R15) as base.
-    //DEBUGWARN("in single data transder\n");
+    DEBUG("in single data transfer\n");
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint32_t rdVal = (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
@@ -544,6 +555,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
     assert((instruction & 0x0E000000) == 0);
+    DEBUG("halfword data trans\n");
 
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
@@ -659,7 +671,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataSwapHandler
     // TODO: figure out memory alignment logic (for all data transfer ops)
     // (verify against existing CPU implementations
     uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("singlke data swap\n");
+    DEBUG("single data swap\n");
     assert((instruction & 0x0F800000) == 0x01000000);
     assert(!(instruction & 0x00300000));
     assert((instruction & 0x00000FF0) == 0x00000090);
@@ -860,6 +872,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::blockDataTransHandler
         // f instruction is LDM and R15 is in the list: (Mode Changes)
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
         // TODO make sure to switch mode ANYWHERE where cpsr is set
+        //DEBUGWARN("switchmong mode in block data trans\n");
         cpu->cpsr = *(cpu->getCurrentModeSpsr());
         cpu->switchToMode(ARM7TDMI::Mode(cpu->cpsr.Mode));
     }
@@ -963,7 +976,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHand
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::undefinedOpHandler(
     uint32_t instruction, ARM7TDMI *cpu) {
-    DEBUG("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
+    DEBUGWARN("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
     cpu->switchToMode(ARM7TDMI::Mode::UNDEFINED);
     cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return BRANCH;

@@ -151,7 +151,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 firstAccess = false;
             } else {
                 uint16_t value = bus->read16(dmaXSourceAddr[x], Bus::SEQUENTIAL);
-                DEBUGWARN("value: " << value << "\n");
+                //DEBUGWARN("value: " << value << "\n");
                 bus->write16(dmaXDestAddr[x], value, Bus::SEQUENTIAL);
             }
         }

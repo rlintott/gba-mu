@@ -44,26 +44,46 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 
 
 uint32_t ARM7TDMI::step() {
-    DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
+    //DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
     // TODO: give this method a better name
 
     bus->resetCycleCountTimeline();
-   // DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
+    //DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
 
     if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
-        (cpsr.I == 0) &&
+        (!cpsr.I) &&
        ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
        ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
         // interrupts is enabled
-        //DEBUGWARN("in here irq\n");
+        //DEBUGWARN("irq fn start\n");
         //DEBUGWARN("IF lo: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF]) << "\n");
         //DEBUGWARN("IF hi: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF + 1]) << "\n");
         irq();
-        return 2;
+        //DEBUGWARN("irq fn ended\n");
+
     }
+    // #ifndef NDEBUGWARN
+    // if(!cpsr.T) {
+    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+    //         currInstruction, 
+    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
+    //         psrToInt(getCpsr()));
+    // } else {
+    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+    //         currInstruction, 
+    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
+    //         psrToInt(getCpsr()));      
+    // }
+    // #endif
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
-        //DEBUGWARN(std::bitset<32>(currInstruction).to_string() << " <- going to execute \n");
+
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;
         DEBUG("in arm state\n");
 
@@ -78,10 +98,9 @@ uint32_t ARM7TDMI::step() {
         // increment PC
 
     } else {  // THUMB state
-        DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
+        //DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
         ThumbOpcodeHandler handler = decodeThumbInstruction(currInstruction);
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
-
 
         currentPcAccessType = handler(currInstruction, this);
     }
@@ -152,20 +171,22 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
 void ARM7TDMI::irq() {
     //DEBUGWARN("hello?\n");
     //DEBUGWARN("irq1\n");
-    uint32_t returnAddr = getRegister(PC_REGISTER);
+
+    uint32_t returnAddr = getRegister(PC_REGISTER) + 4;
+    
     switchToMode(Mode::IRQ);
     // switch to ARM mode
     cpsr.T = 0;
     cpsr.I = 1; 
     setRegister(PC_REGISTER, 0x18);
-    setRegister(LINK_REGISTER, returnAddr + 4);
+    setRegister(LINK_REGISTER, returnAddr);
     getNextInstruction(FetchPCMemoryAccess::BRANCH);
     //DEBUGWARN("irq2\n");
 }
 
 void ARM7TDMI::queueInterrupt(Interrupt interrupt) {
-    bus->iORegisters[Bus::IORegister::IF] |= (interrupt & 0xFF);
-    bus->iORegisters[Bus::IORegister::IF + 1] |= ((interrupt >> 8) & 0xFF);
+    bus->iORegisters[Bus::IORegister::IF] |= ((uint16_t)interrupt & 0xFF);
+    bus->iORegisters[Bus::IORegister::IF + 1] |= (((uint16_t)interrupt >> 8) & 0xFF);
 }
 
 void ARM7TDMI::connectBus(Bus *bus) { 
@@ -174,7 +195,7 @@ void ARM7TDMI::connectBus(Bus *bus) {
 
 
 void ARM7TDMI::switchToMode(Mode mode) {
-    DEBUG((uint32_t)mode << " <- switching to mode\n");
+    //DEBUGWARN((uint32_t)mode << " <- switching to mode\n");
     switch (mode) {
         case SYSTEM:
         case USER: {
@@ -206,6 +227,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
             break;
         }
         case SUPERVISOR: {
+            // DEBUGWARN("supervisor mode\n");
             currentSpsr = &SPSR_svc;
             registers[13] = &r13_svc;
             registers[14] = &r14_svc;
@@ -319,6 +341,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
             
             // TODO: implemnt less hacky way ti transfer psr
             if(psr == &cpsr) {
+                //DEBUGWARN("in transfer to PSR changing mode\n");
                 switchToMode(ARM7TDMI::Mode(mode));
             }   
         }
@@ -442,6 +465,7 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
         }
         case 0b00001110000000000000000000000000: { // SWI
             // TODO: implement software interrupt
+            DEBUGWARN("ARM SWI NOT IMPLEMENTED!!!\n");
             break;
 
         }

@@ -11,6 +11,7 @@
 
 Bus::Bus(PPU* ppu) {
     // TODO: make bios configurable
+    DEBUG("initializing bus\n");
 
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
@@ -283,10 +284,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             break;
         }   
         case 0x03000000: {
-            DEBUG("reading from wramChip\n");
+            
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
-
+            DEBUG("reading from wramChip addr: " << address << "\n");
             if(address > 0x03007FFF) {
                 break;
             }
@@ -687,6 +688,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
 void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
     addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
+    uint32_t shift = address & 0x0F000000;
 
     if(address <= 0x00003FFF) {
         switch(width) {
@@ -730,8 +732,12 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             }
         }
 
-    } else if (0x03000000 <= address && address <= 0x03007FFF) {
+    } else if (0x03000000 <= address && address <= 0x03FFFFFF) {
         DEBUG("writing to wramChip\n");
+
+        // mirrored every 8000 bytes
+        address &= 0x03007FFF;
+        //DEBUGWARN("writing from wramChip addr: " << address << "\n");
 
         switch(width) {
             case 32: {
@@ -751,6 +757,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 break;
             }
         }     
+        //DEBUGWARN("done writing to ram chip\n");
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {
         if(0x04000000 <= address && address < 0x04000056) {
@@ -791,11 +798,14 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             uint32_t tempValue = value;
             while(tempWidth != 0) {
                 //DEBUGWARN("heyo\n");
-                //DEBUGWARN("before " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
-                if(tempAddress == 0x4000202 || tempAddress == 0x4000203) {
+                //DEBUGWARN("tempAddress " << tempAddress << "\n");
+                
+                if(tempAddress == 0x04000202 || tempAddress == 0x04000203) {
+                    //DEBUGWARN("before " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
                     iORegisters[tempAddress - 0x04000000] = iORegisters[tempAddress - 0x04000000] & (~tempValue);
+                    //DEBUGWARN("after " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
                 }
-                //DEBUGWARN("after " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
+                
                 tempWidth -= 8;
                 tempAddress += 1;
                 tempValue = tempValue >> 8;

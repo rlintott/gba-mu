@@ -117,12 +117,12 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
                 break;
             }            
             case 0x4000108: {
-                DEBUGWARN("LO!" << (uint32_t)byte << "\n");
+                //DEBUGWARN("LO!" << (uint32_t)byte << "\n");
                 setTimerXReloadLo(byte, 2);
                 break;
             }
             case 0x4000109: {
-                DEBUGWARN("HI!" << (uint32_t)byte << "\n");
+                //DEBUGWARN("HI!" << (uint32_t)byte << "\n");
                 setTimerXReloadHi(byte, 2);
                 break;
             }
