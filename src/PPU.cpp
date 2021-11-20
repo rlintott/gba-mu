@@ -29,6 +29,7 @@ void PPU::renderScanline(uint16_t scanline) {
 
     switch(bgMode) {
         case 0: {
+            //DEBUGWARN("in bg mode 0\n");
             //if(bus->ppuMemDirty) {
             // render spritebuffer for [scanline+2, 159] 
             renderSprites((scanline + 2) % 228);
@@ -38,9 +39,11 @@ void PPU::renderScanline(uint16_t scanline) {
             break;
         }
         case 1: {
+            DEBUGWARN("in bg mode 1 unimplemented\n");
             break;
         }
         case 2: {
+            DEBUGWARN("in bg mode 2 unimplemented\n");
             break;
         }
         /*
@@ -240,6 +243,7 @@ void PPU::renderSprites(uint16_t scanline) {
                     if(screenY != scanline) {
                         continue;
                     }
+                    
 
                     for(uint8_t tileX = 0; tileX < 8; tileX++) {
                         screenX = hFlipOffset + hFlipMultiplier * (x * 8 + tileX) + screenXOffset & 0x1FF;

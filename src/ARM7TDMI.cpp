@@ -46,7 +46,6 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 uint32_t ARM7TDMI::step() {
     //DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
     // TODO: give this method a better name
-
     bus->resetCycleCountTimeline();
     //DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
 

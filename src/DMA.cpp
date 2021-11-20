@@ -31,7 +31,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
 
     //DEBUGWARN(hBlank << "\n");
-    //DEBUGWARN("control " << (uint32_t)control << "\n");
+    DEBUGWARN("control " << (uint32_t)control << "\n");
     //DEBUGWARN("startTiming " << (uint32_t)startTiming << "\n");
 
     // TODO: fix this
@@ -44,6 +44,8 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             inVideoCaptureMode = true;
         }
     }
+
+    //DEBUGWARN("in DMA\n");
 
     bus->resetCycleCountTimeline();
 
@@ -224,27 +226,27 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     }
     if(control & 0x4000) {
         // irq at end of word count
-        switch(x) {
-            case 0: {
-                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA0);
-                break;
-            }
-            case 1: {
-                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA1);
-                break;
-            }
-            case 2: {
-                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA2);
-                break;
-            }
-            case 3: {
-                cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA3);
-                break;
-            }
-            default: {
-                break;
-            }
-        }
+        // switch(x) {
+        //     case 0: {
+        //         cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA0);
+        //         break;
+        //     }
+        //     case 1: {
+        //         cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA1);
+        //         break;
+        //     }
+        //     case 2: {
+        //         cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA2);
+        //         break;
+        //     }
+        //     case 3: {
+        //         cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA3);
+        //         break;
+        //     }
+        //     default: {
+        //         break;
+        //     }
+        // }
     }
     //DEBUGWARN("temp cycles " << tempCycles << "\n");
     //DEBUGWARN(bus->ppuMemDirty << "\n");

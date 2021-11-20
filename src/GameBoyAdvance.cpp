@@ -90,7 +90,8 @@ void GameBoyAdvance::loop() {
         // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
         uint32_t dmaCycles = dma->step(hBlank, vBlank, nextScanline);
         cyclesThisStep += dmaCycles;
-        timer->step(cyclesThisStep);
+        //\\timer->step(cyclesThisStep);
+
         totalCycles += cyclesThisStep;
         cyclesThisStep = 0;
 
@@ -102,6 +103,7 @@ void GameBoyAdvance::loop() {
             //DEGUGWARN(cyclesThisStep << "\n");
             cyclesThisStep += arm7tdmi->step();
         }
+
 
         if(totalCycles >= nextHBlank) {     
             // in case we have gone through multiple scanlines in a single step somehow
@@ -147,7 +149,6 @@ void GameBoyAdvance::loop() {
 
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
         }
-
         if(totalCycles >= nextVBlankEnd) {
             // setting vblank flag to 0
             nextVBlankEnd += PPU::V_TOTAL;

@@ -25,7 +25,9 @@ void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
         timerCounter[x] += increments; 
 
         if(timerCounter[x] > 0xFFFF) { // if overflow
-            // TODO: timer interrupts
+            if(timerIrqEnable[x]) {
+                queueTimerInterrupt(x);
+            }
             //DEBUGWARN("howdy!\n");
             timerCounter[x] = timerReload[x];
             uint8_t cascadeX = x + 1;
@@ -33,7 +35,9 @@ void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
             while(overflow && cascadeX <= 3 && timerCountUp[cascadeX] && timerStart[cascadeX]) {
                 timerCounter[cascadeX]++;
                 if(timerCounter[cascadeX] > 0xFFFF) {
-                    // TODO: timer interrupts
+                    if(timerIrqEnable[cascadeX]) {
+                        queueTimerInterrupt(cascadeX);
+                    }
                     timerCounter[cascadeX] = timerReload[cascadeX];
                 } else {
                     overflow = false;
