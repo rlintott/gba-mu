@@ -740,6 +740,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::loadStoreHalfwordHa
     uint8_t rb = thumbGetRb(instruction);
     uint32_t offset = (instruction & 0x07C0) >> 5;
     uint32_t address = cpu->getRegister(rb) + offset;
+    DEBUG("rd " << (uint32_t)rd << "\n");
+    DEBUG("rb " << (uint32_t)rb << "\n");
+    DEBUG("address " << (uint32_t)address << "\n");
+    DEBUG("opcode " << (uint32_t)opcode << "\n");
+    DEBUG("offset " << (uint32_t)offset << "\n");
 
     switch (opcode) {
         case 0: {

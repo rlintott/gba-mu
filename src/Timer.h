@@ -25,9 +25,8 @@ class Timer {
 
         void queueTimerInterrupt(uint8_t x);
 
-        Bus* bus;
-
-        ARM7TDMI* cpu;
+public:
+        uint32_t timerPrescaler[4] = {1, 1, 1, 1};
 
         bool timerStart[4] = {false, false, false, false};
 
@@ -37,9 +36,15 @@ class Timer {
 
         uint32_t timerReload[4] = {0, 0, 0, 0};
 
-        uint32_t timerPrescaler[4] = {1, 1, 1, 1};
-
         bool timerCountUp[4] = {false, false, false, false};
 
         bool timerIrqEnable[4] = {false, false, false, false};
+
+
+        Bus* bus;
+
+        ARM7TDMI* cpu;
+
+
+
 };

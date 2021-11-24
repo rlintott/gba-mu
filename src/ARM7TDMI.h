@@ -7,7 +7,7 @@
 #include <vector>
 
 #define NDEBUG 1;
-//#define NDEBUGWARN 1;
+//define NDEBUGWARN 1;
 
 #ifdef NDEBUG
 #define DEBUG(x)

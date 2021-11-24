@@ -687,7 +687,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
 
 void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
-    addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
+    //addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
     uint32_t shift = address & 0x0F000000;
 
     if(address <= 0x00003FFF) {
@@ -768,6 +768,9 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // timer addresses
             timer->updateTimerUponWrite(address, value, width);
         }
+        // DEBUGWARN("width " << (uint32_t)width << "\n");
+        // DEBUGWARN("value " << value << "\n");
+        // DEBUGWARN("addr " << address << "\n");
 
         switch(width) {
             case 32: {
@@ -1046,6 +1049,6 @@ void Bus::printCurrentExecutionTimeline() {
     std::cout << "]\n";
 }
 
-void Bus::connectTimer(Timer* timer) {
-    this->timer = timer;
+void Bus::connectTimer(Timer* _timer) {
+    this->timer = _timer;
 }

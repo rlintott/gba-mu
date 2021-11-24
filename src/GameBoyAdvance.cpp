@@ -32,6 +32,15 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     this->timer->connectCpu(arm7tdmi);
 }
 
+GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, Timer* _timer) {
+    this->arm7tdmi = _arm7tdmi;
+    this->bus = _bus;
+    arm7tdmi->connectBus(bus);
+    this->timer = _timer;
+    this->timer->connectBus(bus);
+    this->timer->connectCpu(arm7tdmi);
+}
+
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
     DEBUG("initializing GBA\n");
     this->arm7tdmi = _arm7tdmi;
@@ -87,31 +96,20 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
 
     while(true) {
-        // TODO: move this PPU logic to a PPU method ie ppu->step(totalCycles, cpuCycles)
         uint32_t dmaCycles = dma->step(hBlank, vBlank, nextScanline);
         cyclesThisStep += dmaCycles;
-        //\\timer->step(cyclesThisStep);
+        timer->step(cyclesThisStep);
 
         totalCycles += cyclesThisStep;
         cyclesThisStep = 0;
 
         vBlank = false;
         hBlank = false;
-        if(!dmaCycles) {
-            // dma did not occur
-            //DEBUGWARN("cpu\n");
-            //DEGUGWARN(cyclesThisStep << "\n");
-            cyclesThisStep += arm7tdmi->step();
-        }
+        cyclesThisStep += arm7tdmi->step();
 
 
-        if(totalCycles >= nextHBlank) {     
-            // in case we have gone through multiple scanlines in a single step somehow
-            // uint16_t scanlinesThisStep = 1 + ((totalCycles - nextHBlank) / (uint64_t)PPU::H_TOTAL);
-            // currentScanline += scanlinesThisStep;
-            // currentScanline %= 228;
-            // nextScanline = (currentScanline + 1) % 228;
-            //DEBUGWARN("scanline: " << currentScanline << "\n");
+        if(totalCycles >= nextHBlank) { 
+            hBlank = true;    
 
             if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
                     arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
@@ -129,7 +127,6 @@ void GameBoyAdvance::loop() {
             currentScanline %= 228;
             nextScanline = (currentScanline + 1) % 228;
             
-            //bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
             nextHBlankEnd += PPU::H_TOTAL;
             bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
             if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
@@ -156,6 +153,7 @@ void GameBoyAdvance::loop() {
         }
 
         if(totalCycles >= nextVBlank) {
+            vBlank = true;
             // TODO: v blank interrupt if enabled
             if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
                 arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VBlank);
@@ -170,13 +168,6 @@ void GameBoyAdvance::loop() {
 
             // setting vblank flag to 1
             bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
-
-            // #ifndef NDEBUGWARN
-            // while(!sf::Keyboard::isKeyPressed(sf::Keyboard::Enter)) {
-            //     screen->drawWindow(ppu->pixelBuffer);  
-            // }
-            // while(sf::Keyboard::isKeyPressed(sf::Keyboard::Enter));
-            // #endif
 
             while(getCurrentTime() - previousTime < 17) {
                 usleep(500);

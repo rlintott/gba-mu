@@ -8,6 +8,7 @@
 
 #include "Bus.h"
 #include "assert.h"
+#include "Timer.h"
 
 
 ARM7TDMI::ARM7TDMI() {
@@ -49,6 +50,7 @@ uint32_t ARM7TDMI::step() {
     bus->resetCycleCountTimeline();
     //DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
 
+
     if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
         (!cpsr.I) &&
        ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
@@ -80,7 +82,7 @@ uint32_t ARM7TDMI::step() {
     //         psrToInt(getCpsr()));      
     // }
     // #endif
-
+    
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;
@@ -126,7 +128,6 @@ uint32_t ARM7TDMI::step() {
 
 
     getNextInstruction(currentPcAccessType);
-
 
     // TODO: just return one cycle per instr for now
     return 2;

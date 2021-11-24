@@ -14,11 +14,11 @@ void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
         //DEBUGWARN("cycles elapsed " << cyclesElapsed << "\n");
         //DEBUGWARN("timer prescaper " << timerPrescaler[x] << "\n");
         //DEBUGWARN("timer excess " << timerExcessCycles[x] << "\n");
-        uint32_t increments = (cyclesElapsed + timerExcessCycles[x]) / timerPrescaler[x];
+        uint32_t increments = (cyclesElapsed + timerExcessCycles[x]) / (timerPrescaler[x]);
 
         //DEBUGWARN("increments " << increments << "\n");
         if(increments != 0) {
-            timerExcessCycles[x] = (cyclesElapsed + timerExcessCycles[x]) % timerPrescaler[x];
+            timerExcessCycles[x] = (cyclesElapsed + timerExcessCycles[x]) % (timerPrescaler[x]);
         } else {
             timerExcessCycles[x] += cyclesElapsed;
         }
@@ -33,7 +33,7 @@ void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
             uint8_t cascadeX = x + 1;
             bool overflow = true;
             while(overflow && cascadeX <= 3 && timerCountUp[cascadeX] && timerStart[cascadeX]) {
-                timerCounter[cascadeX]++;
+                timerCounter[cascadeX] += 1;
                 if(timerCounter[cascadeX] > 0xFFFF) {
                     if(timerIrqEnable[cascadeX]) {
                         queueTimerInterrupt(cascadeX);
@@ -56,22 +56,22 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
     switch(address) {
         case 0x4000100: {
             bus->iORegisters[Bus::IORegister::TM0CNT_L] = timerCounter[0]; 
-            bus->iORegisters[Bus::IORegister::TM0CNT_L + 1] = timerCounter[0] >> 8; 
+            bus->iORegisters[Bus::IORegister::TM0CNT_L + 1] = (timerCounter[0]) >> 8; 
             break;
         }
         case 0x4000104: {
             bus->iORegisters[Bus::IORegister::TM1CNT_L] = timerCounter[1]; 
-            bus->iORegisters[Bus::IORegister::TM1CNT_L + 1] = timerCounter[1] >> 8; 
+            bus->iORegisters[Bus::IORegister::TM1CNT_L + 1] = (timerCounter[1]) >> 8; 
             break;
         }
         case 0x4000108: {
             bus->iORegisters[Bus::IORegister::TM2CNT_L] = timerCounter[2]; 
-            bus->iORegisters[Bus::IORegister::TM2CNT_L + 1] = timerCounter[2] >> 8; 
+            bus->iORegisters[Bus::IORegister::TM2CNT_L + 1] = (timerCounter[2]) >> 8; 
             break;
         }
         case 0x400010C: {
             bus->iORegisters[Bus::IORegister::TM3CNT_L] = timerCounter[3]; 
-            bus->iORegisters[Bus::IORegister::TM3CNT_L + 1] = timerCounter[3] >> 8; 
+            bus->iORegisters[Bus::IORegister::TM3CNT_L + 1] = (timerCounter[3]) >> 8; 
             break;
         } 
         default: {
@@ -171,6 +171,9 @@ void Timer::setTimerXControlHi(uint8_t val, uint8_t x) {
 }
 
 void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
+    // DEBUGWARN("setTimerXControlLo start\n");
+    // DEBUGWARN("x: " << (uint32_t)x << "\n");
+    // DEBUGWARN("prescaler addr: " << timerPrescaler << "\n");
     uint8_t prescalerSelection = val & 0x3;
     switch(prescalerSelection) {
         case 0: { timerPrescaler[x] = 1; break; }
@@ -179,6 +182,7 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
         case 3: { timerPrescaler[x] = 1024; break; }
         default: { break; }
     }
+
     timerCountUp[x] = val & 0x4;
     timerIrqEnable[x] = val & 0x40;
     if(!timerStart[x] && (val & 0x80)) {
@@ -187,7 +191,6 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
     }
     //DEBUGWARN("setting timer start " << (uint32_t)x << " " << (bool)(val & 0x80) << "\n");
     timerStart[x] = val & 0x80;
-
 }
 
 void Timer::setTimerXReloadHi(uint8_t val, uint8_t x) {

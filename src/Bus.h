@@ -170,6 +170,7 @@ class Bus {
     std::array<CycleType, 32> executionTimelineCycleType;
 
     PPU* ppu;
+public:
     Timer* timer; 
 
 };

@@ -13,11 +13,11 @@ int main(int argc, char *argv[]) {
         success = false;
     } else {
         PPU ppu;
-        Bus bus{&ppu};
         ARM7TDMI cpu;
         LCD screen;
         DMA dma;
         Timer timer;
+        Bus bus{&ppu};
 
         GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma, &timer);
         if(gba.loadRom(argv[1])) {

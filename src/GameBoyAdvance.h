@@ -11,6 +11,7 @@ class GameBoyAdvance {
    public:
     GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer);
     GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus);
+    GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, Timer* _timer);
     ~GameBoyAdvance();
 
     bool loadRom(std::string path);
