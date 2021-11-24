@@ -1,66 +1,40 @@
-# Game Boy Advance Emulator (WIP)
+# RyBoyAdvance
 
-This is a currently unnamed GBA emulator written in C++ and aimed at both performance and reasonable hardware accuracy. 
+The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
 
-This is still very much a work in progress. Currently working through the TONC GBA programming tutorial demo roms. I aim to get all these demos working before attempiting to run an actual game.
+## TODO:
+- [ ] Optimization (currently runs at 170FPS on my laptop)
 
-I am using various resources and documentation from the internet to help build this project (see Resources section)
+- [ ] Performant and accurate cycle counting / Gamepak prefetch
 
-Thanks for taking a look!
+- [ ] Implement all PPU modes and features
 
-## Progress
-:white_circle:  CPU - Clean up / refactor code
+- [ ] Getting a wide variety of games running
 
-:white_check_mark: CPU - 32bit ARM Instructions passing jsmolka's gba-suite test rom
-
-:white_check_mark:  CPU - 16bit THUMB Instructions passing jsmolka's gba-suite test rom
-
-:white_check_mark:  CPU - Framework for cycle counting 
-
-:white_circle: Gamepak Prefetch Buffer Emulation
-
-:white_circle: Picture processing unit (PPU) / LCD screen
-
-:white_circle: CPU - Interrupt handling
-
-:white_circle: Timer Hardware
-
-:white_check_mark: Bus - read / write capabilites
-
-:white_check_mark: DMA (most of it, see TODOs)
-
-:white_circle: Optimization (use profiler)
-
-:white_check_mark: `m3_demo.gba` test rom 
-
-:white_check_mark: `key_pad.gba` test rom
-
-:white_check_mark: `dma_demo.gba` test rom
-
-:white_check_mark: `win_demo.gba` test rom
-
-:white_check_mark: `obj_demo.gba` test rom
-
-:white_circle: Everything else!
+- [ ] Miscellaneous bugs 
 
 
-![Alt text](media/dma_demo.png?raw=true "Running TONC's dma demo")
+![Alt text](media/kirby1.png?raw=true)
+Still some graphical glitches....
 
-![Alt text](media/obj_demo.png?raw=true "Running TONC's obj demo")
+![Alt text](media/kirby2.png?raw=true)
+Kirby sucking!
 
 ## Building 
-* **Dependencies:** cmake, c++17, Curses, sfml
+* **Dependencies:** cmake, c++17, sfml
 * `cd build` `./build.sh`
+* Has only been tested on MacOS, but feel free to try it on Linux and Windows and provide feedback
 
 ## Running
 * **To run tests:** `cd build` `./build.sh` `ctest`
 
-* **To run ROM:** `cd build` `./gba <path_to_rom>`
+* **To run a ROM:** `cd build` `./gba <path_to_gba_rom>`
+
 
 
 ## Resources
 
-Here are the main resources I am using to develop the emulator
+Here are some resources I have been using to aid in developing this emulator
 
 * [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference)
 * ARM7TDMI Data Sheet: ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf
