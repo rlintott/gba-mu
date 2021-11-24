@@ -2,13 +2,14 @@
 
 The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
 
-## TODO:
+## Upcoming Features and TODO:
 - [ ] Optimization (currently runs at 170FPS on my laptop)
 - [ ] Performant and accurate cycle counting / Gamepak prefetch
 - [ ] Implement all PPU modes and features
 - [ ] Getting a wide variety of games running
 - [ ] Miscellaneous bugs 
 - [ ] CPU instruction accuracy (pass armwrestler ROM)
+- [ ] Unique API for debugging / live rom hacking
 
 ![Alt text](media/kirby1.png?raw=true)
 Still some graphical glitches....
@@ -22,7 +23,7 @@ Still some graphical glitches....
 * **To run a ROM:** `cd build` `./gba <path_to_gba_rom>`
 ## Resources
 Here are some resources I have been using to aid in developing this emulator
-* [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference)
-* ARM7TDMI Data Sheet: ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf
-* [Emudev Discord Server](https://discord.gg/xxkAe5xm)
+* [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference) is the authorotative reference for GBA's hardware
+* ARM7TDMI Data Sheet: ftp://ftp.dca.fee.unicamp.br/pub/docs/ea871/ARM/ARM7TDMIDataSheet.pdf CPU reference sheet
+* [Emudev Discord Server](https://discord.gg/xxkAe5xm) a welcoming and helpful EmuDev community
 
