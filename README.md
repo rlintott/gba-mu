@@ -12,9 +12,10 @@ The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with a
 - [ ] Improved CPU instruction accuracy
 - [ ] Sound controller
 
-![Alt text](media/kirby1.png?raw=true)
 Still some graphical glitches....
+![Alt text](media/kirby1.png?raw=true)
 ![Alt text](media/kirby2.png?raw=true)
+
 ## Building 
 * **Dependencies:** cmake, c++17, sfml
 * `cd build` `./build.sh`
