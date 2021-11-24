@@ -3,13 +3,14 @@
 The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
 
 ## Upcoming Features and TODO:
-- [ ] Optimization (currently runs at 170FPS on my laptop)
-- [ ] Performant and accurate cycle counting / Gamepak prefetch
-- [ ] Implement all PPU modes and features
-- [ ] Getting a wide variety of games running
-- [ ] Miscellaneous bugs 
-- [ ] CPU instruction accuracy (pass armwrestler ROM)
+- [ ] Optimization (RyBoyAdvance currently runs around 170FPS on my laptop)
 - [ ] Unique API for debugging / live rom hacking
+- [ ] Performant and accurate cycle counting / Gamepak prefetch emulation
+- [ ] All PPU modes and features
+- [ ] Getting more games running
+- [ ] Miscellaneous bugs 
+- [ ] Improved CPU instruction accuracy
+- [ ] Sound controller
 
 ![Alt text](media/kirby1.png?raw=true)
 Still some graphical glitches....
