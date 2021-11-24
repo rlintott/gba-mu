@@ -96,7 +96,7 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
 
     while(true) {
-        uint32_t dmaCycles = dma->step(hBlank, vBlank, nextScanline);
+        uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
         cyclesThisStep += dmaCycles;
         timer->step(cyclesThisStep);
 
@@ -121,7 +121,7 @@ void GameBoyAdvance::loop() {
         }
 
         if(totalCycles >= nextHBlankEnd) {
-            ppu->renderScanline(currentScanline);
+            ppu->renderScanline(nextScanline);
             // setting hblank flag to 0
             currentScanline += 1;
             currentScanline %= 228;
@@ -176,7 +176,7 @@ void GameBoyAdvance::loop() {
             frames++;
 
             if((frames % 60) == 0) {
-                //DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
+                DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
 

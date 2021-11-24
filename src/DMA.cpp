@@ -17,6 +17,25 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     uint8_t startTiming = (control & 0x3000) >> 12;
 
+    if(startTiming == 3) {
+        if(x == 1 || x == 2) {
+            // sound FIFO mode
+            if(false /*TODO: if soundControllerRequest*/) {
+            } else {
+                return 0;
+            }
+        } else if(x == 3) {
+            // video capture mode
+            if(!hBlank || (!dmaXEnabled[x] && scanline != 2)) {
+                // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2,
+                // it is then repeated each scanline, and it gets stopped when VCOUNT=162
+                return 0;
+            }
+        } else {
+            assert(false);
+        }
+    }
+
     if(startTiming == 1) {
         if(!vBlank) {
             return 0;
@@ -28,23 +47,31 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
     }
 
-    //EBUGWARN("dma start\n");
+    // TODO: Game Pak DRQ  - DMA3 only -  (0=Normal, 1=DRQ <from> Game Pak, DMA3)
+
+    //DEBUGWARN("dma start\n");
     //DEBUGWARN(hBlank << "\n");
     //DEBUGWARN("control " << (uint32_t)control << "\n");
-    //DEBUGWARN("startTiming " << (uint32_t)startTiming << "\n");
+    //DEBUGWARN("startTiming: " << (uint32_t)startTiming << "\n");
+    //DEBUGWARN("dma:  " << (uint32_t)x << "\n");
+    //DEBUGWARN(dmaXWordCount[x] << "\n");
 
-    // TODO: fix this
-    if(x == 3 && startTiming == 3) {
-        uint8_t vCount = bus->iORegisters[Bus::IORegister::VCOUNT];
-        if((vCount != 2 && !inVideoCaptureMode) || vCount > 162) {
-            inVideoCaptureMode = false;
-            return 0;
-        } else {
-            inVideoCaptureMode = true;
-        }
+    // TODO: implement this
+    if(startTiming == 3) {
+        if(x == 3) {
+            // video capture mode  using this transfer mode, set the repeat bit, 
+            //and write the number of data units (per scanline) to the word count register. 
+            // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2, 
+            //it is then repeated each scanline, and it gets stopped when VCOUNT=162
+            uint8_t vCount = bus->iORegisters[Bus::IORegister::VCOUNT];
+            if((vCount != 2 && !inVideoCaptureMode) || vCount > 162) {
+                inVideoCaptureMode = false;
+                return 0;
+            } else {
+                inVideoCaptureMode = true;
+            }
+        } 
     }
-
-    
 
     bus->resetCycleCountTimeline();
 
@@ -73,7 +100,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         // 40000B8h - DMA0CNT_L - DMA 0 Word Count (W) (14 bit, 1..4000h)
         dmaXWordCount[x] = (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + ioRegOffset]) |
                             ((uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset]) << 8);
-
+        
 
         // SPECIAL BEHAVIOURS FOR DIFFERENT X
         switch(x) {
@@ -160,7 +187,6 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
         // TODO: TEMPORARY CYCLE COUNTING UNTIL WAITSTATES DONE PROPERLY
 
-
         // iterating source memory pointer
         // (0=Increment,1=Decrement,2=Fixed,3=prohibited)
         switch(srcAdjust) {
@@ -207,12 +233,19 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     if(!(control & 0x0200)) {
         // DMA Repeat (0=Off, 1=On) (Must be zero if Bit 11 set)
         // if not dma repeat, set enable bit = 0 when done transfer
-        bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] = 
-            (bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] & 0x7F);
+        //DEBUGWARN("no dma repeat: setting dma enabled to false\n");
+        bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] &= 0x7F;
         dmaXEnabled[x] = false;
         //DEBUGWARN("imm after setting: " << (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset]) << "\n");
     } else {
-        if((startTiming == 2 && scanline >= (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1) {
+        // else, dma repeat is set, so 
+        //DEBUGWARN("dma repeat: setting dma enabled to false\n");
+        // 
+        if((startTiming == 2 && scanline >= (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1 || 
+           (startTiming == 3 && x == 3 && scanline >= 162))
+            /* TODO: || (startTiming == 3 && (x == 1 || x == 2) && soundControllerFifoRequest) || 
+                        (startTiming == 3 && x == 3 && scanline >= (PPU::SCREEN_HEIGHT - 1))*/ {
+            // hblank repeat ends when in vblank, vlbank repeat only runs once per blank
             dmaXEnabled[x] = false;
         }
         dmaXWordCount[x] = (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + ioRegOffset]) |
@@ -222,13 +255,14 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                     ((uint32_t)(bus->iORegisters[Bus::IORegister::DMA0DAD + 1 + ioRegOffset]) << 8) | 
                     ((uint32_t)(bus->iORegisters[Bus::IORegister::DMA0DAD + 2 + ioRegOffset]) << 16) | 
                     ((uint32_t)(bus->iORegisters[Bus::IORegister::DMA0DAD + 3 + ioRegOffset]) << 24);
-            // TODO: rules for masking dest addr
+            // TODO: rules for masking dest addr 
         }
 
 
     }
     if(control & 0x4000) {
         //irq at end of word count
+        DEBUGWARN("irq\n");
         switch(x) {
             case 0: {
                 cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA0);
