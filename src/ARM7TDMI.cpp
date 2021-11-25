@@ -49,7 +49,7 @@ uint32_t ARM7TDMI::step() {
     // TODO: give this method a better name
     bus->resetCycleCountTimeline();
     //DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
-
+   // DEBUGWARN("start\n");
 
     if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
         (!cpsr.I) &&
@@ -63,25 +63,6 @@ uint32_t ARM7TDMI::step() {
         //DEBUGWARN("irq fn ended\n");
 
     }
-    // #ifndef NDEBUGWARN
-    // if(!cpsr.T) {
-    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-    //         currInstruction, 
-    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
-    //         psrToInt(getCpsr()));
-    // } else {
-    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-    //         currInstruction, 
-    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
-    //         psrToInt(getCpsr()));      
-    // }
-    // #endif
     
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
@@ -128,6 +109,8 @@ uint32_t ARM7TDMI::step() {
 
 
     getNextInstruction(currentPcAccessType);
+
+    //DEBUGWARN("end\n");
 
     // TODO: just return one cycle per instr for now
     return 2;

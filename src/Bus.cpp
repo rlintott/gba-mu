@@ -287,6 +287,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
+            //DEBUGWARN("start\n");
             DEBUG("reading from wramChip addr: " << address << "\n");
             if(address > 0x03007FFF) {
                 break;
@@ -306,6 +307,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                     break;
                 }
             }     
+            //DEBUGWARN("end\n");
             break;
         }      
         case 0x04000000: {
@@ -712,7 +714,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x02000000 <= address && address <= 0x0203FFFF) {
         DEBUG("writing to wramBoard\n");
-
+        //DEBUGWARN("start write at 0x02000000\n");
         switch(width) {
             case 32: {
                 writeToArray32(&wRamBoard, address, 0x02000000, value);
@@ -731,12 +733,14 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 break;
             }
         }
+        //DEBUGWARN("end write at 0x02000000\n");
 
     } else if (0x03000000 <= address && address <= 0x03FFFFFF) {
         DEBUG("writing to wramChip\n");
 
         // mirrored every 8000 bytes
         address &= 0x03007FFF;
+        //DEBUGWARN("starr\n");
         //DEBUGWARN("writing from wramChip addr: " << address << "\n");
 
         switch(width) {
@@ -756,7 +760,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 assert(false);
                 break;
             }
-        }     
+        } 
+        //DEBUGWARN("end\n");    
         //DEBUGWARN("done writing to ram chip\n");
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {

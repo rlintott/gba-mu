@@ -26,7 +26,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         } else if(x == 3) {
             // video capture mode
-            if(!hBlank || (!dmaXEnabled[x] && scanline != 2)) {
+            if(!hBlank || (scanline != 2)) {
                 // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2,
                 // it is then repeated each scanline, and it gets stopped when VCOUNT=162
                 return 0;
@@ -57,21 +57,21 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     //DEBUGWARN(dmaXWordCount[x] << "\n");
 
     // TODO: implement this
-    if(startTiming == 3) {
-        if(x == 3) {
-            // video capture mode  using this transfer mode, set the repeat bit, 
-            //and write the number of data units (per scanline) to the word count register. 
-            // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2, 
-            //it is then repeated each scanline, and it gets stopped when VCOUNT=162
-            uint8_t vCount = bus->iORegisters[Bus::IORegister::VCOUNT];
-            if((vCount != 2 && !inVideoCaptureMode) || vCount > 162) {
-                inVideoCaptureMode = false;
-                return 0;
-            } else {
-                inVideoCaptureMode = true;
-            }
-        } 
-    }
+    // if(startTiming == 3) {
+    //     if(x == 3) {
+    //         // video capture mode  using this transfer mode, set the repeat bit, 
+    //         //and write the number of data units (per scanline) to the word count register. 
+    //         // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2, 
+    //         //it is then repeated each scanline, and it gets stopped when VCOUNT=162
+    //         uint8_t vCount = bus->iORegisters[Bus::IORegister::VCOUNT];
+    //         if((vCount != 2 && !inVideoCaptureMode) || vCount > 162) {
+    //             inVideoCaptureMode = false;
+    //             return 0;
+    //         } else {
+    //             inVideoCaptureMode = true;
+    //         }
+    //     } 
+    // }
 
     bus->resetCycleCountTimeline();
 
@@ -144,9 +144,12 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     }
 
-    //DEBUGWARN(wordCount << " is wordCount \n"); 
-    //DEBUGWARN(destAddr << " is dest \n"); 
-    //DEBUGWARN(sourceAddr << " is source \n"); 
+    // DEBUGWARN(dmaXWordCount[x] << " is wordCount \n"); 
+    // DEBUGWARN((uint32_t)x << " is x \n"); 
+    if(x == 3 && dmaXDestAddr[x] >= 0xD000000) {
+        // TODO: temporarily disabling dma gamepak ROM writing. implement it
+        return 0;
+    }
 
     bool thirtyTwoBit = control & 0x0400; //  (0=16bit, 1=32bit)
     bool firstAccess = true;
@@ -160,8 +163,11 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     uint32_t offset = thirtyTwoBit ? 4 : 2;
 
     // writing / reading from memeory
-   
-    for(uint16_t i = 0; i < dmaXWordCount[x]; i++) {
+
+    for(uint32_t i = 0; i < dmaXWordCount[x]; i++) {
+        // DEBUGWARN(i << " is i \n"); 
+        // DEBUGWARN(dmaXDestAddr[x] << " is dest \n"); 
+        // DEBUGWARN(dmaXSourceAddr[x] << " is source \n"); 
         if(thirtyTwoBit) {
             if(firstAccess) { 
                 uint32_t value = bus->read32(dmaXSourceAddr[x], Bus::NONSEQUENTIAL);
@@ -227,7 +233,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
-        tempCycles += 4;
+        tempCycles += 2;
     }
 
     if(!(control & 0x0200)) {
@@ -287,7 +293,6 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     }
     //DEBUGWARN("temp cycles " << tempCycles << "\n");
     //DEBUGWARN(bus->ppuMemDirty << "\n");
-    //DEBUGWARN("dma end\n");
 
     return tempCycles;
 }
