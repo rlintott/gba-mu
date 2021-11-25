@@ -1,8 +1,10 @@
 #include "PPU.h"
 #include "Bus.h"
 #include "assert.h"
+#include <SFML/Graphics.hpp>
 #include <utility>
 #include <algorithm>
+#include <string>
 
 PPU::PPU() {
 
@@ -197,8 +199,10 @@ void PPU::renderSprites(uint16_t scanline) {
         // to be included in spriteBuffer pixel bits 16-17 for render calclation at frame draw time
         uint32_t drawMode = (uint32_t)(objAttr0 & 0x0C00) << 6;
 
+        // TODO: sign extend (objAttr2 & 0x03FF) in case offset is negaqtive
         uint32_t offset = 0x10000 + ((objAttr2 & 0x03FF)/* charName */ * 0x20); 
-        //DEBUGWARN(offset << "\n");
+        // DEBUGWARN(offset << "\n");
+        // DEBUGWARN(objAttr2 << "\n");
         uint8_t paletteBank = (objAttr2 & 0xF000) >> 8;
         bool colorMode = objAttr0 & 0x2000; // 16 colors (4bpp) if cleared; 256 colors (8bpp) if set.
         uint8_t priority = (objAttr2 & 0x0C00) >> 10;
@@ -254,10 +258,10 @@ void PPU::renderSprites(uint16_t scanline) {
                         if(colorMode) {
                             colour = indexObjPalette8Bpp(bus->vRam[tile + tileY * 8 + tileX]);
                         } else {
-                            if((tileY * 8 + tileX) % 2) {
+                            if((tileX) % 2) {
                                 colour = indexObjPalette4Bpp(((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF0) >> 4) | paletteBank); 
                             } else {
-                                colour = indexObjPalette4Bpp(bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF | paletteBank);
+                                colour = indexObjPalette4Bpp((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF) | paletteBank);
                             }
                         }
                         if(colour != transparentColour) {
@@ -354,43 +358,61 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
     for(uint8_t x = 0; x < width; x++) {
         uint8_t screenBlockX = x / 32;
         for(uint8_t y = 0; y < height; y++) {
+            /*
+            In 'Text Modes', the screen size is organized as follows: 
+            The screen consists of one or more 256x256 pixel (32x32 tiles) areas. 
+            When Size=0: only 1 area (SC0), 
+            when Size=1 or Size=2: two areas (SC0,SC1 either horizontally or vertically arranged next to each other), 
+            when Size=3: four areas (SC0,SC1 in upper row, SC2,SC3 in lower row). 
+            Whereas SC0 is defined by the normal BG Map base address 
+            (Bit 8-12 of BGxCNT), SC1 uses same address +2K, SC2 address +4K, SC3 address +6K. 
+            When the screen is scrolled it'll always wraparound.
+            */
             uint8_t screenBlockY = y / 32;
-            uint8_t screenBlock = screenBlockX + screenBlockY * width / 32;
-            uint32_t addr = (((y % 32) * 32) + (x % 32)) * 2 + screenBaseBlock * 0x800 + screenBlock * 0x800;
-            uint16_t screenEntry = bus->vRam[addr] | 
-                                  (bus->vRam[addr + 1] << 8);
+            uint8_t screenBlock = (screenBlockX + screenBlockY * (width / 32));
 
-            uint8_t hFlipMultiplier = 1;
-            uint8_t hFlipOffset = 0;
-            uint8_t vFlipMultiplier = 1;
-            uint8_t vFlipOffset = 0;
+            uint32_t addr = (((y % 32) * 32) + (x % 32)) * 2 + (screenBaseBlock + screenBlock) * 0x800;
+            
+            uint16_t screenEntry = ((uint16_t)bus->vRam[addr]) | 
+                                  ((uint16_t)(bus->vRam[addr + 1] << 8));
+
+
+            int8_t hFlipMultiplier = 1;
+            int8_t hFlipOffset = 0;
+            int8_t vFlipMultiplier = 1;
+            int8_t vFlipOffset = 0;
 
             if(screenEntry & 0x0400) {
                 // hFlip
-                hFlipMultiplier = -1;
-                hFlipOffset = 7;
+                 hFlipMultiplier = -1;
+                 hFlipOffset = 7;
             }
             if(screenEntry & 0x0800) {
-                // vFlip
+                 // vFlip
                 vFlipMultiplier = -1;
                 vFlipOffset = 7;
             }
 
             // first check if this tile will be rendered
-            screenY = ((uint32_t)(y * 8 + (vFlipOffset + vFlipMultiplier * 0)) - vOffset) % (height * 8);
-            if((screenY + 7) < scanline) continue;
+            screenY = ((uint32_t)(y * 8 + (vFlipOffset + vFlipMultiplier * 0)) - vOffset) % ((uint32_t)height * 8);
+            if((screenY + 7) < scanline) {continue;}
 
             uint8_t paletteBank = (screenEntry & 0xF000) >> 8;
+
             uint32_t tileIndex = screenEntry & 0x3FF;
-            uint32_t offset = tileBaseBlock * 0x4000 + tileIndex * tileWidth; // TODO: or 64 if in 8bpp mode
+            uint32_t offset = ((uint32_t)tileBaseBlock) * 0x4000 + tileIndex * tileWidth; // TODO: or 64 if in 8bpp mode
 
             for(uint8_t tileY = 0; tileY < 8; tileY++) {
-                screenY = ((uint32_t)(y * 8 + (vFlipOffset + vFlipMultiplier * tileY)) - vOffset) % (height * 8);
+                screenY = (((uint32_t)y * 8 + (vFlipOffset + vFlipMultiplier * tileY)) - vOffset) % ((uint32_t)height * 8);
+                // if(vFlipMultiplier == (uint8_t)(-1)) {
+                //    DEBUGWARN("screenY: " << screenY << "\n");
+                // }
                 if(screenY != scanline) {
                     continue;
                 }
                 for(uint8_t tileX = 0; tileX < 8; tileX++) {
-                    screenX = ((uint32_t)(x * 8 + (hFlipOffset + hFlipMultiplier * tileX)) - hOffset) % (width * 8);
+                    screenX = (((uint32_t)x * 8 + (hFlipOffset + hFlipMultiplier * tileX)) - hOffset) % ((uint32_t)width * 8);
+                    
                     if(screenX >= SCREEN_WIDTH || screenY >= SCREEN_HEIGHT) {
                         continue;
                     }
@@ -399,16 +421,29 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
                         bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
                             indexBgPalette8Bpp(bus->vRam[offset + tileY * 8 + tileX]) | ((uint32_t)priority << 16);
                    } else {
-                        if((tileY * 8 + tileX) % 2) {
+                        if(tileX % 2) {
+                            // tile x odd
+                            if((((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4)) == 0) {
+                                // DEBUGWARN("is zero 1!\n");
+                                // DEBUGWARN("offset: " << offset << "\n");
+                                // DEBUGWARN("tileY: " << (uint32_t)tileY << "\n");
+                                // DEBUGWARN("tileX: " << (uint32_t)tileX << "\n");
+                                // DEBUGWARN("addr: " << (offset + ((tileY * 8 + tileX) / 2)) << "\n");
+                            }
                             bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
                                 indexBgPalette4Bpp(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4) | paletteBank) | 
                                 ((uint32_t)priority << 16);
                         } else {
+                            // tile x even
+                            if(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF) | paletteBank) == 0) {
+                               // DEBUGWARN("is zero 2!\n");
+                            }
                             bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
                                 indexBgPalette4Bpp((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF) | paletteBank) |
                                 ((uint32_t)priority << 16);
                         }                    
                     }
+
                 }
                 if(screenY == scanline) break;
             }
@@ -439,6 +474,7 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
 
     bool win0Enabled = false;
     bool win1Enabled = false;
+
 
     for(int y = 0; y < SCREEN_HEIGHT; y++) {
         uint8_t windowBgMask;
@@ -509,7 +545,7 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                     // TODO: sprite window
 
                 } else {
-                    if(!isTransparent(bgPixel)) {
+                   if(!isTransparent(bgPixel)) {
                         pixelBuffer[y * SCREEN_WIDTH + x] = bgPixel & 0xFFFF;
                     } 
                     if(!isTransparent(spritePixel)) {
@@ -525,7 +561,6 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
     for(auto& windowData : scanlineBgWindowData) {
         windowData.enabled = false;
     }
-
 
     return pixelBuffer;
 }
