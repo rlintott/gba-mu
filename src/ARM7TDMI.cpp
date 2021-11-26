@@ -63,7 +63,7 @@ uint32_t ARM7TDMI::step() {
         //DEBUGWARN("irq fn ended\n");
 
     }
-    
+
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;

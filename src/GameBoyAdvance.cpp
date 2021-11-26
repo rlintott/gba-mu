@@ -96,19 +96,19 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
 
     while(true) {
-        //DEBUGWARN(1 << "\n");
+
         uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
         cyclesThisStep += dmaCycles;
-        //DEBUGWARN(2 << "\n");
+    
         timer->step(cyclesThisStep);
-        //DEBUGWARN(3 << "\n");
+
         totalCycles += cyclesThisStep;
         cyclesThisStep = 0;
 
         vBlank = false;
         hBlank = false;
         cyclesThisStep += arm7tdmi->step();
-        //DEBUGWARN(4 << "\n");
+    
         if(totalCycles >= nextHBlank) { 
             hBlank = true;    
 
@@ -120,8 +120,7 @@ void GameBoyAdvance::loop() {
 
             nextHBlank += PPU::H_TOTAL;
         }
-        //DEBUGWARN(5 << "\n");
-
+    
         if(totalCycles >= nextHBlankEnd) {
             ppu->renderScanline(nextScanline);
             // setting hblank flag to 0
@@ -148,7 +147,6 @@ void GameBoyAdvance::loop() {
 
             bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
         }
-        //DEBUGWARN(6 << "\n");
         if(totalCycles >= nextVBlankEnd) {
             // setting vblank flag to 0
             nextVBlankEnd += PPU::V_TOTAL;
@@ -156,6 +154,7 @@ void GameBoyAdvance::loop() {
         }
 
         if(totalCycles >= nextVBlank) {
+
             vBlank = true;
             // TODO: v blank interrupt if enabled
             if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
@@ -182,7 +181,6 @@ void GameBoyAdvance::loop() {
                 DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
             }
         }
-        //DEBUGWARN(7 << "\n");
 
     }
 }

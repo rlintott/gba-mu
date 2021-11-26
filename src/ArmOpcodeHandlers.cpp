@@ -483,6 +483,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
         offset = instruction & 0x00000FFF;
     }
     uint32_t address = rnVal;
+    DEBUG(address << " < - address\n");
+    DEBUG(offset << " < - offset\n");
+    DEBUG((uint32_t)rn << " < - rn\n");
+    DEBUG((uint32_t)rd << " < - rd\n");
+    DEBUG(dataTransGetL(instruction) << " < - l\n");
 
     // U - Up/Down Bit (0=down; subtract offset
     // from base, 1=up; add to base)
@@ -548,6 +553,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
             cpu->bus->write32(address & 0xFFFFFFFC, (rdVal), 
                               Bus::CycleType::NONSEQUENTIAL);
         }
+        
         return NONSEQUENTIAL;
     }
 }
@@ -564,8 +570,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHand
     uint32_t rnVal =
         (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
 
+    DEBUG((uint32_t)rd << " <- rd\n");
+    DEBUG((uint32_t)rn << " <- rn\n");
+
     uint32_t offset = 0;
     bool l = dataTransGetL(instruction);
+
+    DEBUG((uint32_t)l << " <- l\n");
 
     if (instruction & 0x00400000) {
         // immediate as offset
@@ -600,6 +611,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::halfWordDataTransHand
     }
 
     uint8_t opcode = (instruction & 0x00000060) >> 5;
+    DEBUG((uint32_t)opcode << " <- opcode\n");
+    DEBUG((uint32_t)address << " <- address\n");
     switch (opcode) {
         case 0: {
             // Reserved for SWP instruction

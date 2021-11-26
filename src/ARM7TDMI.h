@@ -7,7 +7,7 @@
 #include <vector>
 
 #define NDEBUG 1;
-//define NDEBUGWARN 1;
+//#define NDEBUGWARN 1;
 
 #ifdef NDEBUG
 #define DEBUG(x)
@@ -118,6 +118,7 @@ class ARM7TDMI {
     ProgramStatusRegister SPSR_irq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+    bool debug = false;
   
    private:
 
@@ -382,7 +383,6 @@ class ARM7TDMI {
     // R14_irq
     void setUserRegister(uint8_t index, uint32_t value);
 
-    friend class Debugger;
 
     void switchToMode(Mode mode);
 
