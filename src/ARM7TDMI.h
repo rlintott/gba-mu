@@ -149,6 +149,7 @@ class ARM7TDMI {
         static ARM7TDMI::FetchPCMemoryAccess blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::FetchPCMemoryAccess branchHandler(uint32_t instruction, ARM7TDMI *cpu);
         static ARM7TDMI::FetchPCMemoryAccess branchAndExchangeHandler(uint32_t instruction, ARM7TDMI *cpu);
+        static ARM7TDMI::FetchPCMemoryAccess swiHandler(uint32_t instruction, ARM7TDMI *cpu);
 
     };
 

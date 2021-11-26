@@ -970,7 +970,36 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::branchAndExchangeHand
     return BRANCH;
 }
 
+/* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::swiHandler(
+    uint32_t instruction, ARM7TDMI *cpu) {
+   // DEBUGWARN("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
+    uint8_t opcode = (instruction & 0x0F000000);
+
+    switch(opcode) {
+        case 0x0F000000: {
+            // 1111b: SWI{cond} nn   ;software interrupt
+            cpu->switchToMode(Mode::SUPERVISOR);
+            // switch to ARM mode, interrupts disabled
+            cpu->cpsr.T = 0;
+            cpu->cpsr.I = 1; 
+            cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER));
+            cpu->setRegister(PC_REGISTER, 0x18);
+            break;
+        } 
+        case 0x01000000: {
+            // 0001b: BKPT      nn   ;breakpoint (ARMv5 and up)
+            DEBUGWARN("BKPT instruction not implemented!\n");
+            break;
+        }
+        default: {
+            assert(false);
+            break;
+        }
+    }
+    return BRANCH;
+}
 
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 

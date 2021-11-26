@@ -152,7 +152,6 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
 }
 
 void ARM7TDMI::irq() {
-    //DEBUGWARN("hello?\n");
     //DEBUGWARN("irq1\n");
 
     uint32_t returnAddr = getRegister(PC_REGISTER) + 4;
@@ -448,9 +447,8 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
         }
         case 0b00001110000000000000000000000000: { // SWI
             // TODO: implement software interrupt
-            DEBUGWARN("ARM SWI NOT IMPLEMENTED!!!\n");
-            break;
-
+            //DEBUGWARN("ARM SWI!!!\n");
+            return ArmOpcodeHandlers::swiHandler;
         }
         case 0b00000100000000000000000000000000: {  // transImm9
             return ArmOpcodeHandlers::singleDataTransHandler;
@@ -462,7 +460,6 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
 
             } else {  // Undefined
                 return ArmOpcodeHandlers::undefinedOpHandler;
-
             }
             break;
         }
