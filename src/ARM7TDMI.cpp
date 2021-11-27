@@ -117,6 +117,7 @@ uint32_t ARM7TDMI::step() {
 }
 
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
+    DEBUG("getting instruction from: " << getRegister(PC_REGISTER) << "\n");
     switch(currentPcAccessType) {
         case SEQUENTIAL: {
             currInstruction = 

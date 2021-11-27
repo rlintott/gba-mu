@@ -37,6 +37,8 @@ Bus::Bus(PPU* ppu) {
     for(int i = 0; i < 65792; i++) {
         gamePakSram.push_back(0);
     }
+    // TODO, use resize fn for initialization
+    gamePakRom.resize(32000000);
     this->ppu = ppu;
 }
 
@@ -86,7 +88,7 @@ void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8
     }
 
     switch(shift) {
-        case 0: // BIOS
+        case 0: // bios
         case 0x03000000:  // CHIP RAM    
         case 0x04000000: { // IO
             executionTimelineCycles[executionTimelineSize] = 1;
@@ -235,12 +237,14 @@ void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8
 
 uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
-    uint32_t shift = address & 0x0F000000;
+    uint32_t shift = address & 0xFF000000;
     //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
     switch(shift) {
-        case 0: {
-            if(address > 0x00003FFF) {
+        case 0x0:
+        case 0x01: {
+            if(0x00004000 <= address && address <= 0x01FFFFFF)  {
+                DEBUGWARN("reading from unused memory! address " << address << "\n");
                 break;
             }
             switch(width) {
@@ -400,7 +404,12 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x08000000:
         case 0x09000000: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-            // waitstate 0
+            // waitstate 0 
+            if(address - 0x08000000 > gamePakRom.size()) {
+                DEBUGWARN("bigger!\n");
+                DEBUGWARN(address - 0x08000000 << "\n");
+                DEBUGWARN(gamePakRom.size() << " <- gamepakrom size\n");
+            }
             DEBUG("reading from gamepak\n");
             switch(width) {
                 case 32: {
@@ -417,6 +426,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                     break;
                 }
             } 
+            DEBUG("done reading from gamepak\n");
             break;  
         } 
         case 0x0A000000:
@@ -485,6 +495,14 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
 
             break;
         }
+        default: {  
+            // TODO: implement unused memory access behaviour (and check for unused memory writes)
+            if(0x10000000 <= address && address <= 0xFFFFFFFF) {
+                DEBUGWARN("reading from unused memory! address " << address << "\n");
+            }
+            break;
+        }
+
     }
 
     // if(address <= 0x00003FFF) {
@@ -890,6 +908,12 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
     } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
         //  TODO: *** Separate timings for sequential, and non-sequential accesses.
         // waitstate 0
+
+        if(address - 0x08000000 > gamePakRom.size()) {
+            DEBUGWARN("bigger!\n");
+            DEBUGWARN(address - 0x08000000 << "\n");
+        }
+
         switch(width) {
             case 32: {
                 writeToArray32(&gamePakRom, address, 0x08000000, value);
@@ -979,7 +1003,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
-        gamePakRom.push_back(buffer[i]);
+        gamePakRom[i] = buffer[i];
     }
 }
 

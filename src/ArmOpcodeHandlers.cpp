@@ -518,14 +518,17 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
             cpu->setRegister(rd, (uint32_t)(cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL)));
         } else {  // transfer 32 bits
             if ((address & 0x00000003) != 0 && (address & 0x00000001) == 0) {
+                DEBUG("1\n");
                 // aligned to half-word but not word
                 uint32_t low = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
                 uint32_t hi = (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
                 uint32_t full = ((hi << 16) | low);
+                DEBUG("2\n");
                 cpu->setRegister(rd, 
                                  aluShiftRor(cpu->bus->read32(full & 0xFFFFFFFC, 
                                  Bus::CycleType::NONSEQUENTIAL),
                                  (full & 3) * 8));
+                DEBUG("3\n");
             } else {
 
                 // aligned to word
