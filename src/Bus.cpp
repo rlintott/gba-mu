@@ -244,7 +244,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0:
         case 0x01: {
             if(0x00004000 <= address && address <= 0x01FFFFFF)  {
-                DEBUGWARN("reading from unused memory! address " << address << "\n");
+                //DEBUGWARN("reading from unused memory! address " << address << "\n");
                 break;
             }
             switch(width) {
@@ -498,7 +498,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         default: {  
             // TODO: implement unused memory access behaviour (and check for unused memory writes)
             if(0x10000000 <= address && address <= 0xFFFFFFFF) {
-                DEBUGWARN("reading from unused memory! address " << address << "\n");
+                //DEBUGWARN("reading from unused memory! address " << address << "\n");
             }
             break;
         }

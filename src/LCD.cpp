@@ -42,8 +42,8 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
 }
 
 void LCD::initWindow() {
-    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH * defaultScreenSize, 
-                                                   PPU::SCREEN_HEIGHT * defaultScreenSize), 
+    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH, 
+                                                   PPU::SCREEN_HEIGHT), 
                                                    "RyBoyAdvance");
     pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);
     pixels.setPrimitiveType(sf::Quads);

@@ -119,6 +119,10 @@ class ARM7TDMI {
     ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     bool debug = false;
+    
+    static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
+    static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
+
   
    private:
 
@@ -279,9 +283,6 @@ class ARM7TDMI {
     static uint32_t aluShiftLsl(uint32_t value, uint8_t shift);
     static uint32_t aluShiftLsr(uint32_t value, uint8_t shift);
     static uint32_t aluShiftAsr(uint32_t value, uint8_t shift);
-    static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
-    static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
-
     Cycles execAluOpcode(uint8_t opcode, uint32_t rd, uint32_t op1,
                          uint32_t op2);
 
