@@ -155,6 +155,14 @@ void GameBoyAdvance::loop() {
 
         if(totalCycles >= nextVBlank) {
 
+            // TODO: very temporary
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::P) && 
+               sf::Keyboard::isKeyPressed(sf::Keyboard::K)) {
+                arm7tdmi->debug = true;
+            } else {
+                arm7tdmi->debug = false;
+            }
+
             vBlank = true;
             // TODO: v blank interrupt if enabled
             if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {

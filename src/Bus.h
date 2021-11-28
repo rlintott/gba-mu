@@ -69,12 +69,13 @@ class Bus {
         TM3CNT_L = 0x0400010C - 0x04000000, // TM0CNT_L  Timer 0 Counter/Reload
 
         /*
-            TODO: 
                 4000800h - 32bit - Undocumented - Internal Memory Control (R/W)
                 Supported by GBA and GBA SP only - NOT supported by DS (even in GBA mode).
                 Also supported by GBA Micro - but crashes on "overclocked" WRAM setting.
                 Initialized to 0D000020h (by hardware). Unlike all other I/O registers, this register is mirrored across the whole I/O area (in increments of 64K, ie. at 4000800h, 4010800h, 4020800h, ..., 4FF0800h)
+                TODO: implement more logic for this
         */
+        INTERNAL_MEM_CNT = 0x04000800 - 0x04000000
     };
 
     

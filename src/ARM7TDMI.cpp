@@ -87,25 +87,27 @@ uint32_t ARM7TDMI::step() {
         currentPcAccessType = handler(currInstruction, this);
     }
 
-    // #ifndef NDEBUGWARN
-    // if(!cpsr.T) {
-    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-    //         currInstruction, 
-    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
-    //         psrToInt(getCpsr()));
-    // } else {
-    //     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-    //         currInstruction, 
-    //         getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-    //         getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-    //         getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-    //         getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
-    //         psrToInt(getCpsr()));      
-    // }
-    // #endif
+    if(debug) {
+        #ifndef NDEBUGWARN
+        if(!cpsr.T) {
+            printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+                currInstruction, 
+                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+                getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
+                psrToInt(getCpsr()));
+        } else {
+            printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+                currInstruction, 
+                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+                getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
+                psrToInt(getCpsr()));      
+        }
+        #endif
+    }
 
 
     getNextInstruction(currentPcAccessType);
