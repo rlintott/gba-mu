@@ -549,15 +549,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ArmOpcodeHandlers::singleDataTransHandle
     } else {
         // STR{cond}{B}{T} Rd,<Address>   ;[Rn+/-<offset>]=Rd
         if (b) {  // transfer 8 bits
-            if(rdVal == 0xA5B6C7D8) {
-                // DEBUGWARN("WHAT THE FUCK!\n");
-                // DEBUGWARN("address: " << address << "\n");
-            }
             cpu->bus->write8(address, (uint8_t)(rdVal), 
                              Bus::CycleType::NONSEQUENTIAL);
-            // if(rdVal == 0xA5B6C7D8) {
-            //     DEBUGWARN("done writing\n");
-            // }   
         } else {  // transfer 32 bits
             cpu->bus->write32(address & 0xFFFFFFFC, (rdVal), 
                               Bus::CycleType::NONSEQUENTIAL);

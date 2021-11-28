@@ -368,7 +368,15 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             break;
         }    
         case 0x06000000: {    
-            address &= 0x06017FFF;
+            // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
+            // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
+            //address &= 0x06017FFF;
+            if(address & 0x00010000) {
+                address &= 0x06007FFF;
+                address += 0x10000;
+            } else {
+                address &= 0x0600FFFF;
+            }
             switch(width) {
                 case 32: {
                     return readFromArray32(&vRam, address, 0x06000000);
@@ -790,7 +798,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x04000000 <= address && address <= 0x040003FE) {
         if(0x04000000 <= address && address < 0x04000056) {
-            ppuMemDirty = true;
         }
 
         if(0x4000100 <= address && address <= 0x400010F) {
@@ -847,7 +854,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x05000000 <= address && address <= 0x05FFFFFF) { 
         //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");
-        ppuMemDirty = true;
         address &= 0x050003FF;
         switch(width) {
             case 32: {
@@ -875,8 +881,15 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x06000000 <= address && address <= 0x06FFFFFF) {    
         // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
-        ppuMemDirty = true;
-        address &= 0x06017FFF;
+        // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
+        // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
+            if(address & 0x00010000) {
+                address &= 0x06007FFF;
+                address += 0x10000;
+            } else {
+                address &= 0x0600FFFF;
+            }
+        //address = (address & 0x0607FFF);
         switch(width) {
             case 32: {
                 writeToArray32(&vRam, address, 0x06000000, value);
@@ -898,7 +911,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     } else if (0x07000000 <= address && address <= 0x07FFFFFF) {    
         // TODO: there are more hblank rules to implement
-        ppuMemDirty = true;
         address &= 0x070003FF;
         switch(width) {
             case 32: {

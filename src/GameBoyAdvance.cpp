@@ -172,7 +172,6 @@ void GameBoyAdvance::loop() {
             // TODO: clean this up
             // DEBUGWARN("frame!\n");
             // force a draw every frame
-            bus->ppuMemDirty = true;
             screen->drawWindow(ppu->renderCurrentScreen());  
             Gamepad::getInput(bus);
 
