@@ -15,6 +15,7 @@
 #include "DMA.h"
 #include "Timer.h"
 
+
 using milliseconds = std::chrono::milliseconds;
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer) {
@@ -156,8 +157,8 @@ void GameBoyAdvance::loop() {
         if(totalCycles >= nextVBlank) {
 
             // TODO: very temporary
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::P) && 
-               sf::Keyboard::isKeyPressed(sf::Keyboard::K)) {
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::P)// && 
+               ) {
                 arm7tdmi->debug = true;
             } else {
                 arm7tdmi->debug = false;

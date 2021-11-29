@@ -16,15 +16,18 @@ void handler(int sig) {
 
     // get void*'s for all entries on the stack
     size = backtrace(array, 50);
-    printf("~~~~~~~~~~~~~~~~~~ Uh oh! Error! Printing CPU state ~~~~~~~~~~~~~~~~~~\n");
+    printf("~~~~~~~~~~~~~~~~~~ Uh oh! Error! Printing final instructions ~~~~~~~~~~~~~~~~~~\n");
+    for(std::string& intr : cpu.debugInstrQueue) {
+        printf("%s", intr.c_str());
+    }
 
     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-        cpu.getCurrentInstruction(), 
-        cpu.getRegister(0), cpu.getRegister(1), cpu.getRegister(2), cpu.getRegister(3), 
-        cpu.getRegister(4), cpu.getRegister(5), cpu.getRegister(6), cpu.getRegister(7),
-        cpu.getRegister(8), cpu.getRegister(9), cpu.getRegister(10), cpu.getRegister(11),
-        cpu.getRegister(12), cpu.getRegister(13), cpu.getRegister(14), cpu.getRegister(15) + 2, 
-        cpu.psrToInt(cpu.getCpsr()));      
+            cpu.getCurrentInstruction(), 
+            cpu.getRegister(0), cpu.getRegister(1), cpu.getRegister(2), cpu.getRegister(3), 
+            cpu.getRegister(4), cpu.getRegister(5), cpu.getRegister(6), cpu.getRegister(7),
+            cpu.getRegister(8), cpu.getRegister(9), cpu.getRegister(10), cpu.getRegister(11),
+            cpu.getRegister(12), cpu.getRegister(13), cpu.getRegister(14), cpu.getRegister(15) + 4, 
+            cpu.psrToInt(cpu.getCpsr()));
 
     // print out all the frames to stderr
     fprintf(stderr, "Error: signal %d:\n", sig);

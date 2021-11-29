@@ -530,6 +530,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t 
             if (rs == PC_REGISTER || !(rsVal & 0x1)) {
                 // R15: CPU switches to ARM state, and PC is auto-aligned as
                 // (($+4) AND NOT 2).
+                DEBUG("in here\n");
 
                 // For BX/BLX, when Bit 0 of the value in Rs is zero:
                 // Processor will be switched into ARM mode!
@@ -543,6 +544,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::ThumbOpcodeHandlers::bxHandler(uint16_t 
 
             assert(msbd == 0);
             rsVal &= 0xFFFFFFFE;
+            DEBUG(rsVal << " <- rsVal\n");
             cpu->setRegister(PC_REGISTER, rsVal);
 
             return BRANCH;

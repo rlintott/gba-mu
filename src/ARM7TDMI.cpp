@@ -5,6 +5,8 @@
 #include <bitset>
 #include <iostream>
 #include <type_traits>
+#include <SFML/Graphics.hpp>
+
 
 #include "Bus.h"
 #include "assert.h"
@@ -64,6 +66,25 @@ uint32_t ARM7TDMI::step() {
 
     }
 
+
+    if(debug) {
+
+        char buffer[164];
+        sprintf(buffer, "%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+                currInstruction, 
+                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
+                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
+                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
+                getRegister(12), getRegister(13), getRegister(14), getRegister(15), 
+                psrToInt(getCpsr()));
+        
+        debugInstrQueue.push_back(buffer);
+        if(debugInstrQueue.size() > 100) {
+            debugInstrQueue.pop_front();
+        }
+    }
+
+
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;
@@ -85,28 +106,6 @@ uint32_t ARM7TDMI::step() {
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
 
         currentPcAccessType = handler(currInstruction, this);
-    }
-
-    if(debug) {
-        #ifndef NDEBUGWARN
-        if(!cpsr.T) {
-            printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-                currInstruction, 
-                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-                getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 4, 
-                psrToInt(getCpsr()));
-        } else {
-            printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-                currInstruction, 
-                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-                getRegister(12), getRegister(13), getRegister(14), getRegister(15) + 2, 
-                psrToInt(getCpsr()));      
-        }
-        #endif
     }
 
 

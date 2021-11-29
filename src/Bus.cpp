@@ -725,15 +725,15 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
     if(address <= 0x00003FFF) {
         switch(width) {
             case 32: {
-                writeToArray32(&bios, address, 0, value);
+                //writeToArray32(&bios, address, 0, value);
                 break;
             }
             case 16: {
-                writeToArray16(&bios, address, 0, value);
+                //writeToArray16(&bios, address, 0, value);
                 break;
             }
             case 8: {
-                writeToArray8(&bios, address, 0, value);
+                //writeToArray8(&bios, address, 0, value);
                 break;
             }
             default: {

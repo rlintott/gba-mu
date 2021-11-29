@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <deque>
 
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
@@ -119,12 +120,14 @@ class ARM7TDMI {
     ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     bool debug = false;
+    std::deque<std::string> debugInstrQueue;
     
     static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
 
   
    private:
+    
 
     bool interruptsEnabled();
 

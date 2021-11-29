@@ -64,6 +64,17 @@ int main(int argc, char *argv[]) {
     //cpu.cpsr.raw = values[17];
 
     cpu.step();
+
+    printf("~~~~~~~~~~~~~~~~~~ CPU state after instruction: ~~~~~~~~~~~~~~~~~~\n");
+
+    printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
+            cpu.getCurrentInstruction(), 
+            cpu.getRegister(0), cpu.getRegister(1), cpu.getRegister(2), cpu.getRegister(3), 
+            cpu.getRegister(4), cpu.getRegister(5), cpu.getRegister(6), cpu.getRegister(7),
+            cpu.getRegister(8), cpu.getRegister(9), cpu.getRegister(10), cpu.getRegister(11),
+            cpu.getRegister(12), cpu.getRegister(13), cpu.getRegister(14), cpu.getRegister(15) + 4, 
+            cpu.psrToInt(cpu.getCpsr()));
+
     return 0;
 }
 
