@@ -15,7 +15,6 @@
 #include "DMA.h"
 #include "Timer.h"
 
-
 using milliseconds = std::chrono::milliseconds;
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer) {

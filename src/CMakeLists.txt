@@ -3,6 +3,20 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS "-O3")
 
+
+set(CAPSTONE_ZIP ../capstone-3.0.5-rc2.tar.gz)
+set(CAPSTONE_DIR capstone-3.0.5-rc2)
+set(CAPSTONE_LIB ${CAPSTONE_DIR}/libcapstone.a)
+
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}
+	COMMAND
+        tar -xvf ${CMAKE_CURRENT_SOURCE_DIR}/${CAPSTONE_ZIP}
+    COMMAND
+        make -C ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR} CAPSTONE_STATIC=yes CAPSTONE_SHARED=no CAPSTONE_ARCHS="arm"
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CAPSTONE_ZIP}
+)
+
 #find_package(Curses REQUIRED)
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
 
@@ -16,10 +30,17 @@ add_library(gba_lib
     DMA.cpp DMA.h
     Timer.cpp Timer.h
     )
-target_link_libraries(gba_lib ${CURSES_LIBRARIES})
+
+set_property(SOURCE GameBoyAdvance.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR})
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}/include)
+
+target_link_libraries(gba_lib ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_LIB})  
 target_link_libraries(gba_lib sfml-graphics sfml-audio)  
 
 add_executable(gba main.cpp)
 add_executable(debug debug.cpp)
+
 target_link_libraries(gba gba_lib)
 target_link_libraries(debug gba_lib)
+
