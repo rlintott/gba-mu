@@ -6,6 +6,7 @@ class LCD;
 class PPU;
 class DMA;
 class Timer;
+class Debugger;
 
 class GameBoyAdvance {
    public:
@@ -29,6 +30,7 @@ class GameBoyAdvance {
     PPU* ppu;
     DMA* dma;
     Timer* timer;
+    Debugger* debugger;
 
     bool hBlank = false;
     bool scanlineRendered = false;
@@ -39,6 +41,7 @@ class GameBoyAdvance {
     long frames = 0;
     double startTimeSeconds = 0.0;
     uint64_t totalCycles= 0;
-    
+
+    bool debugMode = true;
 
 };

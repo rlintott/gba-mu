@@ -7,6 +7,8 @@
 #include <vector>
 #include <deque>
 
+
+
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
 
@@ -139,7 +141,8 @@ class ARM7TDMI {
 
     FetchPCMemoryAccess currentPcAccessType;
 
-    uint32_t currInstruction; 
+    uint32_t currInstruction;
+    uint32_t currInstrAddress; 
 
     void getNextInstruction(FetchPCMemoryAccess currentPcAccessType);
 
@@ -187,6 +190,8 @@ class ARM7TDMI {
         static ARM7TDMI::FetchPCMemoryAccess longBranchHandler(uint16_t instruction, ARM7TDMI *cpu); 
         static ARM7TDMI::FetchPCMemoryAccess softwareInterruptHandler(uint16_t instruction, ARM7TDMI *cpu); 
     };
+
+    uint32_t thumbLongbranchShift = 0;
 
     union BitPreservedInt32 {
         int32_t _signed;
@@ -389,5 +394,8 @@ class ARM7TDMI {
 
 
     void switchToMode(Mode mode);
+
+    // TODO: temporary
+    
 
 };

@@ -2,20 +2,25 @@
 // TODO: common include file for defines (like DEBUG)
 #include "ARM7TDMI.h"
 #include "PPU.h"
+#include <TGUI/TGUI.hpp>
 
 /**
  * Helper function for changing resolution
  * TODO: move this somewere else
  * */
 void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
-    float aspectRatio = (float)PPU::SCREEN_WIDTH / (float)PPU::SCREEN_HEIGHT; // 1.5
-    float newAspectRatio = xRes / yRes;
+    float aspectRatio = (float)(PPU::SCREEN_WIDTH) / (float)(PPU::SCREEN_HEIGHT); // 1.5
+    float newAspectRatio = ((xRes / 2.0) / yRes);
 
-    float xScale = xRes / PPU::SCREEN_WIDTH;
+    float xScale = xRes / PPU::SCREEN_WIDTH / 2.0;
     float yScale = yRes / PPU::SCREEN_HEIGHT;
 
-    DEBUG(newAspectRatio << "\n");
+
+    DEBUGWARN(newAspectRatio << "\n");
+    DEBUGWARN(xScale << " x \n");
+    DEBUGWARN(yScale << " y \n");
     if(newAspectRatio <= aspectRatio) {
+        DEBUGWARN("in here\n");
         // xRes is limiting scale factor
         float yShift = yRes/2.0 - (PPU::SCREEN_HEIGHT * xScale / 2.0);
         for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
@@ -28,7 +33,11 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
             }
         }
     } else {
+        DEBUGWARN("nope in here\n");
         float xShift = xRes/2.0 - (PPU::SCREEN_WIDTH * yScale / 2.0);
+        // float xShift = 0.0;
+        // yScale /= 2.0;
+        // float yShift = yRes / 4.0;
         for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
             for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
                 sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
@@ -47,7 +56,34 @@ void LCD::initWindow() {
                                                    "RyBoyAdvance");
     pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);
     pixels.setPrimitiveType(sf::Quads);
-    
+
+    debugGui = new tgui::GuiSFML(*gbaWindow); 
+    tgui::Picture::Ptr pic = tgui::Picture::create("/Users/ryanlintott/Desktop/controlroom.jpg");
+    pic->setSize(gbaWindow->getSize().x, gbaWindow->getSize().y);
+    debugGui->add(pic, "background");
+
+    // TODO: include theme in repository
+    tgui::Theme theme{"/opt/homebrew/Cellar/tgui/0.9.2/share/tgui/themes/TransparentGrey.txt"};
+    auto menu = tgui::MenuBar::create();
+    menu->setRenderer(theme.getRenderer("MenuBar"));
+    menu->setHeight(42.f);
+    menu->setTextSize(20);
+    menu->addMenu("File");
+    menu->addMenuItem("Load");
+    menu->addMenuItem("Save");
+    menu->addMenuItem("Exit");
+    menu->addMenu("Edit");
+    menu->addMenuItem("Copy");
+    menu->addMenuItem("Paste");
+    menu->addMenu("Help");
+    menu->addMenuItem("About");
+    debugGui->add(menu);
+
+    // auto text = tgui::TextArea::create();
+    // text->setText("Hello world");
+    // text->setRenderer(theme.getRenderer("TextArea"));
+    // debugGui->add(text);
+
     for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
         for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
             sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
@@ -72,8 +108,8 @@ void LCD::initWindow() {
     changeResolution(pixels, (float)(PPU::SCREEN_WIDTH * defaultScreenSize), 
                              (float)(PPU::SCREEN_HEIGHT * defaultScreenSize));
 
-
     gbaWindow->clear(sf::Color::Black);
+    debugGui->draw();
     gbaWindow->display();
 }
 
@@ -84,6 +120,7 @@ void LCD::initWindow() {
 */
 
 void LCD::drawWindow(std::array<uint16_t, 38400>& pixelBuffer) {
+
     for(int i = 0; i < (pixelBuffer.size() * 4); i += 4) {
         uint16_t val = pixelBuffer[i >> 2];
         sf::Color colour = sf::Color((val & 0x1f) << 3, /* R */
@@ -106,12 +143,23 @@ void LCD::drawWindow(std::array<uint16_t, 38400>& pixelBuffer) {
                 sf::View view = sf::View(visibleArea);
                 gbaWindow->setView(view);
                 changeResolution(pixels, (float)event.size.width, (float)event.size.height);
+                debugGui->get("background")->setSize(gbaWindow->getSize().x, gbaWindow->getSize().y);
+                //debugGui->setAbsoluteView({0, 0, (float)event.size.width, (float)event.size.height});
             }
+            debugGui->handleEvent(event);
         }
         gbaWindow->clear(sf::Color::Black);
+        debugGui->draw();
         gbaWindow->draw(pixels);
+        
+        
         gbaWindow->display();
     }
     
+}
+
+
+void LCD::closeWindow() {
+    gbaWindow->close();
 }
 

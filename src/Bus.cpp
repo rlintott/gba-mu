@@ -43,11 +43,11 @@ Bus::Bus(PPU* ppu) {
     for(int i = 0; i < 1028; i++) {
         objAttributes.push_back(0);
     }
-    for(int i = 0; i < 65792; i++) {
+    for(int i = 0; i < 69000; i++) {
         gamePakSram.push_back(0);
     }
     // TODO, use resize fn for initialization
-    gamePakRom.resize(32000000);
+    //gamePakRom.resize(32000000);
     this->ppu = ppu;
 }
 
@@ -1038,7 +1038,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
-        gamePakRom[i] = buffer[i];
+        gamePakRom.push_back(buffer[i]);
     }
 }
 

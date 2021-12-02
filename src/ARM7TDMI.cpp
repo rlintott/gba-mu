@@ -6,6 +6,8 @@
 #include <iostream>
 #include <type_traits>
 #include <SFML/Graphics.hpp>
+#include <capstone.h>
+#include <string.h>
 
 
 #include "Bus.h"
@@ -37,6 +39,8 @@ void ARM7TDMI::initializeWithRom() {
     // emulate filling the pipeline
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
+
+
 }
 
 ARM7TDMI::~ARM7TDMI() {}
@@ -67,23 +71,51 @@ uint32_t ARM7TDMI::step() {
     }
 
 
-    if(debug) {
+    // if(debug) {
+    //     //if(cpsr.T) {
 
-        char buffer[164];
-        sprintf(buffer, "%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
-                currInstruction, 
-                getRegister(0), getRegister(1), getRegister(2), getRegister(3), 
-                getRegister(4), getRegister(5), getRegister(6), getRegister(7),
-                getRegister(8), getRegister(9), getRegister(10), getRegister(11),
-                getRegister(12), getRegister(13), getRegister(14), getRegister(15), 
-                psrToInt(getCpsr()));
+    //         csh sCapstone;
+    //         if (cs_open(CS_ARCH_ARM, CS_MODE_ARM, &sCapstone) != CS_ERR_OK) {
+    //             puts("cs_open failed");
+    //             exit(1);
+    //         }
+
+    //         cs_option(sCapstone, CS_OPT_DETAIL, CS_OPT_ON);
+    //         struct cs_insn *insn;
+    //         cs_option(sCapstone, CS_OPT_MODE, (cpsr.T ? CS_MODE_THUMB : CS_MODE_ARM) | CS_MODE_LITTLE_ENDIAN);
+
+    //         uint32_t count;
+    //         if(cpsr.T) {
+    //             //uint32_t instruction = 0xF01D;
+    //             uint8_t instr[2];
+    //             instr[0] = (currInstruction) & 0xFF;
+    //             instr[1] = (currInstruction >> 8) & 0xFF;
+    //             //instr[2] = (currInstruction >> 16) & 0xFF;
+    //             //instr[3] = (currInstruction >> 24) & 0xFF;
+    //             count = cs_disasm(sCapstone, instr, 2, 0, 1, &insn);
+    //         } else {
+    //             //uint32_t instruction = 0xF01D;
+    //             uint8_t instr[4];
+    //             instr[0] = (currInstruction) & 0xFF;
+    //             instr[1] = (currInstruction >> 8) & 0xFF;
+    //             instr[2] = (currInstruction >> 16) & 0xFF;
+    //             instr[3] = (currInstruction >> 24) & 0xFF;
+    //             count = cs_disasm(sCapstone, instr, 4, 0, 1, &insn);
+    //         }
+
+    //         if(count == 0) {
+    //             DEBUGWARN("----- cpastone couldnt find instr!");
+    //             DEBUGWARN(currInstruction << " currInstr\n");
+    //             DEBUGWARN((uint32_t)cpsr.T  << " thumb?\n");
+    //         } else {
+    //             printf("%08X: %s %s\n", currInstrAddress, insn[0].mnemonic, insn[0].op_str);  
+    //         }
+            
+    //         cs_free(insn, count);
+    //         cs_close(&sCapstone);
         
-        debugInstrQueue.push_back(buffer);
-        if(debugInstrQueue.size() > 100) {
-            debugInstrQueue.pop_front();
-        }
-    }
-
+    //     //}
+    // }
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
@@ -119,30 +151,29 @@ uint32_t ARM7TDMI::step() {
 
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
     DEBUG("getting instruction from: " << getRegister(PC_REGISTER) << "\n");
+    currInstrAddress = getRegister(PC_REGISTER);
     switch(currentPcAccessType) {
         case SEQUENTIAL: {
             currInstruction = 
-                cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL) :
-                         bus->read32(getRegister(PC_REGISTER), Bus::CycleType::SEQUENTIAL);
+                cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::SEQUENTIAL) :
+                         bus->read32(currInstrAddress, Bus::CycleType::SEQUENTIAL);
             break;
         }
         case NONSEQUENTIAL: {
             currInstruction = 
-                cpsr.T ? bus->read16(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL) :
-                         bus->read32(getRegister(PC_REGISTER), Bus::CycleType::NONSEQUENTIAL);                
+                cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL) :
+                         bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);                
             break;
         }
         case BRANCH: {
             if(cpsr.T) {
-                uint32_t pcAddress = getRegister(PC_REGISTER);
-                currInstruction = bus->read16(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
                 DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
                 // emulate filling the pipeline
                 //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
                 //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
             } else {
-                uint32_t pcAddress = getRegister(PC_REGISTER);
-                currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
+                currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
                 DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
                 // emulate filling the pipeline
                 //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);

@@ -19,6 +19,7 @@ add_custom_command(
 
 #find_package(Curses REQUIRED)
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
+find_package(tgui 0.9.2 REQUIRED)
 
 add_library(gba_lib
     ARM7TDMI.cpp ArmOpcodeHandlers.cpp ThumbOpcodeHandlers.cpp ARM7TDMI.h
@@ -29,14 +30,16 @@ add_library(gba_lib
     Gamepad.cpp Gamepad.h
     DMA.cpp DMA.h
     Timer.cpp Timer.h
+    Debugger.cpp Debugger.h
     )
 
-set_property(SOURCE GameBoyAdvance.cpp APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR})
+set_property(SOURCE ARM7TDMI.h APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}/include)
 
 target_link_libraries(gba_lib ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_LIB})  
 target_link_libraries(gba_lib sfml-graphics sfml-audio)  
+target_link_libraries(gba_lib tgui)
 
 add_executable(gba main.cpp)
 add_executable(debug debug.cpp)

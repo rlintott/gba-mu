@@ -6,6 +6,9 @@
 #include <iterator>
 #include <chrono>
 #include <algorithm> 
+#include <future>
+#include <thread>
+
 
 #include "ARM7TDMI.h"
 #include "Bus.h"
@@ -14,8 +17,24 @@
 #include "Gamepad.h"
 #include "DMA.h"
 #include "Timer.h"
+#include "Debugger.h"
 
 using milliseconds = std::chrono::milliseconds;
+
+
+static std::string getAnswer() {    
+    std::string answer;
+    std::cin >> answer;
+    return answer;
+}
+
+std::future<std::string> asyncGetInput() {
+    printf("can enter memory address and width to watch, (ex. 0xFFFFFFFF 32):");
+    std::string input = "0";
+    std::future<std::string> future = std::async(getAnswer);
+
+    return future;
+}
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer) {
     this->arm7tdmi = _arm7tdmi;
@@ -30,6 +49,8 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     this->timer = _timer;
     this->timer->connectBus(bus);
     this->timer->connectCpu(arm7tdmi);
+
+    this->debugger = new Debugger();
 }
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, Timer* _timer) {
@@ -74,6 +95,10 @@ long getCurrentTime() {
 
 uint64_t GameBoyAdvance::getTotalCyclesElapsed() {
     return totalCycles;
+}
+
+void asyncDebug(Debugger* debugger) {
+    debugger->step();
 }
 
 void GameBoyAdvance::loop() {
@@ -172,8 +197,12 @@ void GameBoyAdvance::loop() {
             // TODO: clean this up
             // DEBUGWARN("frame!\n");
             // force a draw every frame
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
+                debugMode = true;
+                debugger->stepMode = true;
+            }
             screen->drawWindow(ppu->renderCurrentScreen());  
-            Gamepad::getInput(bus);
+            Gamepad::getInput(bus);            
 
             // setting vblank flag to 1
             bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
@@ -189,6 +218,36 @@ void GameBoyAdvance::loop() {
             }
         }
 
+        if(debugMode) {   
+            if(debugger->stepMode) {
+                DEBUGWARN("starting\n");
+                std::future<std::string> result = asyncGetInput();
+                while(sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+                    screen->drawWindow(ppu->pixelBuffer);  
+                }
+                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+                    screen->drawWindow(ppu->pixelBuffer);  
+                }   
+                DEBUGWARN("enter your memory watch value\n");
+                std::future_status status;
+                do {
+                    status = result.wait_for(std::chrono::seconds(0));
+                    if (status == std::future_status::deferred) {
+                        std::cout << "deferred\n";
+                        //break;
+                    } else if (status == std::future_status::timeout) {
+                        //std::cout << "timeout\n";
+                        screen->drawWindow(ppu->pixelBuffer);  
+                    } else if (status == std::future_status::ready) {
+                        std::cout << "ready!\n";
+                        //break;
+                    }
+                } while (status != std::future_status::ready); 
+                debugger->printState();
+            }
+        }
+
     }
 }
+
 
