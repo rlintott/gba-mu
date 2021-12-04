@@ -3,7 +3,6 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS "-O3")
 
-
 set(CAPSTONE_ZIP ../capstone-3.0.5-rc2.tar.gz)
 set(CAPSTONE_DIR capstone-3.0.5-rc2)
 set(CAPSTONE_LIB ${CAPSTONE_DIR}/libcapstone.a)
@@ -17,9 +16,7 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CAPSTONE_ZIP}
 )
 
-#find_package(Curses REQUIRED)
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
-find_package(tgui 0.9.2 REQUIRED)
 
 add_library(gba_lib
     ARM7TDMI.cpp ArmOpcodeHandlers.cpp ThumbOpcodeHandlers.cpp ARM7TDMI.h
@@ -39,7 +36,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}/include)
 
 target_link_libraries(gba_lib ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_LIB})  
 target_link_libraries(gba_lib sfml-graphics sfml-audio)  
-target_link_libraries(gba_lib tgui)
 
 add_executable(gba main.cpp)
 add_executable(debug debug.cpp)

@@ -17,9 +17,7 @@ void handler(int sig) {
     // get void*'s for all entries on the stack
     size = backtrace(array, 50);
     printf("~~~~~~~~~~~~~~~~~~ Uh oh! Error! Printing final instructions ~~~~~~~~~~~~~~~~~~\n");
-    for(std::string& intr : cpu.debugInstrQueue) {
-        printf("%s", intr.c_str());
-    }
+    // TODO: DO THING WITH DEBUGGER
 
     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
             cpu.getCurrentInstruction(), 

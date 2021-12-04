@@ -1,11 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
-namespace tgui {
-    class GuiSFML;
-}
-
-
 class LCD {
 
     public: 
@@ -19,7 +14,6 @@ class LCD {
         sf::VertexArray pixels;
         sf::Event event;
         int defaultScreenSize = 7;
-        tgui::GuiSFML* debugGui;
 
     
 };

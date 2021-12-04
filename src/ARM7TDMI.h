@@ -121,8 +121,6 @@ class ARM7TDMI {
     ProgramStatusRegister SPSR_irq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     ProgramStatusRegister SPSR_und = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    bool debug = false;
-    std::deque<std::string> debugInstrQueue;
     
     static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
@@ -333,6 +331,7 @@ class ARM7TDMI {
     
     void transferToPsr(uint32_t value, uint8_t field,
                        ProgramStatusRegister *psr);
+    
 
     enum AluOpcode {
         AND = 0x0,
@@ -396,6 +395,6 @@ class ARM7TDMI {
     void switchToMode(Mode mode);
 
     // TODO: temporary
-    
+    friend class Debugger;
 
 };

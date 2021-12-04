@@ -97,10 +97,6 @@ uint64_t GameBoyAdvance::getTotalCyclesElapsed() {
     return totalCycles;
 }
 
-void asyncDebug(Debugger* debugger) {
-    debugger->step();
-}
-
 void GameBoyAdvance::loop() {
     screen->initWindow();
     uint32_t cyclesThisStep = 0;
@@ -120,8 +116,8 @@ void GameBoyAdvance::loop() {
     bus->iORegisters[Bus::IORegister::KEYINPUT] = 0xFF;
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
 
+    // STARTING MAIN EMULATION LOOP!
     while(true) {
-
         uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
         cyclesThisStep += dmaCycles;
     
@@ -132,6 +128,14 @@ void GameBoyAdvance::loop() {
 
         vBlank = false;
         hBlank = false;
+        if(debugMode) {
+            debugger->step(arm7tdmi, bus);
+            if(debugger->stepMode) {
+                while(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift));
+                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift));
+                debugger->printState();
+            }
+        }
         cyclesThisStep += arm7tdmi->step();
     
         if(totalCycles >= nextHBlank) { 
@@ -180,14 +184,6 @@ void GameBoyAdvance::loop() {
 
         if(totalCycles >= nextVBlank) {
 
-            // TODO: very temporary
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::P)// && 
-               ) {
-                arm7tdmi->debug = true;
-            } else {
-                arm7tdmi->debug = false;
-            }
-
             vBlank = true;
             // TODO: v blank interrupt if enabled
             if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
@@ -218,34 +214,6 @@ void GameBoyAdvance::loop() {
             }
         }
 
-        if(debugMode) {   
-            if(debugger->stepMode) {
-                DEBUGWARN("starting\n");
-                std::future<std::string> result = asyncGetInput();
-                while(sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-                    screen->drawWindow(ppu->pixelBuffer);  
-                }
-                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-                    screen->drawWindow(ppu->pixelBuffer);  
-                }   
-                DEBUGWARN("enter your memory watch value\n");
-                std::future_status status;
-                do {
-                    status = result.wait_for(std::chrono::seconds(0));
-                    if (status == std::future_status::deferred) {
-                        std::cout << "deferred\n";
-                        //break;
-                    } else if (status == std::future_status::timeout) {
-                        //std::cout << "timeout\n";
-                        screen->drawWindow(ppu->pixelBuffer);  
-                    } else if (status == std::future_status::ready) {
-                        std::cout << "ready!\n";
-                        //break;
-                    }
-                } while (status != std::future_status::ready); 
-                debugger->printState();
-            }
-        }
 
     }
 }

@@ -5,8 +5,6 @@
 #include <bitset>
 #include <iostream>
 #include <type_traits>
-#include <SFML/Graphics.hpp>
-#include <capstone.h>
 #include <string.h>
 
 
@@ -69,53 +67,6 @@ uint32_t ARM7TDMI::step() {
         //DEBUGWARN("irq fn ended\n");
 
     }
-
-
-    // if(debug) {
-    //     //if(cpsr.T) {
-
-    //         csh sCapstone;
-    //         if (cs_open(CS_ARCH_ARM, CS_MODE_ARM, &sCapstone) != CS_ERR_OK) {
-    //             puts("cs_open failed");
-    //             exit(1);
-    //         }
-
-    //         cs_option(sCapstone, CS_OPT_DETAIL, CS_OPT_ON);
-    //         struct cs_insn *insn;
-    //         cs_option(sCapstone, CS_OPT_MODE, (cpsr.T ? CS_MODE_THUMB : CS_MODE_ARM) | CS_MODE_LITTLE_ENDIAN);
-
-    //         uint32_t count;
-    //         if(cpsr.T) {
-    //             //uint32_t instruction = 0xF01D;
-    //             uint8_t instr[2];
-    //             instr[0] = (currInstruction) & 0xFF;
-    //             instr[1] = (currInstruction >> 8) & 0xFF;
-    //             //instr[2] = (currInstruction >> 16) & 0xFF;
-    //             //instr[3] = (currInstruction >> 24) & 0xFF;
-    //             count = cs_disasm(sCapstone, instr, 2, 0, 1, &insn);
-    //         } else {
-    //             //uint32_t instruction = 0xF01D;
-    //             uint8_t instr[4];
-    //             instr[0] = (currInstruction) & 0xFF;
-    //             instr[1] = (currInstruction >> 8) & 0xFF;
-    //             instr[2] = (currInstruction >> 16) & 0xFF;
-    //             instr[3] = (currInstruction >> 24) & 0xFF;
-    //             count = cs_disasm(sCapstone, instr, 4, 0, 1, &insn);
-    //         }
-
-    //         if(count == 0) {
-    //             DEBUGWARN("----- cpastone couldnt find instr!");
-    //             DEBUGWARN(currInstruction << " currInstr\n");
-    //             DEBUGWARN((uint32_t)cpsr.T  << " thumb?\n");
-    //         } else {
-    //             printf("%08X: %s %s\n", currInstrAddress, insn[0].mnemonic, insn[0].op_str);  
-    //         }
-            
-    //         cs_free(insn, count);
-    //         cs_close(&sCapstone);
-        
-    //     //}
-    // }
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
@@ -1052,3 +1003,37 @@ uint8_t ARM7TDMI::umullGetExecutionTimeMVal(uint32_t value) {
 void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
     currInstruction = instruction;
 }
+
+
+/*
+  Bit   Expl.
+  31    N - Sign Flag       (0=Not Signed, 1=Signed)               ;\
+  30    Z - Zero Flag       (0=Not Zero, 1=Zero)                   ; Condition
+  29    C - Carry Flag      (0=Borrow/No Carry, 1=Carry/No Borrow) ; Code Flags
+  28    V - Overflow Flag   (0=No Overflow, 1=Overflow)            ;/
+  27    Q - Sticky Overflow (1=Sticky Overflow, ARMv5TE and up only)
+  26-25 Reserved            (For future use) - Do not change manually!
+  24    J - Jazelle Mode    (1=Jazelle Bytecode instructions) (if supported)
+  23-10 Reserved            (For future use) - Do not change manually!
+  9     E - Endian          (... Big endian)                  (ARM11 ?)
+  8     A - Abort disable   (1=Disable Imprecise Data Aborts) (ARM11 only)
+  7     I - IRQ disable     (0=Enable, 1=Disable)                     ;\
+  6     F - FIQ disable     (0=Enable, 1=Disable)                     ; Control
+  5     T - State Bit       (0=ARM, 1=THUMB) - Do not change manually!; Bits
+  4-0   M4-M0 - Mode Bits   (See below)                               ;/
+*/
+// uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
+//     uint32_t value = 0;
+
+//     value |= ((bool)psr.N << 31);
+//     value |= ((bool)psr.Z << 30);
+//     value |= ((bool)psr.C << 29);
+//     value |= ((bool)psr.V << 28);
+//     value |= ((bool)psr.Q << 27);
+//     value |= ((bool)psr.I << 7);
+//     value |= ((bool)psr.F << 6);
+//     value |= ((bool)psr.T << 5);
+//     value |= (psr.Mode & 0x1F);
+
+//     return value;
+// }
