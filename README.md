@@ -4,7 +4,7 @@ The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with a
 
 Now that most of the system is emulated, I am focusing on improving performance and refactoring the code and architecture before moving on to making the emulator more accurate. 
 
-## Upcoming Features and TODOa:
+## Upcoming Features and TODOs:
 - [ ] Code refactoring 
 - [ ] Optimization (RyBoyAdvance currently runs around 170FPS on my laptop)
 - [ ] Debugging mode
@@ -12,7 +12,6 @@ Now that most of the system is emulated, I am focusing on improving performance 
 - [ ] All PPU modes and features
 - [ ] Getting more games running
 - [ ] Miscellaneous bugs 
-- [ ] Improved CPU instruction accuracy
 - [ ] Sound controller
 
 ![Alt text](media/kirby.png?raw=true)
