@@ -140,9 +140,58 @@ void GameBoyAdvance::loop() {
             }
         }
         cyclesThisStep += arm7tdmi->step();
+        totalCycles += cyclesThisStep;
 
+        Scheduler::EventType nextEvent = scheduler->getNextTemporalEvent(totalCycles);
+        uint64_t eventCycles = 0;
+        while(nextEvent != Scheduler::EventType::NONE) {
+            switch(nextEvent) {
+                case Scheduler::EventType::DMA0: {
+                    eventCycles += dma->dmaX(x);
+                    break;
+                }
+                case Scheduler::EventType::DMA1: {
+                    break;
+                }
+                case Scheduler::EventType::DMA2: {
+                    break;
+                }
+                case Scheduler::EventType::DMA3: {
+                    break;
+                }
+                case Scheduler::EventType::TIMER0: {
+                    break;
+                }
+                case Scheduler::EventType::TIMER1: {
+                    break;
+                }
+                case Scheduler::EventType::TIMER2: {
+                    break;
+                }
+                case Scheduler::EventType::TIMER3: {
+                    break;
+                }
+                case Scheduler::EventType::VBLANK: {
+                    // vblank time!
+                    
+
+
+
+
+                    break;
+                }
+                case Scheduler::EventType::HBLANK: {
+                    // hblank time!
+                    break;
+                }
+                default: {
+                    break;
+                    //assert(false);
+                }
+            }
+
+        }
         
-
 
 
 

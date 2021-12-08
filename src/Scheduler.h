@@ -7,18 +7,18 @@ class Scheduler {
 
     public: 
         enum EventType {
-            DMA0 = 0,
-            DMA1 = 1,
-            DMA2 = 2,
-            DMA3 = 3,
-            
-            TIMER0 = 4,
-            TIMER1 = 5,
-            TIMER2 = 6,
-            TIMER3 = 7,
+            HBLANK = 0,
+            VBLANK = 1,
 
-            HBLANK = 8,
-            VBLANK = 9,
+            DMA0 = 2,
+            DMA1 = 3,
+            DMA2 = 4,
+            DMA3 = 5,
+            
+            TIMER0 = 6,
+            TIMER1 = 7,
+            TIMER2 = 8,
+            TIMER3 = 9,
 
             NONE = 10
         };
@@ -39,7 +39,8 @@ class Scheduler {
         void addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition EventCondition);
         void removeEvent(EventType eventType);
 
-        EventType getNextEvent(uint64_t currentCycle);
+        EventType getNextTemporalEvent(uint64_t currentCycle);
+        EventType getNextConditionEvent(EventCondition eventCondition);
 
     private: 
         std::list<Event> events;

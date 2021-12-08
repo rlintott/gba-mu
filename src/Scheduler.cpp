@@ -45,11 +45,11 @@ void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCond
 }
 
 
-Scheduler::EventType Scheduler::getNextEvent(uint64_t currentCycle) {
+Scheduler::EventType Scheduler::getNextTemporalEvent(uint64_t currentCycle) {
 
     std::list<Event>::iterator it = events.begin();
     if(it != events.end()) {
-        
+
         if(it->startCycle <= currentCycle) {
             EventType type = it->eventType;
             events.erase(it);   
