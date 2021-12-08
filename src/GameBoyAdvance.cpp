@@ -203,9 +203,9 @@ void GameBoyAdvance::loop() {
             // setting vblank flag to 1
             bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
 
-            while(getCurrentTime() - previousTime < 17) {
-                usleep(500);
-            }
+            // while(getCurrentTime() - previousTime < 17) {
+            //     usleep(500);
+            // }
             previousTime = getCurrentTime();
             frames++;
 
