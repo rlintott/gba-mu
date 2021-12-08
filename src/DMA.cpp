@@ -7,6 +7,7 @@
 
 // TODO: DMA specs not fully implemented yet
 // TODO: fix mgba suite ROM Load DMA0 tests, which fail
+inline
 uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture

@@ -162,6 +162,8 @@ class Bus {
 
     bool ppuMemDirty = false;
 
+    uint32_t getMemoryAccessCycles();
+
    private:
     uint8_t currentNWaitstate;
     uint8_t currentSWaitstate;
@@ -192,8 +194,9 @@ class Bus {
     // TODO: questionable wither this should be owned by bus, could move into a scheduler class?
     std::array<CycleType, 32> executionTimelineCycleType;
 
+    uint32_t memAccessCycles = 0;
+
     PPU* ppu;
-public:
     Timer* timer; 
 
 };

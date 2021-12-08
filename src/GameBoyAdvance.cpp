@@ -110,6 +110,7 @@ void GameBoyAdvance::loop() {
     uint16_t currentScanline = -1;
     uint16_t nextScanline = 0;
     previousTime = getCurrentTime();
+    double previous60Frame = getCurrentTime();
     startTimeSeconds = getCurrentTime() / 1000.0;
 
     // TODO: initialize this somewhere else
@@ -207,14 +208,19 @@ void GameBoyAdvance::loop() {
             // while(getCurrentTime() - previousTime < 17) {
             //     usleep(500);
             // }
-            previousTime = getCurrentTime();
+            
             frames++;
-
+            
             if((frames % 60) == 0) {
-                double smoothing = 0.9;
-                fps = fps * smoothing + (((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) * (1.0 - smoothing));
+                double smoothing = 0.2;
+                fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
+        
                 DEBUGWARN("fps: " << fps << "\n");
+                //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
+                previous60Frame = previousTime;
+                
             }
+            previousTime = getCurrentTime();
         }
 
 

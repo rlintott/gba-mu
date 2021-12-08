@@ -55,7 +55,7 @@ Bus::Bus(PPU* ppu) {
 Bus::~Bus() {
 }
 
-
+inline
 uint32_t readFromArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
         return (uint32_t)arr->at(address - shift) |
                (uint32_t)arr->at((address + 1) - shift) << 8 |
@@ -63,15 +63,18 @@ uint32_t readFromArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t s
                (uint32_t)arr->at((address + 3) - shift) << 24;
 }
 
+inline
 uint16_t readFromArray16(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
         return (uint16_t)arr->at(address - shift) |
                (uint16_t)arr->at((address + 1) - shift) << 8;
 }
 
+inline
 uint8_t readFromArray8(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift) {
         return (uint8_t)arr->at(address - shift);
 }
 
+inline
 void writeToArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint32_t value) {
         arr->at(address - shift) = (uint8_t)value;
         arr->at((address + 1) - shift) = (uint8_t)(value >> 8);
@@ -79,15 +82,16 @@ void writeToArray32(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift,
         arr->at((address + 3) - shift) = (uint8_t)(value >> 24);
 }
 
+inline
 void writeToArray16(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint16_t value) {
         arr->at(address - shift) = (uint8_t)value;
         arr->at((address + 1) - shift) = (uint8_t)(value >> 8);
 }
 
+inline
 void writeToArray8(std::vector<uint8_t>* arr, uint32_t address, uint32_t shift, uint8_t value) {
         arr->at(address - shift) = (uint8_t)value;
 }
-
 
 void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8_t width) {
     if(cycleType == CycleType::INTERNAL) {
@@ -245,8 +249,10 @@ void Bus::addCycleToExecutionTimeline(CycleType cycleType, uint32_t shift, uint8
     }
 }
 
+inline
 uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
+    memAccessCycles += 1;
     uint32_t shift = address & 0xFF000000;
     //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
@@ -430,7 +436,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                 case 16: {
                     return readFromArray16(&gamePakRom, address, 0x08000000);            
                 }
-                case 8: {              
+                case 8: {   
                     return readFromArray8(&gamePakRom, address, 0x08000000);           
                 }
                 default: {
@@ -520,16 +526,18 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     return 436207618U;
 }
 
+inline
 void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
     //addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
+    memAccessCycles += 1;
     uint32_t shift = address & 0x0F000000;
 
     switch(shift) {
         case 0x0:
         case 0x01: {       
         }
-        case 0x02000000: { // CHIP RAM  
+        case 0x02000000: { // BOARD RAM  
             address &= 0x0203FFFF;
             //DEBUGWARN("start write at 0x02000000\n");
             switch(width) {
@@ -1144,9 +1152,14 @@ uint8_t Bus::getWaitState2SCycles() {
 }
 
 void Bus::resetCycleCountTimeline() {
-    currentNWaitstate = 1;
-    currentSWaitstate = 1;
+    //currentNWaitstate = 1;
+    //currentSWaitstate = 1;
     executionTimelineSize = 0;
+    memAccessCycles = 0;
+}
+
+uint32_t Bus::getMemoryAccessCycles() {
+    return memAccessCycles;
 }
 
 void Bus::printCurrentExecutionTimeline() {

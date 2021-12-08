@@ -9,6 +9,7 @@ void Timer::step(uint64_t cyclesElapsed) {
     stepTimerX(cyclesElapsed, 3);
 }
 
+inline
 void Timer::stepTimerX(uint64_t cyclesElapsed, uint8_t x) {
     if(timerStart[x] && !timerCountUp[x]) {
         //DEBUGWARN("cycles elapsed " << cyclesElapsed << "\n");
@@ -166,10 +167,11 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
     return;
 }
 
-
+inline
 void Timer::setTimerXControlHi(uint8_t val, uint8_t x) {
 }
 
+inline
 void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
     // DEBUGWARN("setTimerXControlLo start\n");
     // DEBUGWARN("x: " << (uint32_t)x << "\n");
@@ -193,11 +195,13 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
     timerStart[x] = val & 0x80;
 }
 
+inline
 void Timer::setTimerXReloadHi(uint8_t val, uint8_t x) {
     timerReload[x] = (timerReload[x] & 0x00FF) | ((uint16_t)val << 8); 
     //DEBUGWARN("timer reload hi in fn " << timerReload[x] << "\n");
 }
 
+inline
 void Timer::setTimerXReloadLo(uint8_t val, uint8_t x) {
     timerReload[x] = (timerReload[x] & 0xFF00) | (uint16_t)val; 
 }
@@ -211,6 +215,7 @@ void Timer::connectCpu(ARM7TDMI* cpu) {
     this->cpu = cpu;
 }
 
+inline
 void Timer::queueTimerInterrupt(uint8_t x) {
     switch(x) {
         case 0: {

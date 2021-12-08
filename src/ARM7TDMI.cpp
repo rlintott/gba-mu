@@ -57,7 +57,7 @@ uint32_t ARM7TDMI::step() {
    // DEBUGWARN("start\n");
 
     if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
-        (!cpsr.I) &&
+       (!cpsr.I) &&
        ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
        ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
         // interrupts is enabled
@@ -89,52 +89,58 @@ uint32_t ARM7TDMI::step() {
         currentPcAccessType = executeThumbInstruction(currInstruction);
     }
 
-
     getNextInstruction(currentPcAccessType);
 
     //DEBUGWARN("end\n");
 
     // TODO: just return one cycle per instr for now
-    return 2;
+    return 1 + (bus->getMemoryAccessCycles());
 }
 
 inline
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
     DEBUG("getting instruction from: " << getRegister(PC_REGISTER) << "\n");
     currInstrAddress = getRegister(PC_REGISTER);
-    switch(currentPcAccessType) {
-        case SEQUENTIAL: {
-            currInstruction = 
-                cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::SEQUENTIAL) :
-                         bus->read32(currInstrAddress, Bus::CycleType::SEQUENTIAL);
-            break;
-        }
-        case NONSEQUENTIAL: {
-            currInstruction = 
-                cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL) :
-                         bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);                
-            break;
-        }
-        case BRANCH: {
-            if(cpsr.T) {
-                currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
-                DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
-                // emulate filling the pipeline
-                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
-                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
-            } else {
-                currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
-                DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
-                // emulate filling the pipeline
-                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
-                //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-            }
-            break;
-        }
-        case NONE: {
-            break;
-        }
+    if(cpsr.T) {
+        currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
+    } else {
+        currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
     }
+    return;
+
+    // switch(currentPcAccessType) {
+    //     case SEQUENTIAL: {
+    //         currInstruction = 
+    //             cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::SEQUENTIAL) :
+    //                      bus->read32(currInstrAddress, Bus::CycleType::SEQUENTIAL);
+    //         break;
+    //     }
+    //     case NONSEQUENTIAL: {
+    //         currInstruction = 
+    //             cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL) :
+    //                      bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);                
+    //         break;
+    //     }
+    //     case BRANCH: {
+    //         if(cpsr.T) {
+    //             currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
+    //             DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
+    //             // emulate filling the pipeline
+    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
+    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
+    //         } else {
+    //             currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
+    //             DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
+    //             // emulate filling the pipeline
+    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
+    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
+    //         }
+    //         break;
+    //     }
+    //     case NONE: {
+    //         break;
+    //     }
+    // }
 }
 
 inline
@@ -780,6 +786,7 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
 
 // TODO: separate these utility functions into a different file
 // TODO: make sure all these shift functions are correct
+inline
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
     if(shift >= 32) {
         return 0;
@@ -788,6 +795,7 @@ uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
     }
 }
 
+inline
 uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
     if(shift >= 32) {
         return 0;
@@ -796,6 +804,7 @@ uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
     }
 }
 
+inline
 uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
     if(shift >= 32) {
         return (value & 0x80000000) ? 0xFFFFFFFF : 0x0;
@@ -809,6 +818,7 @@ uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
     return (value >> shift) | (value << (-((int8_t)shift) & 31U));
 }
 
+inline
 uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu) {
     assert(shift < 32U);
     uint32_t rrxMask = (cpu->cpsr).C;
@@ -900,41 +910,49 @@ bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
 }
 
 // not guaranteed to always be rn, check the spec first
+inline
 uint8_t ARM7TDMI::getRn(uint32_t instruction) {
     return (instruction & 0x000F0000) >> 16;
 }
 
 // not guaranteed to always be rd, check the spec first
+inline
 uint8_t ARM7TDMI::getRd(uint32_t instruction) {
     return (instruction & 0x0000F000) >> 12;
 }
 
 // not guaranteed to always be rs, check the spec first
+inline
 uint8_t ARM7TDMI::getRs(uint32_t instruction) {
     return (instruction & 0x00000F00) >> 8;
 }
 
+inline
 uint8_t ARM7TDMI::getRm(uint32_t instruction) {
     return (instruction & 0x0000000F);
 }
 
+inline
 uint8_t ARM7TDMI::thumbGetRs(uint16_t instruction) {
     return (instruction & 0x0038) >> 3;
 }
 
+inline
 uint8_t ARM7TDMI::thumbGetRd(uint16_t instruction) {
     return (instruction & 0x0007);
 }
 
+inline
 uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
     return (instruction & 0x0038) >> 3;
 }
 
-
+inline
 uint8_t ARM7TDMI::getOpcode(uint32_t instruction) {
     return (instruction & 0x01E00000) >> 21;
 }
 
+inline
 bool ARM7TDMI::sFlagSet(uint32_t instruction) {
     return (instruction & 0x00100000);
 }
@@ -947,22 +965,27 @@ uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
            (((uint32_t)psr.T) << 5) | (((uint32_t)psr.Mode) << 0);
 }
 
+inline
 bool ARM7TDMI::dataTransGetP(uint32_t instruction) {
     return instruction & 0x01000000;
 }
 
+inline
 bool ARM7TDMI::dataTransGetU(uint32_t instruction) {
     return instruction & 0x00800000;
 }
 
+inline
 bool ARM7TDMI::dataTransGetB(uint32_t instruction) {
     return instruction & 0x00400000;
 }
 
+inline
 bool ARM7TDMI::dataTransGetW(uint32_t instruction) {
     return instruction & 0x00200000;
 }
 
+inline
 bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
     return instruction & 0x00100000;
 }
