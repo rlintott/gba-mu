@@ -5,11 +5,33 @@
 
 #include <array>
 #include <vector>
+#include <string>
 
-#include "ARM7TDMI.h"
+#define NDEBUG 1;
+//#define NDEBUGWARN 1;
+
+#ifdef NDEBUG
+#define DEBUG(x)
+#else
+#define DEBUG(x)        \
+    do {                \
+        std::cout << "INFO: " << x; \
+    } while (0)
+#endif
+
+
+#ifdef NDEBUGWARN
+#define DEBUGWARN(x)
+#else
+#define DEBUGWARN(x)        \
+    do {                \
+        std::cout << "WARN: " << x; \
+    } while (0)
+#endif
 
 class PPU;
 class Timer;
+class ARM7TDMI;
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)

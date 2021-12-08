@@ -7,11 +7,12 @@
 #include <type_traits>
 #include <string.h>
 
-
 #include "Bus.h"
 #include "assert.h"
 #include "Timer.h"
 
+#include "ArmOpcodeHandlers.cpp"
+#include "ThumbOpcodeHandlers.cpp"
 
 ARM7TDMI::ARM7TDMI() {
 }
@@ -76,8 +77,7 @@ uint32_t ARM7TDMI::step() {
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
 
         if(conditionalHolds(cond)) {
-            ArmOpcodeHandler handler = decodeArmInstruction(currInstruction);
-            currentPcAccessType = handler(currInstruction, this);
+            currentPcAccessType = executeArmInstruction(currInstruction);
         } else {
             currentPcAccessType = SEQUENTIAL;
         }
@@ -85,10 +85,8 @@ uint32_t ARM7TDMI::step() {
 
     } else {  // THUMB state
         //DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
-        ThumbOpcodeHandler handler = decodeThumbInstruction(currInstruction);
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
-
-        currentPcAccessType = handler(currInstruction, this);
+        currentPcAccessType = executeThumbInstruction(currInstruction);
     }
 
 
@@ -100,6 +98,7 @@ uint32_t ARM7TDMI::step() {
     return 2;
 }
 
+inline
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
     DEBUG("getting instruction from: " << getRegister(PC_REGISTER) << "\n");
     currInstrAddress = getRegister(PC_REGISTER);
@@ -132,9 +131,13 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
             }
             break;
         }
+        case NONE: {
+            break;
+        }
     }
 }
 
+inline
 void ARM7TDMI::irq() {
     //DEBUGWARN("irq1\n");
 
@@ -159,7 +162,7 @@ void ARM7TDMI::connectBus(Bus *bus) {
     this->bus = bus; 
 }
 
-
+inline
 void ARM7TDMI::switchToMode(Mode mode) {
     //DEBUGWARN((uint32_t)mode << " <- switching to mode\n");
     switch (mode) {
@@ -217,6 +220,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
     cpsr.Mode = mode;
 }
 
+inline
 bool ARM7TDMI::conditionalHolds(uint8_t cond) {
     switch(cond) {
         case Condition::EQ: {
@@ -274,6 +278,7 @@ bool ARM7TDMI::conditionalHolds(uint8_t cond) {
     }
 }
 
+inline
 void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
                              ProgramStatusRegister *psr) {
     if (field & 0b1000) {
@@ -379,79 +384,79 @@ decoding from highest to lowest specifity to ensure corredct opcode parsed
 
 */
 // TODO: use hex values to make it more syntactically concise
-ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
-    uint32_t instruction) {
+inline
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeArmInstruction(uint32_t instruction) {
 
     switch (instruction & 0b00001110000000000000000000000000) {  // mask 1
         case 0b00000000000000000000000000000000: {
 
             if ((instruction & 0b00001111111111111111111111010000) == 0b00000001001011111111111100010000) {  // BX,BLX
-                return ArmOpcodeHandlers::branchAndExchangeHandler;
+                return branchAndExchangeHandler(instruction);
 
             } else if ((instruction & 0b00001111101100000000111111110000) == 0b00000001000000000000000010010000) {  // TransSwp12
-                return ArmOpcodeHandlers::singleDataSwapHandler;
+                return singleDataSwapHandler(instruction);
 
             } else if ((instruction & 0b00001111100100000000111111110000) == 0b00000001000000000000000000000000) {  // PSR Reg
-                return ArmOpcodeHandlers::psrHandler;
+                return psrHandler(instruction);
 
             } else if ((instruction & 0b00001111110000000000000011110000) == 0b00000000000000000000000010010000) {  // Multiply
-                return ArmOpcodeHandlers::multiplyHandler;
+                return multiplyHandler(instruction);
 
             } else if ((instruction & 0b00001110010000000000111110010000) == 0b00000000000000000000000010010000) {  // TransReg10
-                return ArmOpcodeHandlers::halfWordDataTransHandler;
+                return halfWordDataTransHandler(instruction);
 
             } else if ((instruction & 0b00001111100000000000000011110000) == 0b00000000100000000000000010010000) {  // MulLong
-                return ArmOpcodeHandlers::multiplyHandler;
+                return multiplyHandler(instruction);
 
             } else if ((instruction & 0b00001110010000000000000010010000) == 0b00000000010000000000000010010000) {  // TransImm10
-                return ArmOpcodeHandlers::halfWordDataTransHandler;
+                return halfWordDataTransHandler(instruction);
 
             } else {  // dataProc
                 // debugger->disassembleDataProcessing(instruction);
-                return ArmOpcodeHandlers::dataProcHandler;
+                return dataProcHandler(instruction);
             }
             break;
         }
         case 0b00000010000000000000000000000000: {
             if ((instruction & 0b00001111101100000000000000000000) == 0b00000011001000000000000000000000) {  // PSR Imm
-                return ArmOpcodeHandlers::psrHandler;
+                return psrHandler(instruction);
 
             } else {  // DataProc
                 // debugger->disassembleDataProcessing(instruction);
-                return ArmOpcodeHandlers::dataProcHandler;
+                return dataProcHandler(instruction);
             }
         }
         case 0b00001000000000000000000000000000: { // block transfer
-            return ArmOpcodeHandlers::blockDataTransHandler;
+            return blockDataTransHandler(instruction);
 
         }
         case 0b00001010000000000000000000000000: { // B,BL,BLX
-            return ArmOpcodeHandlers::branchHandler;
+            return branchHandler(instruction);
 
         }
         case 0b00001110000000000000000000000000: { // SWI
             // TODO: implement software interrupt
             //DEBUGWARN("ARM SWI!!!\n");
-            return ArmOpcodeHandlers::swiHandler;
+            return swiHandler(instruction);
         }
         case 0b00000100000000000000000000000000: {  // transImm9
-            return ArmOpcodeHandlers::singleDataTransHandler;
+            return singleDataTransHandler(instruction);
 
         }
         case 0b00000110000000000000000000000000: {
             if ((instruction & 0b00001110000000000000000000010000) == 0b00000110000000000000000000000000) {  // TransReg9
-                return ArmOpcodeHandlers::singleDataTransHandler;
+                return singleDataTransHandler(instruction);
 
             } else {  // Undefined
-                return ArmOpcodeHandlers::undefinedOpHandler;
+                return undefinedOpHandler(instruction);
             }
             break;
         }
         default: {
-            return ArmOpcodeHandlers::undefinedOpHandler;
+            return undefinedOpHandler(instruction);
         }
     }
-    return ArmOpcodeHandlers::undefinedOpHandler;
+    return undefinedOpHandler(instruction);
 }
 
 /*
@@ -511,20 +516,21 @@ ARM7TDMI::ArmOpcodeHandler ARM7TDMI::decodeArmInstruction(
        18: 11100xxxxxxxxxxx B
        19: 1111xxxxxxxxxxxx BL,BLX
 */
-ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instruction) {
+inline
+ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruction) {
     switch (instruction & 0b1110000000000000) {  // mask 1
         case 0b0000000000000000: { // case 000
             if((instruction & 0b0001100000000000) == 0b0001100000000000) {
                 // 2: 00011xxxxxxxxxxx ADD/SUB
-                return ThumbOpcodeHandlers::addSubHandler;
+                return addSubHandler(instruction);
             } else {
                 // 1: 000xxxxxxxxxxxxx Shifted
-                return ThumbOpcodeHandlers::shiftHandler;
+                return shiftHandler(instruction);
             }
         }
         case 0b0010000000000000: { // case 001
             // 3: 001xxxxxxxxxxxxx Immedi.
-            return ThumbOpcodeHandlers::immHandler;
+            return immHandler(instruction);
         }
         case 0b0100000000000000: { // case 010
             switch(instruction & 0b0001000000000000) {
@@ -532,25 +538,25 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
                     switch(instruction & 0b0001110000000000) {
                         case 0b0000000000000000: {
                             // 4: 010000xxxxxxxxxx AluOp     
-                            return ThumbOpcodeHandlers::aluHandler;              
+                            return aluHandler(instruction);              
                         }
                         case 0b0000010000000000: {
                             // 5: 010001xxxxxxxxxx HiReg/BX
-                            return ThumbOpcodeHandlers::bxHandler;
+                            return bxHandler(instruction);
                         }
                         default: {
                             // 6: 01001xxxxxxxxxxx LDR PC
-                            return ThumbOpcodeHandlers::loadPcRelativeHandler;
+                            return loadPcRelativeHandler(instruction);
                         }
                     }
                 }
                 case 0b0001000000000000: {
                     if(instruction & 0b0000001000000000) {
                         // 8: 0101xx1xxxxxxxxx ""H/SB/SH
-                        return ThumbOpcodeHandlers::loadStoreSignExtendedByteHalfwordHandler;
+                        return loadStoreSignExtendedByteHalfwordHandler(instruction);
                     } else {
                         // 7: 0101xx0xxxxxxxxx LDR/STR
-                        return ThumbOpcodeHandlers::loadStoreRegOffsetHandler;
+                        return loadStoreRegOffsetHandler(instruction);
                     }
                 }
                 default: {
@@ -561,15 +567,15 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
         }
         case 0b0110000000000000: { // case 011
             // 9: 011xxxxxxxxxxxxx ""{B}
-            return ThumbOpcodeHandlers::loadStoreImmediateOffsetHandler;
+            return loadStoreImmediateOffsetHandler(instruction);
         }
         case 0b1000000000000000: { // case 100
             if(instruction & 0b0001000000000000) {
                 // 11: 1001xxxxxxxxxxxx "" SP
-                return ThumbOpcodeHandlers::loadStoreSpRelativeHandler;
+                return loadStoreSpRelativeHandler(instruction);
             } else {
                 // 10: 1000xxxxxxxxxxxx "H
-                return ThumbOpcodeHandlers::loadStoreHalfwordHandler;
+                return loadStoreHalfwordHandler(instruction);
             }
             break;
         }
@@ -577,37 +583,37 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
             if(instruction & 0b0001000000000000) {
                 if(instruction & 0b0000010000000000) {
                     // 14: 1011x10xxxxxxxxx PUSH/POP
-                    return ThumbOpcodeHandlers::multipleLoadStorePushPopHandler;
+                    return multipleLoadStorePushPopHandler(instruction);
                 } else {
                     // 13: 10110000xxxxxxxx ADD SP,nn
-                    return ThumbOpcodeHandlers::addOffsetToSpHandler;
+                    return addOffsetToSpHandler(instruction);
                 }
             } else {
                 // 12: 1010xxxxxxxxxxxx ADD PC/SP
-                return ThumbOpcodeHandlers::getRelativeAddressHandler;
+                return getRelativeAddressHandler(instruction);
             }
         }
         case 0b1100000000000000: { // case 110
             if(instruction & 0b0001000000000000) {
                 if((instruction & 0b0001111100000000) == 0b0001111100000000) {
                     // 17: 11011111xxxxxxxx SWI
-                    return ThumbOpcodeHandlers::softwareInterruptHandler;
+                    return softwareInterruptHandler(instruction);
                 } else {
                     // 16: 1101xxxxxxxxxxxx B{cond}
-                    return ThumbOpcodeHandlers::conditionalBranchHandler;
+                    return conditionalBranchHandler(instruction);
                 }
             } else {
                 // 15: 1100xxxxxxxxxxxx STM/LDM
-                return ThumbOpcodeHandlers::multipleLoadStoreHandler;
+                return multipleLoadStoreHandler(instruction);
             }           
         }
         case 0b1110000000000000: { // case 111
             if(instruction & 0b0001000000000000) {
                 // 19: 1111xxxxxxxxxxxx BL,BLX
-                return ThumbOpcodeHandlers::longBranchHandler;
+                return longBranchHandler(instruction);
             } else {
                 // 18: 11100xxxxxxxxxxx B
-                return ThumbOpcodeHandlers::unconditionalBranchHandler;
+                return unconditionalBranchHandler(instruction);
             }
             break;
         }        
@@ -616,13 +622,14 @@ ARM7TDMI::ThumbOpcodeHandler ARM7TDMI::decodeThumbInstruction(uint16_t instructi
         }
     }
     // undefined opcode
-    return ThumbOpcodeHandlers::undefinedOpHandler;
+    return undefinedOpHandler(instruction);
 }
 
 
 // Comment documentation sourced from the ARM7TDMI Data Sheet.
 // TODO: potential optimization (?) only return carry bit and just shift the op2
 // in the instruction itself
+inline
 ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
                                             bool r) {
     if (i) {  // shifted immediate value as 2nd operand

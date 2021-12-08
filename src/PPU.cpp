@@ -5,6 +5,7 @@
 #include <utility>
 #include <algorithm>
 #include <string>
+#include <iostream>
 
 PPU::PPU() {
 

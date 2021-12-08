@@ -4,9 +4,11 @@
 #include "PPU.h"
 #include "DMA.h"
 #include "Timer.h"
+#include "ARM7TDMI.h"
 #include <execinfo.h>
 #include <signal.h>
 #include <unistd.h>
+#include <iostream>
 
 ARM7TDMI cpu;
 

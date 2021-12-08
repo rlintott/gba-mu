@@ -2,6 +2,7 @@
 #include "PPU.h"
 #include "BIOS.h"
 #include "Timer.h"
+#include "ARM7TDMI.h"
 
 #include <assert.h>
 
@@ -294,8 +295,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             break;
         }   
-        case 0x03000000: {
-            
+        case 0x03000000: {   
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
             //DEBUGWARN("start\n");

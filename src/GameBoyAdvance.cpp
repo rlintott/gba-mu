@@ -115,6 +115,7 @@ void GameBoyAdvance::loop() {
     // TODO: initialize this somewhere else
     bus->iORegisters[Bus::IORegister::KEYINPUT] = 0xFF;
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = 0x03;
+    double fps = 60.0;
 
     // STARTING MAIN EMULATION LOOP!
     while(true) {
@@ -210,7 +211,9 @@ void GameBoyAdvance::loop() {
             frames++;
 
             if((frames % 60) == 0) {
-                DEBUGWARN("fps: " << (double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds) << "\n");
+                double smoothing = 0.9;
+                fps = fps * smoothing + (((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) * (1.0 - smoothing));
+                DEBUGWARN("fps: " << fps << "\n");
             }
         }
 

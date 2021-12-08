@@ -7,8 +7,6 @@
 #include <vector>
 #include <deque>
 
-
-
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
 
@@ -134,7 +132,8 @@ class ARM7TDMI {
     enum FetchPCMemoryAccess {
         NONSEQUENTIAL,
         SEQUENTIAL,
-        BRANCH
+        BRANCH,
+        NONE
     };
 
     FetchPCMemoryAccess currentPcAccessType;
@@ -144,50 +143,38 @@ class ARM7TDMI {
 
     void getNextInstruction(FetchPCMemoryAccess currentPcAccessType);
 
-    class ArmOpcodeHandlers {
-       public:
-        static ARM7TDMI::FetchPCMemoryAccess multiplyHandler(uint32_t instruction,
-                                                ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess dataProcHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess psrHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess undefinedOpHandler(uint32_t instruction,
-                                                   ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess singleDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess halfWordDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess singleDataSwapHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess blockDataTransHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess branchHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess branchAndExchangeHandler(uint32_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess swiHandler(uint32_t instruction, ARM7TDMI *cpu);
+    FetchPCMemoryAccess multiplyHandler(uint32_t instruction);
+    FetchPCMemoryAccess dataProcHandler(uint32_t instruction);
+    FetchPCMemoryAccess psrHandler(uint32_t instruction);
+    FetchPCMemoryAccess undefinedOpHandler(uint32_t instruction);
+    FetchPCMemoryAccess singleDataTransHandler(uint32_t instruction);
+    FetchPCMemoryAccess halfWordDataTransHandler(uint32_t instruction);
+    FetchPCMemoryAccess singleDataSwapHandler(uint32_t instruction);
+    FetchPCMemoryAccess blockDataTransHandler(uint32_t instruction);
+    FetchPCMemoryAccess branchHandler(uint32_t instruction);
+    FetchPCMemoryAccess branchAndExchangeHandler(uint32_t instruction);
+    FetchPCMemoryAccess swiHandler(uint32_t instruction);
 
-    };
-
-    class ThumbOpcodeHandlers {
-       public:
-        static ARM7TDMI::FetchPCMemoryAccess shiftHandler(uint16_t instruction,
-                                             ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess addSubHandler(uint16_t instruction,
-                                              ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess undefinedOpHandler(uint16_t instruction,
-                                                   ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess immHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess aluHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess bxHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess loadPcRelativeHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess loadStoreRegOffsetHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess loadStoreImmediateOffsetHandler(uint16_t instruction, ARM7TDMI *cpu); 
-        static ARM7TDMI::FetchPCMemoryAccess loadStoreHalfwordHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess loadStoreSpRelativeHandler(uint16_t instruction, ARM7TDMI *cpu);      
-        static ARM7TDMI::FetchPCMemoryAccess getRelativeAddressHandler(uint16_t instruction, ARM7TDMI *cpu); 
-        static ARM7TDMI::FetchPCMemoryAccess addOffsetToSpHandler(uint16_t instruction, ARM7TDMI *cpu); 
-        static ARM7TDMI::FetchPCMemoryAccess multipleLoadStorePushPopHandler(uint16_t instruction, ARM7TDMI *cpu);  
-        static ARM7TDMI::FetchPCMemoryAccess multipleLoadStoreHandler(uint16_t instruction, ARM7TDMI *cpu);
-        static ARM7TDMI::FetchPCMemoryAccess conditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);     
-        static ARM7TDMI::FetchPCMemoryAccess unconditionalBranchHandler(uint16_t instruction, ARM7TDMI *cpu);         
-        static ARM7TDMI::FetchPCMemoryAccess longBranchHandler(uint16_t instruction, ARM7TDMI *cpu); 
-        static ARM7TDMI::FetchPCMemoryAccess softwareInterruptHandler(uint16_t instruction, ARM7TDMI *cpu); 
-    };
+    FetchPCMemoryAccess shiftHandler(uint16_t instruction);
+    FetchPCMemoryAccess addSubHandler(uint16_t instruction);
+    FetchPCMemoryAccess undefinedOpHandler(uint16_t instruction);
+    FetchPCMemoryAccess immHandler(uint16_t instruction);
+    FetchPCMemoryAccess aluHandler(uint16_t instruction);
+    FetchPCMemoryAccess bxHandler(uint16_t instruction);
+    FetchPCMemoryAccess loadPcRelativeHandler(uint16_t instruction);
+    FetchPCMemoryAccess loadStoreRegOffsetHandler(uint16_t instruction);
+    FetchPCMemoryAccess loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction);
+    FetchPCMemoryAccess loadStoreImmediateOffsetHandler(uint16_t instruction); 
+    FetchPCMemoryAccess loadStoreHalfwordHandler(uint16_t instruction);
+    FetchPCMemoryAccess loadStoreSpRelativeHandler(uint16_t instruction);      
+    FetchPCMemoryAccess getRelativeAddressHandler(uint16_t instruction); 
+    FetchPCMemoryAccess addOffsetToSpHandler(uint16_t instruction); 
+    FetchPCMemoryAccess multipleLoadStorePushPopHandler(uint16_t instruction);  
+    FetchPCMemoryAccess multipleLoadStoreHandler(uint16_t instruction);
+    FetchPCMemoryAccess conditionalBranchHandler(uint16_t instruction);     
+    FetchPCMemoryAccess unconditionalBranchHandler(uint16_t instruction);         
+    FetchPCMemoryAccess longBranchHandler(uint16_t instruction); 
+    FetchPCMemoryAccess softwareInterruptHandler(uint16_t instruction);
 
     uint32_t thumbLongbranchShift = 0;
 
@@ -380,8 +367,8 @@ class ARM7TDMI {
     typedef FetchPCMemoryAccess (*ArmOpcodeHandler)(uint32_t, ARM7TDMI *);
     typedef FetchPCMemoryAccess (*ThumbOpcodeHandler)(uint16_t, ARM7TDMI *);
 
-    ArmOpcodeHandler decodeArmInstruction(uint32_t instruction);
-    ThumbOpcodeHandler decodeThumbInstruction(uint16_t instruction);
+    FetchPCMemoryAccess executeArmInstruction(uint32_t instruction);
+    FetchPCMemoryAccess executeThumbInstruction(uint16_t instruction);
 
     bool conditionalHolds(uint8_t cond);
 
@@ -398,3 +385,4 @@ class ARM7TDMI {
     friend class Debugger;
 
 };
+
