@@ -4,6 +4,7 @@
 #include <queue>
 
 class Bus; 
+class Scheduler;
 
 class PPU {
 
@@ -119,5 +120,5 @@ class PPU {
             {64, 64}
         };
 
-
+        Scheduler* scheduler;
 };

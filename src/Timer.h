@@ -3,6 +3,7 @@
 
 class Bus;
 class ARM7TDMI;
+class Scheduler;
 
 
 class Timer {
@@ -42,9 +43,7 @@ public:
 
 
         Bus* bus;
-
         ARM7TDMI* cpu;
-
-
+        Scheduler* scheduler;
 
 };

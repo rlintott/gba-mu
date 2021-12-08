@@ -2,6 +2,7 @@
 
 class Bus;
 class ARM7TDMI;
+class Scheduler;
 
 class DMA {
 
@@ -12,11 +13,15 @@ class DMA {
         // return 0 if DMA did not occur, else return # of cycles DMA took
         uint32_t step(bool hBlank, bool vBlank, uint16_t scanline);
 
+        void updateDma(uint32_t ioReg, uint8_t newValue);
+
     private:
         Bus *bus;
         ARM7TDMI *cpu;
-        
+        Scheduler* scheduler;
+
         uint32_t dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
+        void modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue);
 
         static const uint32_t internalMemMask = 0x07FFFFFF;
         static const uint32_t anyMemMask      = 0x0FFFFFFF;

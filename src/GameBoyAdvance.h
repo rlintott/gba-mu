@@ -7,6 +7,7 @@ class PPU;
 class DMA;
 class Timer;
 class Debugger;
+class Scheduler;
 
 class GameBoyAdvance {
    public:
@@ -19,9 +20,7 @@ class GameBoyAdvance {
     void startRom();
     void loop();
 
-    void testDisplay();
-
-    uint64_t getTotalCyclesElapsed();
+    
 
    private:
     ARM7TDMI* arm7tdmi;
@@ -31,6 +30,10 @@ class GameBoyAdvance {
     DMA* dma;
     Timer* timer;
     Debugger* debugger;
+    Scheduler* scheduler;
+
+    uint64_t getTotalCyclesElapsed();
+    void testDisplay();
 
     bool hBlank = false;
     bool scanlineRendered = false;

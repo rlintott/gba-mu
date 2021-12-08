@@ -18,6 +18,7 @@
 #include "DMA.h"
 #include "Timer.h"
 #include "Debugger.h"
+#include "Scheduler.h"
 
 using milliseconds = std::chrono::milliseconds;
 
@@ -139,6 +140,13 @@ void GameBoyAdvance::loop() {
             }
         }
         cyclesThisStep += arm7tdmi->step();
+
+        
+
+
+
+
+
     
         if(totalCycles >= nextHBlank) { 
             hBlank = true;    

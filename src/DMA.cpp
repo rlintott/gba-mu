@@ -3,6 +3,7 @@
 #include "ARM7TDMI.h"
 #include "assert.h"
 #include "PPU.h"
+#include "Scheduler.h"
 
 
 // TODO: DMA specs not fully implemented yet
@@ -357,4 +358,109 @@ void DMA::connectBus(Bus* bus) {
 
 void DMA::connectCpu(ARM7TDMI* cpu) {
     this->cpu = cpu;
+}
+
+
+void DMA::updateDma(uint32_t ioReg, uint8_t newValue) {
+    if(!(ioReg & 0x1)) {
+        // lower byte modified
+        // don't have to modify anything in the scheduler because timings dont change
+        return;
+    }
+    switch(ioReg & 0xFC) {
+        case 0xB8: {
+            // dma 0
+            modifyDmaX(0, ioReg, newValue);
+            break;
+        }
+        case 0xC4: {
+            // dma 1
+            modifyDmaX(1, ioReg, newValue);
+            break;
+        }
+        case 0xD0: {
+            // dma 2
+            modifyDmaX(2, ioReg, newValue);
+            break;
+        }
+        case 0xDC: {
+            //dma 3
+            modifyDmaX(3, ioReg, newValue);
+            break;
+        }
+        default: {
+            assert(false);
+        }
+    }
+}
+
+void DMA::modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue) {
+    if(newValue & 0x80 == dmaXEnabled[x]) {
+        // no change, don't have to do anything
+    }
+
+    Scheduler::EventType eventType;
+    switch(x) {
+        case 0: {
+            eventType = Scheduler::DMA0;
+            break;
+        }
+        case 1: {
+            eventType = Scheduler::DMA1;
+            break;
+        }
+        case 2: {
+            eventType = Scheduler::DMA2;
+            break;
+        }
+        case 3: {
+            eventType = Scheduler::DMA3;
+            break;
+        }
+    }
+
+    // remove old event
+    scheduler->removeEvent(eventType);
+
+    if(newValue & 0x80) {
+        // enabling dma
+        uint32_t ioRegOffset =  0xC * x;
+
+        // 40000BAh - DMA0CNT_H - DMA 0 Control (R/W)
+        uint16_t control = (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset]) |
+                           (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
+
+        uint8_t startTiming = (control & 0x3000) >> 12;
+
+        switch(startTiming) {
+            case 0: {
+                scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NONE);
+                break;
+            }
+            case 1: {
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::VBLANK);
+                break;
+            }
+            case 2: {
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::HBLANK);
+                break;
+            }
+            case 3: {
+                // special
+                assert(x != 0);
+                if(x == 1 || x == 2) {
+                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NONE);
+                } else {
+                    // x == 3
+                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::DMA3_VIDEO_MODE);
+                }
+
+                break;
+            }
+        }
+
+    } else {
+        // disabling dma
+        // don't need to add a new dma event
+    }
 }
