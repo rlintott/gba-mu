@@ -254,7 +254,7 @@ inline
 uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
     memAccessCycles += 1;
-    uint32_t shift = address & 0xFF000000;
+    uint32_t shift = (address & 0xFF000000) >> 24;
     //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
     switch(shift) {
@@ -282,7 +282,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             break;
         }
-        case 0x02000000: { // CHIP RAM 
+        case 0x02: { // CHIP RAM 
             DEBUG("reading from wramBoard\n");
             address &= 0x0203FFFF;
             switch(width) {
@@ -302,7 +302,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             break;
         }   
-        case 0x03000000: {   
+        case 0x03: {   
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
             //DEBUGWARN("start\n");
@@ -328,7 +328,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             //DEBUGWARN("end\n");
             break;
         }      
-        case 0x04000000: {
+        case 0x04: {
             if(address > 0x040003FE) {
                 break;
             }
@@ -352,7 +352,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }    
             break;       
         }     
-        case 0x05000000: {  
+        case 0x05: {  
             // if(address > 0x050003FF) {
             //     break;
             // }  
@@ -374,7 +374,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             } 
             break;
         }    
-        case 0x06000000: {    
+        case 0x06: {    
             // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
             // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
             //address &= 0x06017FFF;
@@ -401,7 +401,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }    
             break;
         }        
-        case 0x07000000: {   
+        case 0x07: {   
             address &= 0x070003FF;
             switch(width) {
                 case 32: {
@@ -420,8 +420,8 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             break;
         }      
-        case 0x08000000:
-        case 0x09000000: {
+        case 0x08:
+        case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
             if(address - 0x08000000 > gamePakRom.size()) {
@@ -448,8 +448,8 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             DEBUG("done reading from gamepak\n");
             break;  
         } 
-        case 0x0A000000:
-        case 0x0B000000: {
+        case 0x0A:
+        case 0x0B: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
             switch(width) {
@@ -469,8 +469,8 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }   
             break;
         } 
-        case 0x0C000000:
-        case 0x0D000000:  {
+        case 0x0C:
+        case 0x0D:  {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
             switch(width) {
@@ -490,8 +490,8 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             } 
             break;  
         }
-        case 0x0E000000:
-        case 0x0F000000:  {
+        case 0x0E:
+        case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
             address &= 0x0E00FFFF;
@@ -532,13 +532,13 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
     //addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
     memAccessCycles += 1;
-    uint32_t shift = address & 0x0F000000;
+    uint32_t shift = (address & 0xFF000000) >> 24;
 
     switch(shift) {
         case 0x0:
         case 0x01: {       
         }
-        case 0x02000000: { // BOARD RAM  
+        case 0x02: { // BOARD RAM  
             address &= 0x0203FFFF;
             //DEBUGWARN("start write at 0x02000000\n");
             switch(width) {
@@ -561,7 +561,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             }
             break; 
         }
-        case 0x03000000: {
+        case 0x03: {
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
             switch(width) {
@@ -586,7 +586,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //DEBUGWARN("done writing to ram chip\n");
             break;        
         }
-        case 0x04000000: {
+        case 0x04: {
             if(0x04000000 <= address && address < 0x04000056) {
             }
 
@@ -650,7 +650,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             break;
         }
-        case 0x05000000: {  
+        case 0x05: {  
             address &= 0x050003FF;
             switch(width) {
                 case 32: {
@@ -677,7 +677,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             } 
             break;
         } 
-        case 0x06000000: {  
+        case 0x06: {  
             // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
             // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
             // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
@@ -709,7 +709,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         
             break;
         } 
-        case 0x07000000: {   
+        case 0x07: {   
             // TODO: there are more hblank rules to implement
             address &= 0x070003FF;
             switch(width) {
@@ -735,8 +735,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             break;   
 
         }
-        case 0x08000000:
-        case 0x09000000: {
+        case 0x08:
+        case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0
 
@@ -767,8 +767,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             break;
         }
-        case 0x0A000000:
-        case 0x0B000000: { 
+        case 0x0A:
+        case 0x0B: { 
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
             //assert(false);
@@ -792,8 +792,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             }   
             break;
         }
-        case 0x0C000000:
-        case 0x0D000000:  {
+        case 0x0C:
+        case 0x0D:  {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
             //assert(false);
@@ -816,8 +816,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             }   
             break;
         }
-        case 0x0E000000:
-        case 0x0F000000:  {
+        case 0x0E:
+        case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
             address &= 0x0E00FFFF;

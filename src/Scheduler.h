@@ -82,12 +82,7 @@ class Scheduler {
         std::array<Event, 4> hBlankEvents = {{{DMA0, 0, false},{DMA1, 0, false},{DMA2, 0, false},{DMA3, 0, false}}};
         std::array<Event, 1> dma3VideoModeEvents = {{{DMA3, 0, false}}};
 
-        //std::list<Event>::iterator frontIt = events.begin();
-        uint64_t currClockCycles;
-
         EventType getNextConditionalEvent(EventCondition eventCondition);
-
-        bool eventsQueueDirty = false;
 
         void removeNode(EventNode* eventNode);
         
