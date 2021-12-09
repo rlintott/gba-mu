@@ -400,8 +400,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::dataProcHandler(uint32_t instruction) {
         cpsr.V = overflowBit;
     } else if (rd == PC_REGISTER && sFlagSet(instruction)) {
         DEBUG("changing cpsr / mode in dataproc\n");
+        Mode oldMode = Mode(cpsr.Mode);
         cpsr = *(getCurrentModeSpsr());
-        switchToMode(ARM7TDMI::Mode((*(getCurrentModeSpsr())).Mode));
+        switchToMode(ARM7TDMI::Mode((*(getCurrentModeSpsr())).Mode), oldMode);
     } else {
     }  // flags not affected, not allowed in CMP
 
@@ -886,8 +887,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
         // While R15 loaded, additionally: CPSR=SPSR_<current mode>
         // TODO make sure to switch mode ANYWHERE where cpsr is set
         //DEBUGWARN("switchmong mode in block data trans\n");
+        Mode oldMode = Mode(cpsr.Mode);
         cpsr = *(getCurrentModeSpsr());
-        switchToMode(ARM7TDMI::Mode(cpsr.Mode));
+        switchToMode(ARM7TDMI::Mode(cpsr.Mode), oldMode);
     }
 
     bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -990,7 +992,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::swiHandler(uint32_t instruction) {
     switch(opcode) {
         case 0x0F000000: {
             // 1111b: SWI{cond} nn   ;software interrupt
-            switchToMode(Mode::SUPERVISOR);
+            switchToMode(Mode::SUPERVISOR, Mode(cpsr.Mode));
             // switch to ARM mode, interrupts disabled
             cpsr.T = 0;
             cpsr.I = 1; 
@@ -1015,7 +1017,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::swiHandler(uint32_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::undefinedOpHandler(uint32_t instruction) {
     DEBUGWARN("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
-    switchToMode(ARM7TDMI::Mode::UNDEFINED);
+    switchToMode(ARM7TDMI::Mode::UNDEFINED, Mode(cpsr.Mode));
     bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return BRANCH;
 }

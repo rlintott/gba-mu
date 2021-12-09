@@ -18,7 +18,7 @@ ARM7TDMI::ARM7TDMI() {
 }
 
 void ARM7TDMI::initializeWithRom() {
-    switchToMode(SYSTEM);
+    switchToMode(SYSTEM, SYSTEM);
     cpsr.T = 0; // set CPU to ARM state
     cpsr.Z = 1; // why? TODO: find out
     cpsr.C = 1;
@@ -28,8 +28,10 @@ void ARM7TDMI::initializeWithRom() {
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
     setRegister(SP_REGISTER, 0x03007F00); // stack pointer
-    r13_svc = 0x03007FE0; // SP_svc=03007FE0h
-    r13_irq = 0x03007FA0; // SP_irq=03007FA0h
+    //r13_svc = 0x03007FE0; // SP_svc=03007FE0h
+    svcRegisterBank[0] = 0x03007FE0;
+    //r13_irq = 0x03007FA0; // SP_irq=03007FA0h
+    irqRegisterBank[0] = 0x03007FA0;
 
     bus->resetCycleCountTimeline();
     uint32_t pcAddress = getRegister(PC_REGISTER);
@@ -38,8 +40,6 @@ void ARM7TDMI::initializeWithRom() {
     // emulate filling the pipeline
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-
-
 }
 
 ARM7TDMI::~ARM7TDMI() {}
@@ -149,7 +149,7 @@ void ARM7TDMI::irq() {
 
     uint32_t returnAddr = getRegister(PC_REGISTER) + 4;
     
-    switchToMode(Mode::IRQ);
+    switchToMode(Mode::IRQ, Mode(cpsr.Mode));
     // switch to ARM mode
     cpsr.T = 0;
     cpsr.I = 1; 
@@ -169,61 +169,93 @@ void ARM7TDMI::connectBus(Bus *bus) {
 }
 
 inline
-void ARM7TDMI::switchToMode(Mode mode) {
+void ARM7TDMI::switchToMode(Mode newMode, Mode prevMode) {
+    // if(prevMode == 0) {
+    //     abort();
+    // }
     //DEBUGWARN((uint32_t)mode << " <- switching to mode\n");
-    switch (mode) {
+    Mode currMode = Mode(cpsr.Mode);
+    std::array<uint32_t, 2>* bank;
+    switch (prevMode) {
+        case SYSTEM:
+        case USER: {
+            bank = &userRegisterBank;
+            break;
+        }
+        case IRQ: {
+            bank = &irqRegisterBank;
+            break;
+        }
+        case SUPERVISOR: {
+            bank = &svcRegisterBank;
+            break;
+        }
+        case ABORT: {
+            bank = &abtRegisterBank;
+            break;
+        }
+        case UNDEFINED: {
+            bank = &undRegisterBank;
+            break;
+        }
+        default: {
+            DEBUGWARN(currMode << " :unhandled CPU mode\n");
+            return;
+        }
+    }
+    uint32_t temp13 = registers[13];
+    uint32_t temp14 = registers[14];
+
+    switch (newMode) {
         case SYSTEM:
         case USER: {
             currentSpsr = &cpsr;
-            registers[8] = &r8;
-            registers[9] = &r9;
-            registers[10] = &r10;
-            registers[11] = &r11;
-            registers[12] = &r12;
-            registers[13] = &r13;
-            registers[14] = &r14;
-            break;
-        }
-        case FIQ: {
-            currentSpsr = &SPSR_fiq;
-            registers[8] = &r8_fiq;
-            registers[9] = &r9_fiq;
-            registers[10] = &r10_fiq;
-            registers[11] = &r11_fiq;
-            registers[12] = &r12_fiq;
-            registers[13] = &r13_fiq;
-            registers[14] = &r14_fiq;
+            registers[13] = userRegisterBank[0];
+            registers[14] = userRegisterBank[1];
+            bank->at(0) = temp13;
+            bank->at(1) = temp14;
             break;
         }
         case IRQ: {
             currentSpsr = &SPSR_irq;
-            registers[13] = &r13_irq;
-            registers[14] = &r14_irq;
+            registers[13] = irqRegisterBank[0];
+            registers[14] = irqRegisterBank[1];
+            bank->at(0) = temp13;
+            bank->at(1) = temp14;
             break;
         }
         case SUPERVISOR: {
             // DEBUGWARN("supervisor mode\n");
             currentSpsr = &SPSR_svc;
-            registers[13] = &r13_svc;
-            registers[14] = &r14_svc;
+            registers[13] = svcRegisterBank[0];
+            registers[14] = svcRegisterBank[1];
+            bank->at(0) = temp13;
+            bank->at(1) = temp14;
             break;
         }
         case ABORT: {
             currentSpsr = &SPSR_abt;
-            registers[13] = &r13_abt;
-            registers[14] = &r14_abt;
+            registers[13] = abtRegisterBank[0];
+            registers[14] = abtRegisterBank[1];
+            bank->at(0) = temp13;
+            bank->at(1) = temp14;
             break;
         }
         case UNDEFINED: {
             currentSpsr = &SPSR_und;
-            registers[13] = &r13_abt;
-            registers[14] = &r14_abt;
+            registers[13] = undRegisterBank[0];
+            registers[14] = undRegisterBank[1];
+            bank->at(0) = temp13;
+            bank->at(1) = temp14;
             break;
+        }
+        default: {
+            DEBUGWARN("unhandled CPU mode\n");
         }
     }
     // SPSR_svc=CPSR   ;save CPSR flags
     *(getCurrentModeSpsr()) = cpsr;
-    cpsr.Mode = mode;
+    cpsr.Mode = newMode;
 }
 
 inline
@@ -304,6 +336,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
         // reserverd don't change
     }
     if (cpsr.Mode != USER) {
+        Mode oldMode = Mode(cpsr.Mode);
         if (field & 0b0001) {
             psr->I = (bool)(value & 0x00000080);
             psr->F = (bool)(value & 0x00000040);
@@ -319,7 +352,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
             // TODO: implemnt less hacky way ti transfer psr
             if(psr == &cpsr) {
                 //DEBUGWARN("in transfer to PSR changing mode\n");
-                switchToMode(ARM7TDMI::Mode(mode));
+                switchToMode(ARM7TDMI::Mode(mode), oldMode);
             }   
         }
     }
@@ -834,15 +867,28 @@ ARM7TDMI::ProgramStatusRegister ARM7TDMI::getCpsr() {
     return cpsr;
 }
 
-uint32_t ARM7TDMI::getRegister(uint8_t index) { return *(registers[index]); }
+inline
+uint32_t ARM7TDMI::getRegister(uint8_t index) { return registers[index]; }
 
-uint32_t ARM7TDMI::getUserRegister(uint8_t index) { return *(userRegisters[index]); }
+uint32_t ARM7TDMI::getUserRegister(uint8_t index) { 
+    DEBUGWARN("in get user\n");
+    if(13 <= index && index <= 14 && Mode(cpsr.Mode) != Mode::SYSTEM && Mode(cpsr.Mode) != Mode::USER) {
+        return userRegisterBank[index - 13];
+    }
+    return registers[index]; 
+}
 
+inline
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
-    *(registers[index]) = value;
+    registers[index] = value;
 }
 void ARM7TDMI::setUserRegister(uint8_t index, uint32_t value) {
-    *(userRegisters[index]) = value;
+    DEBUGWARN("in set user\n");
+    if(13 <= index && index <= 14 &&  Mode(cpsr.Mode) != Mode::SYSTEM && Mode(cpsr.Mode) != Mode::USER) {
+        userRegisterBank[index - 13] = value;
+    } else {
+        registers[index] = value;
+    }
 }
 
 bool ARM7TDMI::aluSetsZeroBit(uint32_t value) { return value == 0; }
@@ -1034,6 +1080,13 @@ void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
     currInstruction = instruction;
 }
 
+uint32_t ARM7TDMI::getRegisterDebug(uint8_t reg) {
+    return registers[reg];
+}
+
+uint32_t ARM7TDMI::setRegisterDebug(uint8_t reg, uint32_t value) {
+    registers[reg] = value;
+}
 
 /*
   Bit   Expl.
@@ -1067,3 +1120,4 @@ void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
 
 //     return value;
 // }
+

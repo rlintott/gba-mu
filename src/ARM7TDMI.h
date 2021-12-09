@@ -50,6 +50,9 @@ class ARM7TDMI {
     // dependency injection
     void connectBus(Bus *bus);
 
+    uint32_t getRegisterDebug(uint8_t reg);
+    uint32_t setRegisterDebug(uint8_t reg, uint32_t value);
+
     // struct representing program status register (xPSR)
     struct ProgramStatusRegister {
         uint8_t Mode : 5;  //  M4-M0 - Mode Bits
@@ -101,10 +104,7 @@ class ARM7TDMI {
 
     // accounts for modes, ex in IRQ mode, getting register 14 will return value
     // of R14_irq
-    uint32_t getRegister(uint8_t index);
-    uint32_t getUserRegister(uint8_t index);
 
-    void setRegister(uint8_t index, uint32_t value);
 
     void setCurrInstruction(uint32_t instruction);
 
@@ -126,6 +126,13 @@ class ARM7TDMI {
   
    private:
     
+    uint32_t getRegister(uint8_t index);
+    uint32_t getUserRegister(uint8_t index);
+    
+    void setRegister(uint8_t index, uint32_t value);
+    // accounts for modes, ex in IRQ mode, setting register 14 will set value of
+    // R14_irq
+    void setUserRegister(uint8_t index, uint32_t value);
 
     bool interruptsEnabled();
 
@@ -190,52 +197,60 @@ class ARM7TDMI {
 
     // registers can be dynamically changed to support different registers for
     // different CPU modes
-    std::array<uint32_t *, 16> registers = {
-        &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
-        &r13,  // stack pointer
-        &r14,  // link register
-        &r15   // program counter
-    };
+    // std::array<uint32_t *, 16> registers = {
+    //     &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
+    //     &r13,  // stack pointer
+    //     &r14,  // link register
+    //     &r15   // program counter
+    // };
 
-    std::array<uint32_t *, 16> userRegisters = {
-        &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
-        &r13,  // stack pointer
-        &r14,  // link register
-        &r15   // program counter
-    };
+    // std::array<uint32_t *, 16> userRegisters = {
+    //     &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
+    //     &r13,  // stack pointer
+    //     &r14,  // link register
+    //     &r15   // program counter
+    // };
 
     // all the possible registers
-    uint32_t r0 = 0;
-    uint32_t r1 = 0;
-    uint32_t r2 = 0;
-    uint32_t r3 = 0;
-    uint32_t r4 = 0;
-    uint32_t r5 = 0;
-    uint32_t r6 = 0;
-    uint32_t r7 = 0;
-    uint32_t r8 = 0;
-    uint32_t r9 = 0;
-    uint32_t r10 = 0;
-    uint32_t r11 = 0;
-    uint32_t r12 = 0;
-    uint32_t r13 = 0;
-    uint32_t r14 = 0;
-    uint32_t r15 = 0;
-    uint32_t r8_fiq = 0x0;
-    uint32_t r9_fiq = 0x0;
-    uint32_t r10_fiq = 0x0;
-    uint32_t r11_fiq = 0x0;
-    uint32_t r12_fiq = 0x0;
-    uint32_t r13_fiq = 0x0;
-    uint32_t r14_fiq = 0x0;
-    uint32_t r13_irq = 0x0;
-    uint32_t r14_irq = 0x0;
-    uint32_t r13_svc = 0x0;
-    uint32_t r14_svc = 0x0;
-    uint32_t r13_abt = 0x0;
-    uint32_t r14_abt = 0x0;
-    uint32_t r13_und = 0x0;
-    uint32_t r14_und = 0x0;
+    // uint32_t r0 = 0;
+    // uint32_t r1 = 0;
+    // uint32_t r2 = 0;
+    // uint32_t r3 = 0;
+    // uint32_t r4 = 0;
+    // uint32_t r5 = 0;
+    // uint32_t r6 = 0;
+    // uint32_t r7 = 0;
+    // uint32_t r8 = 0;
+    // uint32_t r9 = 0;
+    // uint32_t r10 = 0;
+    // uint32_t r11 = 0;
+    // uint32_t r12 = 0;
+    // uint32_t r13 = 0;
+    // uint32_t r14 = 0;
+    // uint32_t r15 = 0;
+    // uint32_t r8_fiq = 0x0;
+    // uint32_t r9_fiq = 0x0;
+    // uint32_t r10_fiq = 0x0;
+    // uint32_t r11_fiq = 0x0;
+    // uint32_t r12_fiq = 0x0;
+    // uint32_t r13_fiq = 0x0;
+    // uint32_t r14_fiq = 0x0;
+    // uint32_t r13_irq = 0x0;
+    // uint32_t r14_irq = 0x0;
+    // uint32_t r13_svc = 0x0;
+    // uint32_t r14_svc = 0x0;
+    // uint32_t r13_abt = 0x0;
+    // uint32_t r14_abt = 0x0;
+    // uint32_t r13_und = 0x0;
+    // uint32_t r14_und = 0x0;
+
+
+    std::array<uint32_t, 16> registers = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    std::array<uint32_t, 2> userRegisterBank = {0,0};
+    std::array<uint32_t, 2> svcRegisterBank = {0,0};
+    std::array<uint32_t, 2> irqRegisterBank = {0,0};
+    std::array<uint32_t, 2> abtRegisterBank = {0,0};
+    std::array<uint32_t, 2> undRegisterBank = {0,0};
 
     static const uint8_t PC_REGISTER = 15;
     static const uint8_t LINK_REGISTER = 14;
@@ -374,12 +389,7 @@ class ARM7TDMI {
 
     Cycles executeInstruction(uint32_t rawInstruction);
 
-    // accounts for modes, ex in IRQ mode, setting register 14 will set value of
-    // R14_irq
-    void setUserRegister(uint8_t index, uint32_t value);
-
-
-    void switchToMode(Mode mode);
+    void switchToMode(Mode newMode, Mode prevMode);
 
     // TODO: temporary
     friend class Debugger;

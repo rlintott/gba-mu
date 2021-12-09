@@ -108,38 +108,38 @@ spsr_und:   " WORD_TO_BINARY_PATTERN "\n\
 
 
 void Debugger::updateState(ARM7TDMI* cpu, Bus* bus) {
-    r0 = cpu->getRegister(0);
-    r1 = cpu->getRegister(1);
-    r2 = cpu->getRegister(2);
-    r3 = cpu->getRegister(3);
-    r4 = cpu->getRegister(4);
-    r5 = cpu->getRegister(5);
-    r6 = cpu->getRegister(6);
-    r7 = cpu->getRegister(7);
-    r8 = cpu->getRegister(8);
-    r9 = cpu->getRegister(9);
-    r10= cpu->getRegister(10);
-    r11= cpu->getRegister(11);
-    r12= cpu->getRegister(12);
-    r13= cpu->getRegister(13);
-    r14= cpu->getRegister(14);
-    r15= cpu->getRegister(15);
-    r13irq = cpu->r13_irq;
-    r14irq = cpu->r14_irq;
-    r13svc = cpu->r13_svc;
-    r14svc = cpu->r14_svc;
-    r13und = cpu->r13_und;
-    r14und = cpu->r14_und;
-    cpsr = ARM7TDMI::psrToInt(cpu->cpsr);
-    spsr_abt = ARM7TDMI::psrToInt(cpu->SPSR_abt);
-    spsr_svc = ARM7TDMI::psrToInt(cpu->SPSR_svc);
-    spsr_irq = ARM7TDMI::psrToInt(cpu->SPSR_irq);
-    spsr_fiq = ARM7TDMI::psrToInt(cpu->SPSR_fiq);
-    spsr_und = ARM7TDMI::psrToInt(cpu->SPSR_und);
+    // r0 = cpu->getRegisterDebug(0);
+    // r1 = cpu->getRegisterDebug(1);
+    // r2 = cpu->getRegisterDebug(2);
+    // r3 = cpu->getRegisterDebug(3);
+    // r4 = cpu->getRegisterDebug(4);
+    // r5 = cpu->getRegisterDebug(5);
+    // r6 = cpu->getRegisterDebug(6);
+    // r7 = cpu->getRegisterDebug(7);
+    // r8 = cpu->getRegisterDebug(8);
+    // r9 = cpu->getRegisterDebug(9);
+    // r10= cpu->getRegisterDebug(10);
+    // r11= cpu->getRegisterDebug(11);
+    // r12= cpu->getRegisterDebug(12);
+    // r13= cpu->getRegisterDebug(13);
+    // r14= cpu->getRegisterDebug(14);
+    // r15= cpu->getRegisterDebug(15);
+    // r13irq = cpu->r13_irq;
+    // r14irq = cpu->r14_irq;
+    // r13svc = cpu->r13_svc;
+    // r14svc = cpu->r14_svc;
+    // r13und = cpu->r13_und;
+    // r14und = cpu->r14_und;
+    // cpsr = ARM7TDMI::psrToInt(cpu->cpsr);
+    // spsr_abt = ARM7TDMI::psrToInt(cpu->SPSR_abt);
+    // spsr_svc = ARM7TDMI::psrToInt(cpu->SPSR_svc);
+    // spsr_irq = ARM7TDMI::psrToInt(cpu->SPSR_irq);
+    // spsr_fiq = ARM7TDMI::psrToInt(cpu->SPSR_fiq);
+    // spsr_und = ARM7TDMI::psrToInt(cpu->SPSR_und);
 
-    instrAddress = cpu->currInstrAddress;
-    instr = disassembleArm(cpu->currInstruction);
-    instrWord = cpu->currInstruction;
+    // instrAddress = cpu->currInstrAddress;
+    // instr = disassembleArm(cpu->currInstruction);
+    // instrWord = cpu->currInstruction;
 }
 
 static uint32_t signExtend23Bit(uint32_t value) {

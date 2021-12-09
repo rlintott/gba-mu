@@ -24,10 +24,10 @@ void handler(int sig) {
 
     printf("%08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X\n",
             cpu.getCurrentInstruction(), 
-            cpu.getRegister(0), cpu.getRegister(1), cpu.getRegister(2), cpu.getRegister(3), 
-            cpu.getRegister(4), cpu.getRegister(5), cpu.getRegister(6), cpu.getRegister(7),
-            cpu.getRegister(8), cpu.getRegister(9), cpu.getRegister(10), cpu.getRegister(11),
-            cpu.getRegister(12), cpu.getRegister(13), cpu.getRegister(14), cpu.getRegister(15) + 4, 
+            cpu.getRegisterDebug(0), cpu.getRegisterDebug(1), cpu.getRegisterDebug(2), cpu.getRegisterDebug(3), 
+            cpu.getRegisterDebug(4), cpu.getRegisterDebug(5), cpu.getRegisterDebug(6), cpu.getRegisterDebug(7),
+            cpu.getRegisterDebug(8), cpu.getRegisterDebug(9), cpu.getRegisterDebug(10), cpu.getRegisterDebug(11),
+            cpu.getRegisterDebug(12), cpu.getRegisterDebug(13), cpu.getRegisterDebug(14), cpu.getRegisterDebug(15) + 4, 
             cpu.psrToInt(cpu.getCpsr()));
 
     // print out all the frames to stderr

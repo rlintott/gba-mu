@@ -1192,7 +1192,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::softwareInterruptHandler(uint16_t instru
     
 
     // CPSR=<changed>  ;Enter svc/abt
-    switchToMode(Mode::SUPERVISOR);
+    switchToMode(Mode::SUPERVISOR, Mode(cpsr.Mode));
 
     // ARM state, IRQs disabled
     cpsr.T = 0;
