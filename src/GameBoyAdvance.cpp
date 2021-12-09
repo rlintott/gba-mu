@@ -133,7 +133,10 @@ void GameBoyAdvance::loop() {
         uint64_t eventCycles = 0;
         //DEBUGWARN(cyclesSinceStart << " <- cycles since start\n");
         while(nextEvent != Scheduler::EventType::NULL_EVENT) {
-            //DEBUGWARN(nextEvent << " current event\n");
+            // if(Scheduler::EventType::TIMER0 <= nextEvent && nextEvent <= Scheduler::EventType::TIMER3) {
+            //     DEBUGWARN(nextEvent << " current event\n");
+            // }
+            
             switch(nextEvent) {
                 case Scheduler::EventType::DMA0: {
                     eventCycles += dma->dmaX(0, false, false, currentScanline);
@@ -182,6 +185,10 @@ void GameBoyAdvance::loop() {
 
                     frames++;
                     
+                    // while(getCurrentTime() - previousTime < 17) {
+                    //     usleep(500);
+                    // }
+
                     if((frames % 60) == 0) {
                         double smoothing = 0.2;
                         fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);

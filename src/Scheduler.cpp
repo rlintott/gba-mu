@@ -161,6 +161,7 @@ void Scheduler::removeEvent(EventType eventType) {
     while(it != events.end() && !found) {
         if(it->eventType == eventType) {
             found = true;
+            break;
         } 
         ++it;
     } 

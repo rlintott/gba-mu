@@ -592,6 +592,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             if(0x4000100 <= address && address <= 0x400010F) {
                 // timer addresses
+                DEBUGWARN("howdy\n");
                 timer->updateTimerUponWrite(address, value, width);
             }
 

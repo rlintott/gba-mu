@@ -46,45 +46,84 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
     update Timer state upon write
 */
 void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width) {
+    
     while(width != 0) {
+        //DEBUGWARN(address << " writing to addr\n");
         uint8_t byte = value & 0xFF;
 
-        switch(address & 0xF) {
-            case 0x2: {
+        switch(address) {
+            case 0x4000100: {
+                setTimerXReloadLo(byte, 0);
+                break;
+            }
+            case 0x4000101: {
+                setTimerXReloadHi(byte, 0);
+                break;
+            }
+            case 0x4000102: {
                 setTimerXControlLo(byte, 0);
                 break;
             }
-            case 0x3: {
+            case 0x4000103: {
                 setTimerXControlHi(byte, 0);
                 break;
             }
-            case 0x6: {
+            case 0x4000104: {
+                setTimerXReloadLo(byte, 1);
+                break;
+            }
+            case 0x4000105: {
+                setTimerXReloadHi(byte, 1);
+                break;
+            }
+            case 0x4000106: {
+                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 1);
                 break;
             }
-            case 0x7: {
+            case 0x4000107: {
                 setTimerXControlHi(byte, 1);
                 break;
             }            
-            case 0xA: {
+            case 0x4000108: {
+                //DEBUGWARN("LO!" << (uint32_t)byte << "\n");
+                setTimerXReloadLo(byte, 2);
+                break;
+            }
+            case 0x4000109: {
+                //DEBUGWARN("HI!" << (uint32_t)byte << "\n");
+                setTimerXReloadHi(byte, 2);
+                break;
+            }
+            case 0x400010A: {
+                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 2);
                 break;
             }
-            case 0xB: {
+            case 0x400010B: {
                 setTimerXControlHi(byte, 2);
                 break;
             }
-            case 0xE: {
+            case 0x400010C: {
+                setTimerXReloadLo(byte, 3);
+                break;
+            }
+            case 0x400010D: {
+                setTimerXReloadHi(byte, 3);
+                break;
+            }
+            case 0x400010E: {
+                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 3);
                 break;
             }
-            case 0xF: {
+            case 0x400010F: {
                 setTimerXControlHi(byte, 3);
                 break;
             }
             default: {
                 break;
-            }
+            }        
         }
 
         width -= 8;
@@ -100,7 +139,7 @@ void Timer::setTimerXControlHi(uint8_t val, uint8_t x) {
 
 inline
 void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
-    // DEBUGWARN("setTimerXControlLo start\n");
+    //((uint32_t) x << "setTimerXControlLo x \n");
     // DEBUGWARN("x: " << (uint32_t)x << "\n");
     // DEBUGWARN("prescaler addr: " << timerPrescaler << "\n");
     Scheduler::EventType timerEvent;
@@ -138,7 +177,10 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
     timerIrqEnable[x] = val & 0x40;
     timerStart[x] = val & 0x80;
 
-    if((val & 0x80) && (val & 0x4)) {
+    //DEBUGWARN((uint32_t) timerCountUp[x] << " setTimerXControlLo countup \n");
+    //DEBUGWARN((uint32_t) timerStart[x] << "setTimerXControlLo start \n");
+
+    if((val & 0x80) && !(val & 0x4)) {
         // only schedule if the timer is not count-up (since count up timers will automatically overflow)
         // timer enabled, so schedule new event
         if(timerCounter[x] > 0xFFFF) { // if overflow
@@ -147,7 +189,10 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
             scheduler->addEvent(timerEvent, 0, Scheduler::EventCondition::NULL_CONDITION);
         } else {
             // add event at time when timer will go off
-            scheduler->addEvent(timerEvent, (0x10000 - timerCounter[x]) * timerPrescaler[x], Scheduler::EventCondition::NULL_CONDITION);
+            //DEBUGWARN("adding timer event to scheduler!\n");
+            scheduler->addEvent(timerEvent, 
+                                (0x10000 - timerCounter[x]) * timerPrescaler[x], 
+                                Scheduler::EventCondition::NULL_CONDITION);
         }
     }
 }
@@ -187,6 +232,7 @@ void Timer::timerXOverflowEvent(uint8_t x) {
     if(timerIrqEnable[x]) {
         queueTimerInterrupt(x);
     }
+
     timerCounter[x] = timerReload[x];
     uint8_t cascadeX = x + 1;
     bool overflow = true;
@@ -202,6 +248,17 @@ void Timer::timerXOverflowEvent(uint8_t x) {
         }
         cascadeX++;
     }
+    Scheduler::EventType timerEvent;
+    switch(x) {
+        case 0: { timerEvent = Scheduler::EventType::TIMER0; break; }
+        case 1: { timerEvent = Scheduler::EventType::TIMER1; break; }
+        case 2: { timerEvent = Scheduler::EventType::TIMER2; break; }
+        case 3: { timerEvent = Scheduler::EventType::TIMER3; break; }
+        default: { break; }
+    }
+    scheduler->addEvent(timerEvent,
+                       (0x10000 - timerCounter[x]) * timerPrescaler[x], 
+                        Scheduler::EventCondition::NULL_CONDITION);
 }
 
 inline
@@ -232,14 +289,18 @@ void Timer::queueTimerInterrupt(uint8_t x) {
 inline
 void Timer::calculateTimerXCounter(uint8_t x, uint64_t cyclesPassed) {
     // update counter
-    uint32_t increments = (cyclesPassed - timerCycleOfLastUpdate[x] + timerExcessCycles[x]) / timerPrescaler[x];
+    if(!timerCountUp[x]) {
+        if(timerStart[x]) {
+            uint32_t increments = ((cyclesPassed - timerCycleOfLastUpdate[x]) + timerExcessCycles[x]) / timerPrescaler[x];
 
-    if(increments != 0) {
-        timerExcessCycles[x] = (cyclesPassed - timerCycleOfLastUpdate[x] + timerExcessCycles[x]) % (timerPrescaler[x]);
-    } else {
-        timerExcessCycles[x] += cyclesPassed - timerCycleOfLastUpdate[x];
+            if(increments != 0) {
+                timerExcessCycles[x] = ((cyclesPassed - timerCycleOfLastUpdate[x]) + timerExcessCycles[x]) % (timerPrescaler[x]);
+            } else {
+                timerExcessCycles[x] += (cyclesPassed - timerCycleOfLastUpdate[x]);
+            }
+            
+            timerCounter[x] += increments; 
+        }
+        timerCycleOfLastUpdate[x] = cyclesPassed;
     }
-    timerCycleOfLastUpdate[x] = cyclesPassed;
-
-    timerCounter[x] += increments; 
-}
+}     
