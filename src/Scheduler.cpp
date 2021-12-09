@@ -32,39 +32,38 @@
 
 
 void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition) {
-    if(eventsQueueDirty && frontIt != events.begin() && events.size() > 100) {
-        //DEBUGWARN("in here!\n");
-        //DEBUGWARN(events.size() << " before\n");
-        events.erase(events.begin(), frontIt);
-        frontIt = events.begin();
-        eventsQueueDirty = false;
-    }
     //DEBUGWARN(events.size() << " after\n");
-
     if(eventCondition == NULL_CONDITION) {
         uint64_t startAt = GameBoyAdvance::cyclesSinceStart + cyclesInFuture;
 
-        std::list<Event>::iterator it = frontIt;
-        bool foundPos = false;
-        if(frontIt == events.end()) {
-            frontIt = events.insert(it, {eventType, startAt, true});
+        EventNode* node = &events[eventType];
+        node->event.active = true;
+        node->event.startCycle = startAt;
+        node->next = nullptr;
+
+        if(startNode == nullptr) {
+            startNode = node;
         } else {
-            while(it != events.end() && !foundPos) {
-                if(startAt < it->startCycle) {
-                    foundPos = true;
-                } else if(startAt == it->startCycle && eventType < it->eventType) {
-                    foundPos = true;
+            removeNode(node);
+
+            EventNode* curr = startNode;
+            EventNode* prev = nullptr;
+            while(curr != nullptr) {
+                if((curr->event.startCycle > startAt) || 
+                   (curr->event.startCycle == startAt && eventType < curr->event.eventType)) {
+                    break;
                 } 
-                if(!foundPos) {
-                    ++it;
-                }       
+                prev = curr;
+                curr = curr->next;
             }
-            std::list<Event>::iterator newIt = events.insert(it, {eventType, startAt, true});
-            if(++newIt == frontIt) {
-                frontIt = --newIt;
+            node->next = curr;
+            if(prev != nullptr) {
+                prev->next = node;
+            } else {
+                startNode = node;
             }
         }
-        //frontIt = events.begin();
+
     } else {
 
         switch(eventCondition) {
@@ -87,24 +86,32 @@ void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCond
     }
 }
 
+void Scheduler::removeNode(EventNode* eventNode) {
+    if(startNode == eventNode) {
+        startNode = nullptr;
+    } else {
+        EventNode* curr = startNode;
+        while(curr->next != nullptr) {
+            //DEBUGWARN("hey!\n");
+            if(curr->next == eventNode) {
+                curr->next = curr->next->next;
+                break;
+            } 
+            curr = curr->next;
+        }
+    }
+    eventNode->next = nullptr;
+}
 
 Scheduler::EventType Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
     EventType toReturn = EventType::NULL_EVENT;
-
-    //DEBUGWARN(currentCycle << "\n");
-    //DEBUGWARN(events.size() << "\n");
-    //printEventList();
-    //DEBUGWARN("hi" << "\n");
     if(eventCondition == EventCondition::NULL_CONDITION) {
-        
-        if(frontIt != events.end()) {
-            
-            if(frontIt->startCycle <= currentCycle) {
-                toReturn = frontIt->eventType;
-                ++frontIt;
-                eventsQueueDirty = true;
-            }
-        }
+        if(startNode != nullptr && startNode->event.startCycle < currentCycle) {
+            toReturn = startNode->event.eventType;
+            EventNode* oldStart = startNode;
+            startNode = startNode->next;
+            oldStart->next = nullptr;
+        }    
     } else {
         toReturn = getNextConditionalEvent(eventCondition);
     }
@@ -156,18 +163,9 @@ Scheduler::EventType Scheduler::getNextConditionalEvent(EventCondition eventCond
 }
 
 void Scheduler::removeEvent(EventType eventType) {
-    std::list<Event>::iterator it = frontIt;
-    bool found = false;
-    while(it != events.end() && !found) {
-        if(it->eventType == eventType) {
-            found = true;
-            break;
-        } 
-        ++it;
-    } 
-    if(found) {
-        events.erase(it);
-    }
+    //DEBUGWARN("getting called!\n");
+    EventNode* node = &events[eventType];
+    removeNode(node);
 
     if(DMA0 <= eventType && eventType <= DMA3) {
         vBlankEvents[eventType - 2].active = false;
@@ -180,11 +178,11 @@ void Scheduler::removeEvent(EventType eventType) {
 
 void Scheduler::printEventList() {
     std::cout << "[\n";
-    std::list<Event>::iterator it = frontIt;
-    while(it != events.end()) {
-        std::cout << "{eventType: " << (it->eventType) << " startCycle: " << it->startCycle << " active: " << it->active << "},\n";
-        ++it;
+    EventNode* curr = startNode;
+    while(curr != nullptr) {
+        std::cout << "{eventType: " << (curr->event.eventType) << " startCycle: " << curr->event.startCycle << " active: " << curr->event.active << "},\n";
+        curr = curr->next;
     }
     std::cout << "]\n";
-    //int i = 5;
+
 }  

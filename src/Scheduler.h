@@ -54,17 +54,41 @@ class Scheduler {
         void printEventList();
 
     private: 
-        std::list<Event> events;
+        struct EventNode {
+            Event event;
+            EventNode* next = nullptr;
+            EventNode* prev = nullptr;
+        };
+
+         std::array<EventNode, 12> events = {{
+                                    {{HBLANK, 0, false}, nullptr, nullptr}, 
+                                    {{VBLANK, 0, false}, nullptr, nullptr},
+                                    {{DMA0, 0, false}, nullptr, nullptr},
+                                    {{DMA1, 0, false}, nullptr, nullptr},
+                                    {{DMA2, 0, false}, nullptr, nullptr},
+                                    {{DMA3, 0, false}, nullptr, nullptr},
+                                    {{TIMER0, 0, false}, nullptr, nullptr},
+                                    {{TIMER1, 0, false}, nullptr, nullptr},
+                                    {{TIMER2, 0, false}, nullptr, nullptr},
+                                    {{TIMER3, 0, false}, nullptr, nullptr},
+                                    {{VBLANK_END, 0, false}, nullptr, nullptr},
+                                    {{HBLANK_END, 0, false}, nullptr, nullptr}
+                                }};
+
+        EventNode* startNode = nullptr;
+        
+        //std::list<Event> events;
         std::array<Event, 4> vBlankEvents = {{{DMA0, 0, false},{DMA1, 0, false},{DMA2, 0, false},{DMA3, 0, false}}};
         std::array<Event, 4> hBlankEvents = {{{DMA0, 0, false},{DMA1, 0, false},{DMA2, 0, false},{DMA3, 0, false}}};
         std::array<Event, 1> dma3VideoModeEvents = {{{DMA3, 0, false}}};
 
-        std::list<Event>::iterator frontIt = events.begin();
+        //std::list<Event>::iterator frontIt = events.begin();
         uint64_t currClockCycles;
 
         EventType getNextConditionalEvent(EventCondition eventCondition);
 
         bool eventsQueueDirty = false;
 
+        void removeNode(EventNode* eventNode);
         
 };

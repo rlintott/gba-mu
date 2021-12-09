@@ -237,6 +237,7 @@ void GameBoyAdvance::loop() {
 
                     // add next hblank event
                     scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    
                     break;
                 }
                 case Scheduler::EventType::VBLANK_END: {
