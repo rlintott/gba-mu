@@ -8,8 +8,8 @@
 
 // TODO: DMA specs not fully implemented yet
 // TODO: fix mgba suite ROM Load DMA0 tests, which fail
-inline
-uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
+uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
+    DEBUGWARN("dma " << (uint32_t)x << "\n");
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
     uint32_t ioRegOffset =  0xC * x;
@@ -275,8 +275,7 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         dmaXEnabled[x] = false;
         //DEBUGWARN("imm after setting: " << (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset]) << "\n");
     } else {
-        // else, dma repeat is set, so 
-        //DEBUGWARN("dma repeat: setting dma enabled to false\n");
+        // else, dma repeat is set, so schedule next dma
         if((startTiming == 2 && scanline >= (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1 || 
            (startTiming == 3 && x == 3 && scanline >= 162))
             /* TODO: || (startTiming == 3 && (x == 1 || x == 2) && soundControllerFifoRequest) || 
@@ -294,6 +293,10 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             // TODO: rules for masking dest addr 
         }
 
+        uint16_t control = (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset]) |
+                    (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
+        
+        scheduleDmaX(x, control);
 
     }
     if(control & 0x4000) {
@@ -328,30 +331,6 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 }
 
 
-uint32_t DMA::step(bool hBlank, bool vBlank, uint16_t scanline) {
-    uint32_t cycles = 0;
-
-    if(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1] & 0x80) {
-        // dma0 enabled
-        cycles += dma(0, vBlank, hBlank, scanline);
-    } 
-    if(bus->iORegisters[Bus::IORegister::DMA1CNT_H + 1] & 0x80) {
-        // dma1 enabled
-        cycles += dma(1, vBlank, hBlank, scanline);
-    } 
-    if(bus->iORegisters[Bus::IORegister::DMA2CNT_H + 1] & 0x80) {
-        // dma2 enabled
-        cycles += dma(2, vBlank, hBlank, scanline);
-    } 
-    if(bus->iORegisters[Bus::IORegister::DMA3CNT_H + 1] & 0x80) {
-        // dma3 enabled
-        //DEBUGWARN((uint32_t)bus->iORegisters[Bus::IORegister::DMA3CNT_H + 1] << "\n");
-        cycles += dma(3, vBlank, hBlank, scanline);
-    } 
-    return cycles;
-}
-
-
 void DMA::connectBus(Bus* bus) {
     this->bus = bus;
 }
@@ -370,22 +349,22 @@ void DMA::updateDma(uint32_t ioReg, uint8_t newValue) {
     switch(ioReg & 0xFC) {
         case 0xB8: {
             // dma 0
-            modifyDmaX(0, ioReg, newValue);
+            scheduleDmaX(0, newValue);
             break;
         }
         case 0xC4: {
             // dma 1
-            modifyDmaX(1, ioReg, newValue);
+            scheduleDmaX(1, newValue);
             break;
         }
         case 0xD0: {
             // dma 2
-            modifyDmaX(2, ioReg, newValue);
+            scheduleDmaX(2, newValue);
             break;
         }
         case 0xDC: {
             //dma 3
-            modifyDmaX(3, ioReg, newValue);
+            scheduleDmaX(3, newValue);
             break;
         }
         default: {
@@ -394,11 +373,7 @@ void DMA::updateDma(uint32_t ioReg, uint8_t newValue) {
     }
 }
 
-void DMA::modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue) {
-    if(newValue & 0x80 == dmaXEnabled[x]) {
-        // no change, don't have to do anything
-    }
-
+void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte) {
     Scheduler::EventType eventType;
     switch(x) {
         case 0: {
@@ -422,7 +397,7 @@ void DMA::modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue) {
     // remove old event
     scheduler->removeEvent(eventType);
 
-    if(newValue & 0x80) {
+    if(upperControlByte & 0x80) {
         // enabling dma
         uint32_t ioRegOffset =  0xC * x;
 
@@ -434,22 +409,22 @@ void DMA::modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue) {
 
         switch(startTiming) {
             case 0: {
-                scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NONE);
+                scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NULL_CONDITION);
                 break;
             }
             case 1: {
-                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::VBLANK);
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::VBLANK_START);
                 break;
             }
             case 2: {
-                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::HBLANK);
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::HBLANK_START);
                 break;
             }
             case 3: {
                 // special
                 assert(x != 0);
                 if(x == 1 || x == 2) {
-                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NONE);
+                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NULL_CONDITION);
                 } else {
                     // x == 3
                     scheduler->addEvent(eventType, 2, Scheduler::EventCondition::DMA3_VIDEO_MODE);
@@ -463,4 +438,9 @@ void DMA::modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue) {
         // disabling dma
         // don't need to add a new dma event
     }
+}
+
+
+void DMA::connectScheduler(Scheduler* scheduler) {
+    this->scheduler = scheduler;
 }

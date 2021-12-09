@@ -593,6 +593,12 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 // timer addresses
                 timer->updateTimerUponWrite(address, value, width);
             }
+
+            if(0x40000BA <= address && address <= 0x40000DE) {
+                // timer addresses
+                
+                //dma->updateTimerUponWrite(address, value, width);
+            }
             // DEBUGWARN("width " << (uint32_t)width << "\n");
             // DEBUGWARN("value " << value << "\n");
             // DEBUGWARN("addr " << address << "\n");

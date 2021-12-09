@@ -14,6 +14,10 @@ class Timer {
         void updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width);
         void connectBus(Bus* bus);
         void connectCpu(ARM7TDMI* cpu);
+        void connectScheduler(Scheduler* scheduler);
+        void timerXOverflowEvent(uint8_t x);
+
+        void updateTimer(uint32_t ioReg, uint8_t newValue);
 
     private:
         void stepTimerX(uint64_t cycles, uint8_t x);
@@ -26,12 +30,15 @@ class Timer {
 
         void queueTimerInterrupt(uint8_t x);
 
-public:
+        void calculateTimerXCounter(uint8_t x, uint64_t cyclesPassed);
+
         uint32_t timerPrescaler[4] = {1, 1, 1, 1};
 
         bool timerStart[4] = {false, false, false, false};
 
         uint32_t timerExcessCycles[4] = {0, 0, 0, 0};
+
+        uint64_t timerCycleOfLastUpdate[4] = {0, 0, 0, 0};
 
         uint32_t timerCounter[4] = {0, 0, 0, 0};
 

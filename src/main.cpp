@@ -5,6 +5,7 @@
 #include "DMA.h"
 #include "Timer.h"
 #include "ARM7TDMI.h"
+#include "Scheduler.h"
 #include <execinfo.h>
 #include <signal.h>
 #include <unistd.h>
@@ -37,6 +38,7 @@ void handler(int sig) {
 
 int main(int argc, char *argv[]) {
     signal(SIGABRT, handler);
+    signal(SIGTRAP, handler);
     bool success = true;
     if(argc < 2) {
         std::cerr << "Please include path to a GBA ROM" << std::endl;
@@ -47,8 +49,9 @@ int main(int argc, char *argv[]) {
         DMA dma;
         Timer timer;
         Bus bus{&ppu};
+        Scheduler scheduler;
 
-        GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma, &timer);
+        GameBoyAdvance gba(&cpu, &bus, &screen, &ppu, &dma, &timer, &scheduler);
         if(gba.loadRom(argv[1])) {
             gba.loop();
         }

@@ -23,21 +23,7 @@
 using milliseconds = std::chrono::milliseconds;
 
 
-static std::string getAnswer() {    
-    std::string answer;
-    std::cin >> answer;
-    return answer;
-}
-
-std::future<std::string> asyncGetInput() {
-    printf("can enter memory address and width to watch, (ex. 0xFFFFFFFF 32):");
-    std::string input = "0";
-    std::future<std::string> future = std::async(getAnswer);
-
-    return future;
-}
-
-GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer) {
+GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU* _ppu, DMA* _dma, Timer* _timer, Scheduler* scheduler) {
     this->arm7tdmi = _arm7tdmi;
     this->bus = _bus;
     this->screen = _screen;
@@ -50,6 +36,9 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     this->timer = _timer;
     this->timer->connectBus(bus);
     this->timer->connectCpu(arm7tdmi);
+    this->scheduler = scheduler;
+    dma->connectScheduler(scheduler);
+    timer->connectScheduler(scheduler);
 
     this->debugger = new Debugger();
 }
@@ -62,6 +51,8 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, Timer* _timer) {
     this->timer->connectBus(bus);
     this->timer->connectCpu(arm7tdmi);
 }
+
+uint64_t GameBoyAdvance::cyclesSinceStart = 0;
 
 GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus) {
     DEBUG("initializing GBA\n");
@@ -100,11 +91,12 @@ uint64_t GameBoyAdvance::getTotalCyclesElapsed() {
 
 void GameBoyAdvance::loop() {
     screen->initWindow();
-    uint32_t cyclesThisStep = 0;
-    uint64_t nextHBlank = PPU::H_VISIBLE_CYCLES;
-    uint64_t nextVBlank = PPU::V_VISIBLE_CYCLES;
-    uint64_t nextHBlankEnd = 0;
-    uint64_t nextVBlankEnd = 227 * PPU::H_TOTAL;
+    scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION);
+    scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION);
+    scheduler->addEvent(Scheduler::EventType::HBLANK_END, 0, Scheduler::EventCondition::NULL_CONDITION);
+    scheduler->addEvent(Scheduler::EventType::VBLANK_END, 227 * PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+    scheduler->printEventList();
+
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
 
@@ -121,16 +113,8 @@ void GameBoyAdvance::loop() {
 
     // STARTING MAIN EMULATION LOOP!
     while(true) {
-        uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
-        cyclesThisStep += dmaCycles;
-    
-        timer->step(cyclesThisStep);
-
-        totalCycles += cyclesThisStep;
-        cyclesThisStep = 0;
-
-        vBlank = false;
-        hBlank = false;
+        //uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
+        //cyclesThisStep += dmaCycles;
         if(debugMode) {
             debugger->step(arm7tdmi, bus);
             if(debugger->stepMode) {
@@ -139,49 +123,147 @@ void GameBoyAdvance::loop() {
                 debugger->printState();
             }
         }
-        cyclesThisStep += arm7tdmi->step();
-        totalCycles += cyclesThisStep;
 
-        Scheduler::EventType nextEvent = scheduler->getNextTemporalEvent(totalCycles);
+        uint32_t cpuCycles = arm7tdmi->step();
+        //totalCycles += cpuCycles;
+        cyclesSinceStart += cpuCycles;
+
+        Scheduler::EventType nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         uint64_t eventCycles = 0;
-        while(nextEvent != Scheduler::EventType::NONE) {
+        //DEBUGWARN(cyclesSinceStart << " <- cycles since start\n");
+        while(nextEvent != Scheduler::EventType::NULL_EVENT) {
+            //DEBUGWARN(nextEvent << " current event\n");
             switch(nextEvent) {
                 case Scheduler::EventType::DMA0: {
-                    eventCycles += dma->dmaX(x);
+                    eventCycles += dma->dmaX(0, false, false, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::DMA1: {
+                    eventCycles += dma->dmaX(1, false, false, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::DMA2: {
+                    eventCycles += dma->dmaX(2, false, false, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::DMA3: {
+                    eventCycles += dma->dmaX(3, false, false, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::TIMER0: {
+                    timer->timerXOverflowEvent(0);
                     break;
                 }
                 case Scheduler::EventType::TIMER1: {
+                    timer->timerXOverflowEvent(1);
                     break;
                 }
                 case Scheduler::EventType::TIMER2: {
+                    timer->timerXOverflowEvent(2);
                     break;
                 }
                 case Scheduler::EventType::TIMER3: {
+                    timer->timerXOverflowEvent(3);
                     break;
                 }
                 case Scheduler::EventType::VBLANK: {
+                    //DEBUGWARN("vblank\n");
                     // vblank time!
+                    // (do frame stuff)
+                    // TODO: put some of this stuff to separate methods / classes
+                    if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
+                        arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VBlank);
+                    }
+                    Gamepad::getInput(bus);
+
+                    // setting vblank flag to 1
+                    bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
+
+                    frames++;
                     
+                    if((frames % 60) == 0) {
+                        double smoothing = 0.2;
+                        fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
+                
+                        DEBUGWARN("fps: " << fps << "\n");
+                        //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
+                        previous60Frame = previousTime;
+                        
+                    }
+                    previousTime = getCurrentTime();
+                    screen->drawWindow(ppu->renderCurrentScreen());  
 
+                    Scheduler::EventType vblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::VBLANK_START);
+                    while(vblankEvent != Scheduler::EventType::NULL_EVENT) {
+                        dma->dmaX(vblankEvent - 2, false, true, currentScanline);
+                        vblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::VBLANK_START);
+                    }
 
-
-
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
+                        std::cout << "Entering DEBUG mode! Press LSHIFT to step through CPU instructions\n";
+                        debugMode = true;
+                        debugger->stepMode = true;
+                    }
+                    // add next vblank event
+                    scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
                     break;
                 }
-                case Scheduler::EventType::HBLANK: {
+                case Scheduler::EventType::HBLANK: {      
                     // hblank time!
+                    if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
+                        arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
+                    }
+                    bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
+
+                    Scheduler::EventType hblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::HBLANK_START);
+                    while(hblankEvent != Scheduler::EventType::NULL_EVENT) {
+                        //DEBUGWARN("hi!\n");
+                        dma->dmaX(hblankEvent - 2, false, true, currentScanline);
+                        hblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::HBLANK_START);
+                    }
+                    Scheduler::EventType dma3VideoMode = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::DMA3_VIDEO_MODE);
+                    while(dma3VideoMode != Scheduler::EventType::NULL_EVENT) {
+                        dma->dmaX(dma3VideoMode - 2, false, true, currentScanline);
+                        dma3VideoMode = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::DMA3_VIDEO_MODE);
+                    }
+
+                    // add next hblank event
+                    scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    break;
+                }
+                case Scheduler::EventType::VBLANK_END: {
+                    bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
+                    // add next vblank end event
+                    scheduler->addEvent(Scheduler::EventType::VBLANK_END, PPU::V_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    break;
+                }
+                case Scheduler::EventType::HBLANK_END: {
+                    ppu->renderScanline(nextScanline);
+                    // setting hblank flag to 0
+                    currentScanline += 1;
+                    currentScanline %= 228;
+                    nextScanline = (currentScanline + 1) % 228;
+                    
+                    bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
+                    if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
+                        // current scanline == vcount bits in DISPSTAT
+                        // set vcounter flag
+                        bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x04;
+                        if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x20) {
+                            // if vcount irq enabled, queue the interrupt!
+                            //DEBUGWARN("VCOUNTER INTERRUPT at scanline " << currentScanline << "\n");
+                            arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VCounterMatch);
+                        }
+                    } else {
+                        // toggle vcounter flag off
+                        bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x04);
+
+                    }
+
+                    bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
+
+                    // add next hblank end event
+                    scheduler->addEvent(Scheduler::EventType::HBLANK_END, PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
                     break;
                 }
                 default: {
@@ -189,99 +271,13 @@ void GameBoyAdvance::loop() {
                     //assert(false);
                 }
             }
-
+            nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         }
-        
-
-
-
-
-    
-        if(totalCycles >= nextHBlank) { 
-            hBlank = true;    
-
-            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x10) {
-                    arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::HBlank);
-            }
-            // setting hblank flag to 1
-            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
-
-            nextHBlank += PPU::H_TOTAL;
-        }
-    
-        if(totalCycles >= nextHBlankEnd) {
-            ppu->renderScanline(nextScanline);
-            // setting hblank flag to 0
-            currentScanline += 1;
-            currentScanline %= 228;
-            nextScanline = (currentScanline + 1) % 228;
-            
-            nextHBlankEnd += PPU::H_TOTAL;
-            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
-            if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
-                // current scanline == vcount bits in DISPSTAT
-                // set vcounter flag
-                bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x04;
-                if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x20) {
-                    // if vcount irq enabled, queue the interrupt!
-                    //DEBUGWARN("VCOUNTER INTERRUPT at scanline " << currentScanline << "\n");
-                    arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VCounterMatch);
-                }
-            } else {
-                // toggle vcounter flag off
-                bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x04);
-
-            }
-
-            bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
-        }
-        if(totalCycles >= nextVBlankEnd) {
-            // setting vblank flag to 0
-            nextVBlankEnd += PPU::V_TOTAL;
-            bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
-        }
-
-        if(totalCycles >= nextVBlank) {
-
-            vBlank = true;
-            // TODO: v blank interrupt if enabled
-            if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x8) {
-                arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VBlank);
-            }
-            nextVBlank += PPU::V_TOTAL; 
-            // TODO: clean this up
-            // DEBUGWARN("frame!\n");
-            // force a draw every frame
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
-                debugMode = true;
-                debugger->stepMode = true;
-            }
-            screen->drawWindow(ppu->renderCurrentScreen());  
-            Gamepad::getInput(bus);            
-
-            // setting vblank flag to 1
-            bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x1;
-
-            // while(getCurrentTime() - previousTime < 17) {
-            //     usleep(500);
-            // }
-            
-            frames++;
-            
-            if((frames % 60) == 0) {
-                double smoothing = 0.2;
-                fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
-        
-                DEBUGWARN("fps: " << fps << "\n");
-                //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
-                previous60Frame = previousTime;
-                
-            }
-            previousTime = getCurrentTime();
-        }
-
-
+        //DEBUGWARN("done handling events\n");
+        cyclesSinceStart += eventCycles;
     }
 }
+
+
 
 

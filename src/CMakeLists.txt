@@ -22,6 +22,7 @@ add_library(gba_lib
     ARM7TDMI.cpp ARM7TDMI.h
     Bus.cpp Bus.h
     GameBoyAdvance.cpp GameBoyAdvance.h
+    Scheduler.cpp Scheduler.h
     LCD.cpp LCD.h
     PPU.cpp PPU.h
     Gamepad.cpp Gamepad.h

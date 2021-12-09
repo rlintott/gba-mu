@@ -9,9 +9,9 @@ class DMA {
     public:
         void connectBus(Bus* bus);
         void connectCpu(ARM7TDMI* cpu);
+        void connectScheduler(Scheduler* scheduler);
 
-        // return 0 if DMA did not occur, else return # of cycles DMA took
-        uint32_t step(bool hBlank, bool vBlank, uint16_t scanline);
+        uint32_t dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
 
         void updateDma(uint32_t ioReg, uint8_t newValue);
 
@@ -20,8 +20,7 @@ class DMA {
         ARM7TDMI *cpu;
         Scheduler* scheduler;
 
-        uint32_t dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
-        void modifyDmaX(uint32_t x, uint32_t ioReg, uint8_t newValue);
+        void scheduleDmaX(uint32_t x, uint8_t upperControlByte);
 
         static const uint32_t internalMemMask = 0x07FFFFFF;
         static const uint32_t anyMemMask      = 0x0FFFFFFF;
