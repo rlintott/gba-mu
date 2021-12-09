@@ -32,6 +32,7 @@
 class PPU;
 class Timer;
 class ARM7TDMI;
+class DMA;
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
@@ -44,6 +45,7 @@ class Bus {
     ~Bus();
 
     void connectTimer(Timer* timer);
+    void connectDma(DMA* dma);
 
     enum CycleType {
         SEQUENTIAL,
@@ -198,5 +200,6 @@ class Bus {
 
     PPU* ppu;
     Timer* timer; 
+    DMA* dma;
 
 };

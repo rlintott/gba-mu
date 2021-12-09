@@ -13,7 +13,7 @@ class DMA {
 
         uint32_t dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
 
-        void updateDma(uint32_t ioReg, uint8_t newValue);
+        void updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width);
 
     private:
         Bus *bus;

@@ -2,6 +2,7 @@
 #include "PPU.h"
 #include "BIOS.h"
 #include "Timer.h"
+#include "DMA.h"
 #include "ARM7TDMI.h"
 
 #include <assert.h>
@@ -594,10 +595,9 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 timer->updateTimerUponWrite(address, value, width);
             }
 
-            if(0x40000BA <= address && address <= 0x40000DE) {
-                // timer addresses
-                
-                //dma->updateTimerUponWrite(address, value, width);
+            if(0x40000BA <= address && address <= 0x40000DF) {
+                // dma addresses
+                dma->updateDmaUponWrite(address, value, width);
             }
             // DEBUGWARN("width " << (uint32_t)width << "\n");
             // DEBUGWARN("value " << value << "\n");
@@ -1180,4 +1180,8 @@ void Bus::printCurrentExecutionTimeline() {
 
 void Bus::connectTimer(Timer* _timer) {
     this->timer = _timer;
+}
+
+void Bus::connectDma(DMA* _dma) {
+    this->dma = _dma;
 }

@@ -9,7 +9,7 @@
 // TODO: DMA specs not fully implemented yet
 // TODO: fix mgba suite ROM Load DMA0 tests, which fail
 uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
-    DEBUGWARN("dma " << (uint32_t)x << "\n");
+    //DEBUGWARN("dma " << (uint32_t)x << "\n");
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
     uint32_t ioRegOffset =  0xC * x;
@@ -340,36 +340,40 @@ void DMA::connectCpu(ARM7TDMI* cpu) {
 }
 
 
-void DMA::updateDma(uint32_t ioReg, uint8_t newValue) {
-    if(!(ioReg & 0x1)) {
-        // lower byte modified
-        // don't have to modify anything in the scheduler because timings dont change
-        return;
-    }
-    switch(ioReg & 0xFC) {
-        case 0xB8: {
-            // dma 0
-            scheduleDmaX(0, newValue);
-            break;
+void DMA::updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width) {
+
+    while(width != 0) {
+        uint8_t byte = value & 0xFF;
+        switch(address & 0xFF) {
+            case 0xBB: {
+                // dma 0
+                scheduleDmaX(0, byte);
+                break;
+            }
+            case 0xC7: {
+                // dma 1
+                scheduleDmaX(1, byte);
+                break;
+            }
+            case 0xD3: {
+                // dma 2
+                scheduleDmaX(2, byte);
+                break;
+            }
+            case 0xDF: {
+                //dma 3
+                scheduleDmaX(3, byte);
+                break;
+            }
+            default: {
+                //assert(false);
+                break;
+            }
         }
-        case 0xC4: {
-            // dma 1
-            scheduleDmaX(1, newValue);
-            break;
-        }
-        case 0xD0: {
-            // dma 2
-            scheduleDmaX(2, newValue);
-            break;
-        }
-        case 0xDC: {
-            //dma 3
-            scheduleDmaX(3, newValue);
-            break;
-        }
-        default: {
-            assert(false);
-        }
+        
+        width -= 8;
+        address += 1;
+        value = value >> 8;
     }
 }
 

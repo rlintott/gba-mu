@@ -32,32 +32,39 @@
 
 
 void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition) {
-    if(eventsQueueDirty && frontIt != events.begin()) {
+    if(eventsQueueDirty && frontIt != events.begin() && events.size() > 100) {
         //DEBUGWARN("in here!\n");
+        //DEBUGWARN(events.size() << " before\n");
         events.erase(events.begin(), frontIt);
         frontIt = events.begin();
         eventsQueueDirty = false;
     }
+    //DEBUGWARN(events.size() << " after\n");
 
     if(eventCondition == NULL_CONDITION) {
         uint64_t startAt = GameBoyAdvance::cyclesSinceStart + cyclesInFuture;
 
-        std::list<Event>::iterator it = events.begin();
+        std::list<Event>::iterator it = frontIt;
         bool foundPos = false;
-
-        while(it != events.end() && !foundPos) {
-            if(startAt < it->startCycle) {
-                foundPos = true;
-            } else if(startAt == it->startCycle && eventType < it->eventType) {
-                foundPos = true;
-            } 
-            if(!foundPos) {
-                ++it;
+        if(frontIt == events.end()) {
+            frontIt = events.insert(it, {eventType, startAt, true});
+        } else {
+            while(it != events.end() && !foundPos) {
+                if(startAt < it->startCycle) {
+                    foundPos = true;
+                } else if(startAt == it->startCycle && eventType < it->eventType) {
+                    foundPos = true;
+                } 
+                if(!foundPos) {
+                    ++it;
+                }       
             }
-            
+            std::list<Event>::iterator newIt = events.insert(it, {eventType, startAt, true});
+            if(++newIt == frontIt) {
+                frontIt = --newIt;
+            }
         }
-        events.insert(it, {eventType, startAt, true});
-        frontIt = events.begin();
+        //frontIt = events.begin();
     } else {
 
         switch(eventCondition) {

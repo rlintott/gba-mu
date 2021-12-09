@@ -31,6 +31,7 @@ GameBoyAdvance::GameBoyAdvance(ARM7TDMI* _arm7tdmi, Bus* _bus, LCD* _screen, PPU
     this->ppu = _ppu;
     ppu->connectBus(bus);
     this->dma = _dma;
+    bus->connectDma(dma);
     dma->connectBus(bus);
     dma->connectCpu(arm7tdmi);
     this->timer = _timer;
@@ -96,7 +97,7 @@ void GameBoyAdvance::loop() {
     scheduler->addEvent(Scheduler::EventType::HBLANK_END, 0, Scheduler::EventCondition::NULL_CONDITION);
     scheduler->addEvent(Scheduler::EventType::VBLANK_END, 227 * PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
     scheduler->printEventList();
-
+    //exit(0);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
 
