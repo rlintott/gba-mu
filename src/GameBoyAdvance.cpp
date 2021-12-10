@@ -125,18 +125,26 @@ void GameBoyAdvance::loop() {
             }
         }
 
-        uint32_t cpuCycles = arm7tdmi->step();
-        //totalCycles += cpuCycles;
-        cyclesSinceStart += cpuCycles;
+       if(!bus->haltMode) {
+            uint32_t cpuCycles = arm7tdmi->step();
+            cyclesSinceStart += cpuCycles;
+        } else {
+            DEBUGWARN("entering halt mode\n");
+            if(((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
+               ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
+                // halt mode over, interrupt fired
+                bus->haltMode = false;
+            } else {
+                // skip to next event
+                //DEBUGWARN(scheduler->peekNextEventStartCycle() << " nextEventStartCycle\n");
+                cyclesSinceStart = scheduler->peekNextEventStartCycle();
+            }
+        }
 
         Scheduler::EventType nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         uint64_t eventCycles = 0;
-        //DEBUGWARN(cyclesSinceStart << " <- cycles since start\n");
         while(nextEvent != Scheduler::EventType::NULL_EVENT) {
-            // if(Scheduler::EventType::TIMER0 <= nextEvent && nextEvent <= Scheduler::EventType::TIMER3) {
-            //     DEBUGWARN(nextEvent << " current event\n");
-            // }
-            
+            //DEBUGWARN(nextEvent << " next event\n");
             switch(nextEvent) {
                 case Scheduler::EventType::DMA0: {
                     eventCycles += dma->dmaX(0, false, false, currentScanline);

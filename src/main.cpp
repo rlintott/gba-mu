@@ -39,6 +39,7 @@ void handler(int sig) {
 int main(int argc, char *argv[]) {
     signal(SIGABRT, handler);
     signal(SIGTRAP, handler);
+    signal(SIGSEGV, handler);
     bool success = true;
     if(argc < 2) {
         std::cerr << "Please include path to a GBA ROM" << std::endl;

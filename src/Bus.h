@@ -99,10 +99,13 @@ class Bus {
                 Initialized to 0D000020h (by hardware). Unlike all other I/O registers, this register is mirrored across the whole I/O area (in increments of 64K, ie. at 4000800h, 4010800h, 4020800h, ..., 4FF0800h)
                 TODO: implement more logic for this
         */
-        INTERNAL_MEM_CNT = 0x04000800 - 0x04000000
+        INTERNAL_MEM_CNT = 0x04000800 - 0x04000000,
+
+        HALTCNT = 0x04000301 - 0x04000000   // HALTCNT - BYTE - Undocumented - Low Power Mode Control (W)
+
     };
 
-    
+    bool haltMode = false;
 
     /* General Internal Memory */
 

@@ -596,10 +596,13 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 timer->updateTimerUponWrite(address, value, width);
             }
 
+            // TODO: there's a more efficient way to do this I think,
+            // send the changed register to DMA AFTER the write happens
             if(0x40000BA <= address && address <= 0x40000DF) {
                 // dma addresses
                 dma->updateDmaUponWrite(address, value, width);
             }
+
             // DEBUGWARN("width " << (uint32_t)width << "\n");
             // DEBUGWARN("value " << value << "\n");
             // DEBUGWARN("addr " << address << "\n");
@@ -646,8 +649,15 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                     tempValue = tempValue >> 8;
                 }
                 //DEBUGWARN("eyo2\n");
-            }          
+            }   
 
+            if(address == 0x04000301) {
+                // halt register hit
+                //DEBUGWARN("hey!\n");
+                if(!(iORegisters[HALTCNT] & 0x80)) {
+                    haltMode = true;
+                }
+            }           
             break;
         }
         case 0x05: {  

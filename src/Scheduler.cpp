@@ -106,7 +106,7 @@ void Scheduler::removeNode(EventNode* eventNode) {
 Scheduler::EventType Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
     EventType toReturn = EventType::NULL_EVENT;
     if(eventCondition == EventCondition::NULL_CONDITION) {
-        if(startNode != nullptr && startNode->event.startCycle < currentCycle) {
+        if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
             toReturn = startNode->event.eventType;
             EventNode* oldStart = startNode;
             startNode = startNode->next;
@@ -118,6 +118,16 @@ Scheduler::EventType Scheduler::getNextEvent(uint64_t currentCycle, EventConditi
     //DEBUGWARN(toReturn << "\n");
     return toReturn;
 }
+
+
+uint64_t Scheduler::peekNextEventStartCycle() {
+    uint64_t toReturn = 0;
+    if(startNode != nullptr) {
+        toReturn = startNode->event.startCycle;
+    }
+    return toReturn;
+}
+
 
 Scheduler::EventType Scheduler::getNextConditionalEvent(EventCondition eventCondition) {
     EventType toReturn = EventType::NULL_EVENT;

@@ -51,6 +51,8 @@ class Scheduler {
         */
         EventType getNextEvent(uint64_t currentCycle, EventCondition eventCondition);
 
+        uint64_t peekNextEventStartCycle();
+
         void printEventList();
 
     private: 
