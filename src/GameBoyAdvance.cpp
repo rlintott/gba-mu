@@ -9,7 +9,6 @@
 #include <future>
 #include <thread>
 
-
 #include "ARM7TDMI.h"
 #include "Bus.h"
 #include "LCD.h"
@@ -18,6 +17,8 @@
 #include "DMA.h"
 #include "Timer.h"
 #include "Debugger.h"
+#include "assert.h"
+
 
 using milliseconds = std::chrono::milliseconds;
 
@@ -151,7 +152,7 @@ void GameBoyAdvance::loop() {
 
             nextHBlank += PPU::H_TOTAL;
         }
-    
+        assert(false);
         if(totalCycles >= nextHBlankEnd) {
             ppu->renderScanline(nextScanline);
             // setting hblank flag to 0

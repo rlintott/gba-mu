@@ -8,11 +8,12 @@
 #include <string.h>
 
 #include "Bus.h"
-#include "assert.h"
 #include "Timer.h"
 
 #include "ArmOpcodeHandlers.cpp"
 #include "ThumbOpcodeHandlers.cpp"
+#include "assert.h"
+
 
 ARM7TDMI::ARM7TDMI() {
 }

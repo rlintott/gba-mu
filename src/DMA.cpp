@@ -1,8 +1,8 @@
 #include "DMA.h"
 #include "Bus.h"
 #include "ARM7TDMI.h"
-#include "assert.h"
 #include "PPU.h"
+#include "assert.h"
 
 
 // TODO: DMA specs not fully implemented yet
@@ -18,7 +18,6 @@ uint32_t DMA::dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                        (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
 
     uint8_t startTiming = (control & 0x3000) >> 12;
-
     if(startTiming == 3) {
         if(x == 1 || x == 2) {
             // sound FIFO mode
