@@ -423,8 +423,9 @@ class ARM7TDMI {
             000x x0xx 1xx1 (6)
             000x x1xx 1xx1 (6)
         Dataproc:
-            001x xxxx 0xx1 (5)
+            000x xxxx 0xx1 (5)
             000x xxxx xxx0 (4)
+            001x xxxx xxxx (4)
         Undefined:
             011x xxxx xxx1 (4)
         SWI:
@@ -453,7 +454,9 @@ class ARM7TDMI {
                         return &armMultHandler<i.value>;
                     } else if((i & 0b000000001001) == 0b000000001001) {
                         return &armHwdtHandler<i.value>;
-                    } else if((i & 0b000000000001) == 0b000000000001) {
+                    } else if((i & 0b000000001001) == 0b000000000001) {
+                        return &armDataProcHandler<i.value>;
+                    } else if((i & 0b000000000001) == 0b000000000000) {
                         return &armDataProcHandler<i.value>;
                     } else {
                     }
@@ -462,9 +465,8 @@ class ARM7TDMI {
                 case 0b001: {
                     if((i & 0b000110110000) == 0b000100100000) {
                         return &armPsrHandler<i.value>;
-                    } else if((i & 0b000000001001) == 0b000000000001) {
-                        return &armDataProcHandler<i.value>;
                     } else { 
+                        return &armDataProcHandler<i.value>;
                     }                   
                     break;
                 } 
@@ -494,7 +496,11 @@ class ARM7TDMI {
             }
             return &armUndefHandler<i.value>;
         };
-
+        /* 
+            Since using recursive template metaprogramming, we have to
+            build the LUT in chunks of 500 to avoid
+            compiler stack overflow....
+        */
         static_for<0, 500>::apply([&](auto i)
         {     
             lut[i] = decodeHandler(i);    
@@ -757,7 +763,7 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
             psr->F = (bool)(value & 0x00000040);
             // t bit may not be changed, for THUMB/ARM switching use BX
             // instruction.
-            assert(!(bool)(value & 0x00000020));
+            //assert(!(bool)(value & 0x00000020));
             psr->T = (bool)(value & 0x00000020);
             uint8_t mode = (value & 0x00000010) | (value & 0x00000008) |
                            (value & 0x00000004) | (value & 0x00000002) |

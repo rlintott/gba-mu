@@ -141,7 +141,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                         data = cpu->getRegister(reg);
                     } else {
                         data = cpu->getUserRegister(reg);
-                    }
+                    } 
                     if (reg == 15) data += 8;
                     if(firstAccess) {
                         cpu->bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::NONSEQUENTIAL);

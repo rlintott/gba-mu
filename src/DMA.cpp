@@ -1,9 +1,9 @@
 #include "DMA.h"
 #include "Bus.h"
 #include "ARM7TDMI.h"
-#include "assert.h"
 #include "PPU.h"
 #include "Scheduler.h"
+#include "assert.h"
 
 
 // TODO: DMA specs not fully implemented yet

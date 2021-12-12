@@ -1,7 +1,7 @@
 #include "Scheduler.h"
-#include "assert.h"
 #include "GameBoyAdvance.h"
 #include <iostream>
+#include "assert.h"
 
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
