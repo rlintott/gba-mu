@@ -264,8 +264,9 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
-        tempCycles += 2;
+        
     }
+    tempCycles += bus->getMemoryAccessCycles();
 
     if(!(control & 0x0200)) {
         // DMA Repeat (0=Off, 1=On) (Must be zero if Bit 11 set)

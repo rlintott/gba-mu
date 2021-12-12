@@ -19,7 +19,20 @@ add_custom_command(
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
 
 add_library(gba_lib
-    ARM7TDMI.cpp ARM7TDMI.h
+    ARM7TDMI.cpp 
+    util/static_for.h
+    ARMInstructions/ArmDataProcHandler.cpp 
+    ARMInstructions/ArmPsrHandler.cpp 
+    ARMInstructions/ArmSdtHandler.cpp 
+    ARMInstructions/ArmMultHandler.cpp 
+    ARMInstructions/ArmHwdtHandler.cpp 
+    ARMInstructions/ArmSdsHandler.cpp 
+    ARMInstructions/ArmBdtHandler.cpp 
+    ARMInstructions/ArmBranchHandler.cpp 
+    ARMInstructions/ArmBranchXHandler.cpp 
+    ARMInstructions/ArmSwiHandler.cpp 
+    ARMInstructions/ArmUndefHandler.cpp
+    ARM7TDMI.h
     Bus.cpp Bus.h
     GameBoyAdvance.cpp GameBoyAdvance.h
     Scheduler.cpp Scheduler.h

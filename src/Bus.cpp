@@ -282,17 +282,20 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             break;
         }
-        case 0x02: { // CHIP RAM 
+        case 0x02: { // board RAM 
             DEBUG("reading from wramBoard\n");
             address &= 0x0203FFFF;
             switch(width) {
                 case 32: {
+                    memAccessCycles += 5;
                     return readFromArray32(&wRamBoard, address, 0x02000000);
                 }
                 case 16: {
+                    memAccessCycles += 2;
                     return readFromArray16(&wRamBoard, address, 0x02000000);            
                 }
                 case 8: {
+                    memAccessCycles += 2;
                     return readFromArray8(&wRamBoard, address, 0x02000000);            
                 }
                 default: {
@@ -424,20 +427,23 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
-            if(address - 0x08000000 > gamePakRom.size()) {
-                DEBUGWARN("bigger!\n");
-                DEBUGWARN(address - 0x08000000 << "\n");
-                DEBUGWARN(gamePakRom.size() << " <- gamepakrom size\n");
-            }
+            // if(address - 0x08000000 > gamePakRom.size()) {
+            //     DEBUGWARN("bigger!\n");
+            //     DEBUGWARN(address - 0x08000000 << "\n");
+            //     DEBUGWARN(gamePakRom.size() << " <- gamepakrom size\n");
+            // }
             DEBUG("reading from gamepak\n");
             switch(width) {
                 case 32: {
+                    memAccessCycles += 7;
                     return readFromArray32(&gamePakRom, address, 0x08000000);
                 }
                 case 16: {
+                    memAccessCycles += 4;
                     return readFromArray16(&gamePakRom, address, 0x08000000);            
                 }
-                case 8: {   
+                case 8: {  
+                    memAccessCycles += 4; 
                     return readFromArray8(&gamePakRom, address, 0x08000000);           
                 }
                 default: {
@@ -543,14 +549,17 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //DEBUGWARN("start write at 0x02000000\n");
             switch(width) {
                 case 32: {
+                    memAccessCycles += 5;
                     writeToArray32(&wRamBoard, address, 0x02000000, value);
                     break;
                 }
                 case 16: {
+                    memAccessCycles += 2;
                     writeToArray16(&wRamBoard, address, 0x02000000, value);    
                     break;        
                 }
                 case 8: {
+                    memAccessCycles += 2;
                     writeToArray8(&wRamBoard, address, 0x02000000, value);    
                     break;       
                 }

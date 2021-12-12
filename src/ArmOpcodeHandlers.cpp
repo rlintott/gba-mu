@@ -228,14 +228,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::dataProcHandler(uint32_t instruction) {
     DEBUG((uint32_t)opcode << "<- opcode\n");
 
 
-
     uint32_t rnVal;
     // if rn == pc regiser, have to add to it to account for pipelining /
     // prefetching
     // TODO probably dont need this logic if pipelining is emulated
     if (rn != PC_REGISTER) {
         rnVal = getRegister(rn);
-    } else if (!(instruction & 0x02000000) && (instruction & 0x00000010)) {
+    } else if (!i && r) {
         rnVal = getRegister(rn) + 8;
     } else {
         rnVal = getRegister(rn) + 4;
