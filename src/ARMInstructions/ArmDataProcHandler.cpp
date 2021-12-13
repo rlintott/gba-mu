@@ -77,86 +77,87 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         DEBUG((uint32_t)shiftAmount << " is shiftAmount \n");
         DEBUG(r << " = r \n");
         DEBUG(immOpIsZero << " = immOpIsZero \n");
-
-        if (shiftType == 0 && doShift) {  // Logical Shift Left
-            /*
-                A logical shift left (LSL) takes the contents of
-                Rm and moves each bit by the specified amount
-                to a more significant position. The least significant
-                bits of the result are filled with zeros, and the high bits
-                of Rm which do not map into the result are discarded, except
-                that the least significant discarded bit becomes the shifter
-                carry output which may be latched into the C bit of the CPSR
-                when the ALU operation is in the logical class
-            */
-            if (!immOpIsZero) {
-                op2 = ARM7TDMI::aluShiftLsl(rm, shiftAmount);
-                shiftCarryBit = (shiftAmount > 32) ? 0 : ((rm >> (32 - shiftAmount)) & 1);
-                DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-                DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
-            } else {  // no op performed, carry flag stays the same
-                op2 = rm;
-                shiftCarryBit = cpu->cpsr.C;
-            }
-        } else if (shiftType == 1) {  // Logical Shift Right
-            /*
-                A logical shift right (LSR) is similar, but the contents
-                of Rm are moved to less significant positions in the result
-            */
-            if (!immOpIsZero) {
-                op2 = ARM7TDMI::aluShiftLsr(rm, shiftAmount);
-                shiftCarryBit = (shiftAmount > 32) ? 0 : ((rm >> (shiftAmount - 1)) & 1);
-            } else {
+        if(doShift) {
+            if (shiftType == 0) {  // Logical Shift Left
                 /*
-                    The form of the shift field which might be expected to
-                    correspond to LSR #0 is used to encode LSR #32, which has a
-                    zero result with bit 31 of Rm as the carry output
+                    A logical shift left (LSL) takes the contents of
+                    Rm and moves each bit by the specified amount
+                    to a more significant position. The least significant
+                    bits of the result are filled with zeros, and the high bits
+                    of Rm which do not map into the result are discarded, except
+                    that the least significant discarded bit becomes the shifter
+                    carry output which may be latched into the C bit of the CPSR
+                    when the ALU operation is in the logical class
                 */
-                op2 = 0;
-                shiftCarryBit = rm >> 31;
-            }
-        } else if (shiftType == 2) {  // Arithmetic Shift Right
-            /*
-                An arithmetic shift right (ASR) is similar to logical shift right,
-                except that the high bits are filled with bit 31 of Rm instead of
-            zeros. This preserves the sign in 2's complement notation
-            */
-            if (!immOpIsZero) {
-                op2 = ARM7TDMI::aluShiftAsr(rm, shiftAmount);
-                shiftCarryBit = (shiftAmount >= 32) ? (rm & 0x80000000) : ((rm >> (shiftAmount - 1)) & 1);
-                DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-                DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
-            } else {
+                if (!immOpIsZero) {
+                    op2 = ARM7TDMI::aluShiftLsl(rm, shiftAmount);
+                    shiftCarryBit = (shiftAmount > 32) ? 0 : ((rm >> (32 - shiftAmount)) & 1);
+                    DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
+                    DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
+                } else {  // no op performed, carry flag stays the same
+                    op2 = rm;
+                    shiftCarryBit = cpu->cpsr.C;
+                }
+            } else if (shiftType == 1) {  // Logical Shift Right
                 /*
-                    The form of the shift field which might be expected to give ASR
-                #0 is used to encode ASR #32. Bit 31 of Rm is again used as the
-                carry output, and each bit of operand 2 is also equal to bit 31
-                of Rm.
+                    A logical shift right (LSR) is similar, but the contents
+                    of Rm are moved to less significant positions in the result
                 */
-                op2 = ARM7TDMI::aluShiftAsr(rm, 32);
-                shiftCarryBit = rm >> 31;
-            }
-        } else {  // Rotating Shift
-            /*
-                Rotate right (ROR) operations reuse the bits which “overshoot”
-                in a logical shift right operation by reintroducing them at the
-                high end of the result, in place of the zeros used to fill the high
-                end in logical right operation
-            */
-            if (!immOpIsZero) {
-                op2 = ARM7TDMI::aluShiftRor(rm, shiftAmount % 32);
-                shiftCarryBit = (rm >> ((shiftAmount % 32) - 1)) & 1;
-            } else {
+                if (!immOpIsZero) {
+                    op2 = ARM7TDMI::aluShiftLsr(rm, shiftAmount);
+                    shiftCarryBit = (shiftAmount > 32) ? 0 : ((rm >> (shiftAmount - 1)) & 1);
+                } else {
+                    /*
+                        The form of the shift field which might be expected to
+                        correspond to LSR #0 is used to encode LSR #32, which has a
+                        zero result with bit 31 of Rm as the carry output
+                    */
+                    op2 = 0;
+                    shiftCarryBit = rm >> 31;
+                }
+            } else if (shiftType == 2) {  // Arithmetic Shift Right
                 /*
-                    The form of the shift field which might be expected to give ROR
-                #0 is used to encode a special function of the barrel shifter,
-                    rotate right extended (RRX). This is a rotate right by one bit
-                position of the 33 bit quantity formed by appending the CPSR C
-                flag to the most significant end of the contents of Rm as shown
+                    An arithmetic shift right (ASR) is similar to logical shift right,
+                    except that the high bits are filled with bit 31 of Rm instead of
+                zeros. This preserves the sign in 2's complement notation
                 */
-                op2 = rm >> 1;
-                op2 = op2 | (((uint32_t)(cpu->cpsr.C)) << 31);
-                shiftCarryBit = rm & 1;
+                if (!immOpIsZero) {
+                    op2 = ARM7TDMI::aluShiftAsr(rm, shiftAmount);
+                    shiftCarryBit = (shiftAmount >= 32) ? (rm & 0x80000000) : ((rm >> (shiftAmount - 1)) & 1);
+                    DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
+                    DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
+                } else {
+                    /*
+                        The form of the shift field which might be expected to give ASR
+                    #0 is used to encode ASR #32. Bit 31 of Rm is again used as the
+                    carry output, and each bit of operand 2 is also equal to bit 31
+                    of Rm.
+                    */
+                    op2 = ARM7TDMI::aluShiftAsr(rm, 32);
+                    shiftCarryBit = rm >> 31;
+                }
+            } else {  // Rotating Shift
+                /*
+                    Rotate right (ROR) operations reuse the bits which “overshoot”
+                    in a logical shift right operation by reintroducing them at the
+                    high end of the result, in place of the zeros used to fill the high
+                    end in logical right operation
+                */
+                if (!immOpIsZero) {
+                    op2 = ARM7TDMI::aluShiftRor(rm, shiftAmount % 32);
+                    shiftCarryBit = (rm >> ((shiftAmount % 32) - 1)) & 1;
+                } else {
+                    /*
+                        The form of the shift field which might be expected to give ROR
+                    #0 is used to encode a special function of the barrel shifter,
+                        rotate right extended (RRX). This is a rotate right by one bit
+                    position of the 33 bit quantity formed by appending the CPSR C
+                    flag to the most significant end of the contents of Rm as shown
+                    */
+                    op2 = rm >> 1;
+                    op2 = op2 | (((uint32_t)(cpu->cpsr.C)) << 31);
+                    shiftCarryBit = rm & 1;
+                }
             }
         }
     }

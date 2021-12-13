@@ -7,10 +7,13 @@
 #include <vector>
 #include <deque>
 #include "util/static_for.h"
-#include "assert.h"
 
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
+
+#define COMPILE_TIME_LUT 1
+
+#include "assert.h"
 
 #ifdef NDEBUG
 #define DEBUG(x)
@@ -96,6 +99,9 @@ class ARM7TDMI {
     };
 
     void queueInterrupt(Interrupt interrupt);
+
+    uint64_t thumbCount = 0;
+    uint64_t armCount = 0;
 
     // returns the SPSR for the CPU's current mode
     ProgramStatusRegister *getCurrentModeSpsr();
@@ -318,6 +324,9 @@ class ARM7TDMI {
     static uint8_t mulGetExecutionTimeMVal(uint32_t value);
     static uint8_t umullGetExecutionTimeMVal(uint32_t value);
 
+    static uint32_t signExtend9Bit(uint16_t value);
+    static uint32_t signExtend12Bit(uint32_t value);
+    static uint32_t signExtend23Bit(uint32_t value);
     
     void transferToPsr(uint32_t value, uint8_t field,
                        ProgramStatusRegister *psr);
@@ -388,6 +397,7 @@ class ARM7TDMI {
     friend class Debugger;
 
     using ArmHandler = FetchPCMemoryAccess (*)(uint32_t instruction, ARM7TDMI* cpu);
+    using ThumbHandler = FetchPCMemoryAccess (*)(uint16_t instruction, ARM7TDMI* cpu);
 
     template<uint16_t op> static FetchPCMemoryAccess armDataProcHandler(uint32_t instruction, ARM7TDMI* cpu);
     template<uint16_t op> static FetchPCMemoryAccess armPsrHandler(uint32_t instruction, ARM7TDMI* cpu);
@@ -402,6 +412,29 @@ class ARM7TDMI {
     template<uint16_t op> static FetchPCMemoryAccess armBranchXHandler(uint32_t instruction, ARM7TDMI* cpu);
     template<uint16_t op> static FetchPCMemoryAccess armSwiHandler(uint32_t instruction, ARM7TDMI* cpu);
 
+    template<uint16_t op> static FetchPCMemoryAccess thumbAddOffSpHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbAddSubHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbAluHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbBHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbBxHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbCondBHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbImmHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLongBHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdPcRelHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdStHwHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdStImmOffHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdStRegOffHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbLdStSpRelHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbMultLdStHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbMultLdStPushPopHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbRelAddrHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbShiftHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbSwiHandler(uint16_t instruction, ARM7TDMI* cpu);
+    template<uint16_t op> static FetchPCMemoryAccess thumbUndefHandler(uint16_t instruction, ARM7TDMI* cpu);
+
+
+    #ifdef COMPILE_TIME_LUT
     static constexpr std::array<ArmHandler, 4096> armLut = [] {
         std::array<ArmHandler, 4096> lut = {};
 
@@ -539,11 +572,182 @@ class ARM7TDMI {
         });
         return lut;
     }();
+
+    static constexpr std::array<ThumbHandler, 1024> thumbLut = [] {
+        std::array<ThumbHandler, 1024> lut2 = {};
+        /*
+            add sp,nn
+                1011 0000 xx (8)
+            swi
+                1101 1111 xx (8)
+            alu
+                0100 00xx xx (6)
+            hireg/bx
+                0100 01xx xx (6)
+            push/pop
+                1011 x10x xx (6)
+            add/sub
+                0001 1xxx xx (5)
+            B
+                1110 0xxx xx (5)
+            ldr pc
+                0100 1xxx xx (5)
+            ldr str
+                0101 xx0x xx (5)
+            ldr h/sb/sh
+                0101 xx1x xx (5)
+            ldr H
+                1000 xxxx xx (4)
+            ldr sp
+                1001 xxxx xx (4)
+            add pc/sp
+                1010 xxxx xx (4)
+            stm/ldm
+                1100 xxxx xx (4)
+            b{cond}
+                1101 xxxx xx (4)
+            BL,BLX
+                1111 xxxx xx (4)
+            shift
+                000x xxxx xx (3)
+            imm
+                001x xxxx xx (3)
+            ldr {B}
+                011x xxxx xx (3)
+        */
+        auto decodeThumbHandler = [&] (auto i) {
+            switch ((i & 0b01110000000) >> 7) {  // mask 1
+                case 0b0: { // case 000
+                    if((i & 0b0001100000) == 0b0001100000) {
+                        // 2: 00011xxxxxxxxxxx ADD/SUB
+                        return &thumbAddSubHandler<i>;
+                    } else {
+                        // 1: 000xxxxxxxxxxxxx Shifted
+                        return &thumbShiftHandler<i>;
+                    }
+                }
+                case 0b001: { // case 001
+                    // 3: 001xxxxxxxxxxxxx Immedi.
+                    return &thumbImmHandler<i>;
+                }
+                case 0b010: { // case 010
+                    switch(i & 0b0001000000) {
+                        case 0b0000000000: {
+                            switch(i & 0b0001110000) {
+                                case 0b0000000000: {
+                                    // 4: 010000xxxxxxxxxx AluOp     
+                                    return &thumbAluHandler<i.value>;              
+                                }
+                                case 0b0000010000: {
+                                    // 5: 010001xxxxxxxxxx HiReg/BX
+                                    return &thumbBxHandler<i.value>;
+                                }
+                                default: {
+                                    // 6: 01001xxxxxxxxxxx LDR PC
+                                    return &thumbLdPcRelHandler<i.value>;
+                                }
+                            }
+                        }
+                        case 0b0001000000: {
+                            if(i & 0b0000001000) {
+                                // 8: 0101xx1xxxxxxxxx ""H/SB/SH
+                                return &thumbLdStSeBHwHandler<i.value>;
+                            } else {
+                                // 7: 0101xx0xxxxxxxxx LDR/STR
+                                return &thumbLdStRegOffHandler<i.value>;
+                            }
+                        }
+                        default: {
+                            break;
+                        }                
+                    }
+                    break;
+                }
+                case 0b011: { // case 011
+                    // 9: 011xxxxxxxxxxxxx ""{B}
+                    return &thumbLdStImmOffHandler<i.value>;
+                }
+                case 0b100: { // case 100
+                    if(i & 0b0001000000) {
+                        // 11: 1001xxxxxxxxxxxx "" SP
+                        return &thumbLdStSpRelHandler<i.value>;
+                    } else {
+                        // 10: 1000xxxxxxxxxxxx "H
+                        return &thumbLdStHwHandler<i.value>;
+                    }
+                    break;
+                }
+                case 0b101: { // case 101
+                    if(i & 0b0001000000) {
+                        if(i & 0b0000010000) {
+                            // 14: 1011x10xxxxxxxxx PUSH/POP
+                            return &thumbMultLdStPushPopHandler<i.value>;
+                        } else {
+                            // 13: 10110000xxxxxxxx ADD SP,nn
+                            return &thumbAddOffSpHandler<i.value>;
+                        }
+                    } else {
+                        // 12: 1010xxxxxxxxxxxx ADD PC/SP
+                        return &thumbRelAddrHandler<i.value>;
+                    }
+                }
+                case 0b110: { // case 110
+                    if(i & 0b0001000000) {
+                        if((i & 0b0001111100) == 0b0001111100) {
+                            // 17: 11011111xxxxxxxx SWI
+                            return &thumbSwiHandler<i.value>;
+                        } else {
+                            // 16: 1101xxxxxxxxxxxx B{cond}
+                            return &thumbCondBHandler<i.value>;
+                        }
+                    } else {
+                        // 15: 1100xxxxxxxxxxxx STM/LDM
+                        return &thumbMultLdStHandler<i.value>;
+                    }           
+                }
+                case 0b111: { // case 111
+                    if(i & 0b0001000000) {
+                        // 19: 1111xxxxxxxxxxxx BL,BLX
+                        return &thumbLongBHandler<i.value>;
+                    } else {
+                        // 18: 11100xxxxxxxxxxx B
+                        return &thumbBHandler<i.value>;
+                    }
+                    break;
+                }        
+                default: {
+                    break;
+                }
+            }
+            // undefined opcode
+            return &thumbUndefHandler<i.value>;
+        };
+        /* 
+            Since using recursive template metaprogramming, we have to
+            build the LUT in chunks of 500 to avoid
+            compiler stack overflow....
+        */
+        static_for<0, 500>::apply([&](auto i)
+        {     
+            lut2[i] = decodeThumbHandler(i);    
+        });
+        static_for<500, 1000>::apply([&](auto i)
+        {   
+            lut2[i] = decodeThumbHandler(i);           
+        });
+        static_for<1000, 1024>::apply([&](auto i)
+        {            
+            lut2[i] = decodeThumbHandler(i);
+        });
+        return lut2;
+    }();
+    #endif
 };
 
-
+#ifdef COMPILE_TIME_LUT
 constexpr std::array<ARM7TDMI::ArmHandler, 4096> ARM7TDMI::armLut;
-
+constexpr std::array<ARM7TDMI::ThumbHandler, 1024> ARM7TDMI::thumbLut;
+#endif
 
 inline
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
@@ -851,4 +1055,35 @@ uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu) {
     uint32_t rrxMask = (cpu->cpsr).C;
     DEBUG(rrxMask << " <- rrx mask\n");
     return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
+}
+
+inline
+uint32_t ARM7TDMI::signExtend9Bit(uint16_t value) {
+    return (value & 0x0100) ? (((uint32_t)value) | 0xFFFFFE00) : value;
+}
+
+inline
+uint32_t ARM7TDMI::signExtend12Bit(uint32_t value) {
+    return (value & 0x00000800) ? (value | 0xFFFFF000) : value;
+}
+
+inline
+uint32_t ARM7TDMI::signExtend23Bit(uint32_t value) {
+    return (value & 0x00400000) ? (value | 0xFF800000) : value;
+}
+
+
+inline
+uint8_t ARM7TDMI::thumbGetRs(uint16_t instruction) {
+    return (instruction & 0x0038) >> 3;
+}
+
+inline
+uint8_t ARM7TDMI::thumbGetRd(uint16_t instruction) {
+    return (instruction & 0x0007);
+}
+
+inline
+uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
+    return (instruction & 0x0038) >> 3;
 }

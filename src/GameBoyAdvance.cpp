@@ -119,9 +119,19 @@ void GameBoyAdvance::loop() {
         if(debugMode) {
             debugger->step(arm7tdmi, bus);
             if(debugger->stepMode) {
-                while(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift));
-                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift));
+                while(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && debugger->stepMode) {
+
+                };
+                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && debugger->stepMode) {
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
+                        std::cout << "Leaving DEBUG mode!\n";
+                        debugMode = false;
+                        debugger->stepMode = false;
+                        break;
+                    }
+                };
                 debugger->printState();
+                std::cout << "armCount: " << arm7tdmi->armCount << " thumbCount: " << arm7tdmi->thumbCount << "\n";
             }
         }
 
@@ -190,10 +200,10 @@ void GameBoyAdvance::loop() {
                     // }
 
                     if((frames % 60) == 0) {
-                        double smoothing = 0.2;
+                        double smoothing = 0.8;
                         fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
                 
-                        DEBUGWARN("fps: " << fps << "\n");
+                        std::cout << "fps: " << fps << "\n";
                         //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
                         previous60Frame = previousTime;
                         

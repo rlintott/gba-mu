@@ -81,6 +81,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::addSubHandler(uint16_t instruction) {
     uint32_t result;
     uint32_t rsVal = getRegister(rs);
 
+
     bool carryFlag;
     bool overflowFlag;
     bool zeroFlag;

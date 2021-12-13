@@ -79,7 +79,7 @@ class Debugger {
         std::string instr;
         uint32_t instrWord;
 
-        uint32_t breakpoint = 0x0000077C;
+        uint32_t breakpoint = 134234288;
 
 
 };

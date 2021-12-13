@@ -88,18 +88,28 @@ uint32_t ARM7TDMI::step() {
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
 
         if(conditionalHolds(cond)) { 
+            #ifdef COMPILE_TIME_LUT
+            //DEBUGWARN("using lut!\n");
             currentPcAccessType = 
-                armLut[((currInstruction & 0x0FF00000) >> 16) | ((currInstruction & 0x0F0) >> 4)](currInstruction, this);
-            //currentPcAccessType = executeArmInstruction(currInstruction);
+                armLut[((currInstruction & 0x0FF00000) >> 16) | 
+                       ((currInstruction & 0x0F0) >> 4)](currInstruction, this);
+            #else
+            //DEBUGWARN("using case switch!\n");
+            currentPcAccessType = executeArmInstruction(currInstruction);
+            #endif
         } else {
             currentPcAccessType = SEQUENTIAL;
         }
         // increment PC
 
     } else {  // THUMB state
-        //DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
+        #ifdef COMPILE_TIME_LUT
+        currentPcAccessType = thumbLut[(currInstruction >> 6)](currInstruction, this);
+        #else
+        //DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
         currentPcAccessType = executeThumbInstruction(currInstruction);
+        #endif
     }
 
     getNextInstruction(currentPcAccessType);
@@ -717,21 +727,6 @@ void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
 }
 void ARM7TDMI::setUserRegister(uint8_t index, uint32_t value) {
     *(userRegisters[index]) = value;
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRs(uint16_t instruction) {
-    return (instruction & 0x0038) >> 3;
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRd(uint16_t instruction) {
-    return (instruction & 0x0007);
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
-    return (instruction & 0x0038) >> 3;
 }
 
 inline

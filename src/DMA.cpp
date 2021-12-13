@@ -9,7 +9,7 @@
 // TODO: DMA specs not fully implemented yet
 // TODO: fix mgba suite ROM Load DMA0 tests, which fail
 uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
-    //DEBUGWARN("dma " << (uint32_t)x << "\n");
+    DEBUGWARN("dma " << (uint32_t)x << "\n");
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
     uint32_t ioRegOffset =  0xC * x;
@@ -193,14 +193,16 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     // writing / reading from memeory
 
     for(uint32_t i = 0; i < dmaXWordCount[x]; i++) {
-        // DEBUGWARN(i << " is i \n"); 
-        // DEBUGWARN(dmaXDestAddr[x] << " is dest \n"); 
-        // DEBUGWARN(dmaXSourceAddr[x] << " is source \n"); 
+        DEBUGWARN(i << " is i \n"); 
+        DEBUGWARN(dmaXDestAddr[x] << " is dest \n"); 
+        DEBUGWARN(dmaXSourceAddr[x] << " is source \n"); 
         if(thirtyTwoBit) {
             if(firstAccess) { 
+                DEBUGWARN("1 32\n");
                 uint32_t value = bus->read32(dmaXSourceAddr[x] & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
                 //uint32_t value = bus->read32(dmaXSourceAddr[x], Bus::NONSEQUENTIAL);
                 //DEBUGWARN("value: " << value << "\n");
+                DEBUGWARN("2 32\n");
                 bus->write32(dmaXDestAddr[x] & 0xFFFFFFFC, value, Bus::NONSEQUENTIAL);
                 firstAccess = false;
             } else {
@@ -209,10 +211,9 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         } else {
             if(firstAccess) { 
+                DEBUGWARN("1 16\n");
                 uint16_t value = bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL);
-                if(x == 0 && value == 0xFACE) {
-                    DEBUGWARN("wtf!\n");
-                }
+                DEBUGWARN("2 16\n");
                 bus->write16(dmaXDestAddr[x] & 0xFFFFFFFE, value, Bus::NONSEQUENTIAL);
                 firstAccess = false;
             } else {
@@ -223,7 +224,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
 
         // TODO: TEMPORARY CYCLE COUNTING UNTIL WAITSTATES DONE PROPERLY
-
+        DEBUGWARN("here\n");
         // iterating source memory pointer
         // (0=Increment,1=Decrement,2=Fixed,3=prohibited)
         switch(srcAdjust) {
@@ -267,6 +268,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         
     }
     tempCycles += bus->getMemoryAccessCycles();
+    DEBUGWARN("done dma \n"); 
 
     if(!(control & 0x0200)) {
         // DMA Repeat (0=Off, 1=On) (Must be zero if Bit 11 set)

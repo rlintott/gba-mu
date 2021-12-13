@@ -21,17 +21,40 @@ find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
 add_library(gba_lib
     ARM7TDMI.cpp 
     util/static_for.h
-    ARMInstructions/ArmDataProcHandler.cpp 
-    ARMInstructions/ArmPsrHandler.cpp 
-    ARMInstructions/ArmSdtHandler.cpp 
-    ARMInstructions/ArmMultHandler.cpp 
-    ARMInstructions/ArmHwdtHandler.cpp 
-    ARMInstructions/ArmSdsHandler.cpp 
-    ARMInstructions/ArmBdtHandler.cpp 
-    ARMInstructions/ArmBranchHandler.cpp 
-    ARMInstructions/ArmBranchXHandler.cpp 
-    ARMInstructions/ArmSwiHandler.cpp 
-    ARMInstructions/ArmUndefHandler.cpp
+
+    ArmInstructions/ArmDataProcHandler.cpp 
+    ArmInstructions/ArmPsrHandler.cpp 
+    ArmInstructions/ArmSdtHandler.cpp 
+    ArmInstructions/ArmMultHandler.cpp 
+    ArmInstructions/ArmHwdtHandler.cpp 
+    ArmInstructions/ArmSdsHandler.cpp 
+    ArmInstructions/ArmBdtHandler.cpp 
+    ArmInstructions/ArmBranchHandler.cpp 
+    ArmInstructions/ArmBranchXHandler.cpp 
+    ArmInstructions/ArmSwiHandler.cpp 
+    ArmInstructions/ArmUndefHandler.cpp
+
+    ThumbInstructions/ThumbAddOffSpHandler.cpp        
+    ThumbInstructions/ThumbCondBHandler.cpp           
+    ThumbInstructions/ThumbLdStRegOffHandler.cpp      
+    ThumbInstructions/ThumbMultLdStPushPopHandler.cpp
+    ThumbInstructions/ThumbAddSubHandler.cpp          
+    ThumbInstructions/ThumbImmHandler.cpp             
+    ThumbInstructions/ThumbLdStSeBHwHandler.cpp       
+    ThumbInstructions/ThumbRelAddrHandler.cpp
+    ThumbInstructions/ThumbAluHandler.cpp             
+    ThumbInstructions/ThumbLdPcRelHandler.cpp         
+    ThumbInstructions/ThumbLdStSpRelHandler.cpp       
+    ThumbInstructions/ThumbShiftHandler.cpp
+    ThumbInstructions/ThumbBHandler.cpp               
+    ThumbInstructions/ThumbLdStHwHandler.cpp          
+    ThumbInstructions/ThumbLongBHandler.cpp           
+    ThumbInstructions/ThumbSwiHandler.cpp
+    ThumbInstructions/ThumbBxHandler.cpp              
+    ThumbInstructions/ThumbLdStImmOffHandler.cpp      
+    ThumbInstructions/ThumbMultLdStHandler.cpp        
+    ThumbInstructions/ThumbUndefHandler.cpp
+
     ARM7TDMI.h
     Bus.cpp Bus.h
     GameBoyAdvance.cpp GameBoyAdvance.h
