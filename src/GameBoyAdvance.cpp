@@ -92,17 +92,17 @@ uint64_t GameBoyAdvance::getTotalCyclesElapsed() {
 
 void GameBoyAdvance::loop() {
     screen->initWindow();
-    scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION);
-    scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION);
-    scheduler->addEvent(Scheduler::EventType::HBLANK_END, 0, Scheduler::EventCondition::NULL_CONDITION);
-    scheduler->addEvent(Scheduler::EventType::VBLANK_END, 227 * PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+    scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION, false);
+    scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION, false);
+    scheduler->addEvent(Scheduler::EventType::HBLANK_END, 0, Scheduler::EventCondition::NULL_CONDITION, false);
+    scheduler->addEvent(Scheduler::EventType::VBLANK_END, 227 * PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION, false);
     scheduler->printEventList();
-    //exit(0);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
 
     uint16_t currentScanline = -1;
     uint16_t nextScanline = 0;
+    uint64_t cyclesSinceLastScanline = 0;
     previousTime = getCurrentTime();
     double previous60Frame = getCurrentTime();
     startTimeSeconds = getCurrentTime() / 1000.0;
@@ -129,7 +129,7 @@ void GameBoyAdvance::loop() {
             uint32_t cpuCycles = arm7tdmi->step();
             cyclesSinceStart += cpuCycles;
         } else {
-            DEBUGWARN("entering halt mode\n");
+            //DEBUGWARN("entering halt mode\n");
             if(((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
                ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
                 // halt mode over, interrupt fired
@@ -137,29 +137,72 @@ void GameBoyAdvance::loop() {
             } else {
                 // skip to next event
                 //DEBUGWARN(scheduler->peekNextEventStartCycle() << " nextEventStartCycle\n");
-                cyclesSinceStart = scheduler->peekNextEventStartCycle();
+                cyclesSinceStart = scheduler->peekNextEvent()->startCycle;
             }
         }
 
-        Scheduler::EventType nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
-        uint64_t eventCycles = 0;
-        while(nextEvent != Scheduler::EventType::NULL_EVENT) {
+        Scheduler::Event* nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
+        
+        while(nextEvent != nullptr) {
             //DEBUGWARN(nextEvent << " next event\n");
-            switch(nextEvent) {
+            //DEBUGWARN(cyclesSinceStart << " cyclesSinceStart\n");
+            //scheduler->printEventList();
+            uint64_t eventCycles = 0;
+            switch(nextEvent->eventType) {
                 case Scheduler::EventType::DMA0: {
-                    eventCycles += dma->dmaX(0, false, false, currentScanline);
+                    // TODO: put this repetive code into inline fn
+                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
+                        eventCycles += dma->dmaX(0, false, false, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
+                        eventCycles += dma->dmaX(0, false, true, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
+                        eventCycles += dma->dmaX(0, true, false, currentScanline);
+                    } else {
+                        // EventConditoin = DMA3Videomode;
+                        eventCycles += dma->dmaX(0, false, true, currentScanline);
+                    }
                     break;
                 }
                 case Scheduler::EventType::DMA1: {
-                    eventCycles += dma->dmaX(1, false, false, currentScanline);
+
+                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
+                        eventCycles += dma->dmaX(1, false, false, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
+                        eventCycles += dma->dmaX(1, false, true, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
+                        eventCycles += dma->dmaX(1, true, false, currentScanline);
+                    } else {
+                        // EventConditoin = DMA3Videomode;
+                        eventCycles += dma->dmaX(1, false, true, currentScanline);
+                    }                   
                     break;
                 }
                 case Scheduler::EventType::DMA2: {
-                    eventCycles += dma->dmaX(2, false, false, currentScanline);
+
+                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
+                        eventCycles += dma->dmaX(2, false, false, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
+                        eventCycles += dma->dmaX(2, false, true, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
+                        eventCycles += dma->dmaX(2, true, false, currentScanline);
+                    } else {
+                        // EventCondition = DMA3Videomode;
+                        eventCycles += dma->dmaX(2, false, true, currentScanline);
+                    }                    
                     break;
                 }
                 case Scheduler::EventType::DMA3: {
-                    eventCycles += dma->dmaX(3, false, false, currentScanline);
+
+                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
+                        eventCycles += dma->dmaX(3, false, false, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
+                        eventCycles += dma->dmaX(3, false, true, currentScanline);
+                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
+                        eventCycles += dma->dmaX(3, true, false, currentScanline);
+                    } else {
+                        // EventCondition = DMA3Videomode;
+                        eventCycles += dma->dmaX(3, false, true, currentScanline);
+                    }                  
                     break;
                 }
                 case Scheduler::EventType::TIMER0: {
@@ -201,19 +244,11 @@ void GameBoyAdvance::loop() {
                         double smoothing = 0.2;
                         fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
                 
-                        DEBUGWARN("fps: " << fps << "\n");
-                        //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
+                        std::cout << "fps: " << fps << "\n";
                         previous60Frame = previousTime;
-                        
                     }
                     previousTime = getCurrentTime();
                     screen->drawWindow(ppu->renderCurrentScreen());  
-
-                    Scheduler::EventType vblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::VBLANK_START);
-                    while(vblankEvent != Scheduler::EventType::NULL_EVENT) {
-                        dma->dmaX(vblankEvent - 2, false, true, currentScanline);
-                        vblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::VBLANK_START);
-                    }
 
                     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
                         std::cout << "Entering DEBUG mode! Press LSHIFT to step through CPU instructions\n";
@@ -221,7 +256,10 @@ void GameBoyAdvance::loop() {
                         debugger->stepMode = true;
                     }
                     // add next vblank event
-                    scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    scheduler->addEvent(Scheduler::EventType::VBLANK, 
+                                        PPU::V_TOTAL - ((cyclesSinceStart + PPU::V_VISIBLE_CYCLES) % PPU::V_TOTAL), 
+                                        Scheduler::EventCondition::NULL_CONDITION, 
+                                        false);                    
                     break;
                 }
                 case Scheduler::EventType::HBLANK: {      
@@ -231,33 +269,28 @@ void GameBoyAdvance::loop() {
                     }
                     bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x2;
 
-                    Scheduler::EventType hblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::HBLANK_START);
-                    while(hblankEvent != Scheduler::EventType::NULL_EVENT) {
-                        //DEBUGWARN("hi!\n");
-                        dma->dmaX(hblankEvent - 2, false, true, currentScanline);
-                        hblankEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::HBLANK_START);
-                    }
-                    Scheduler::EventType dma3VideoMode = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::DMA3_VIDEO_MODE);
-                    while(dma3VideoMode != Scheduler::EventType::NULL_EVENT) {
-                        dma->dmaX(dma3VideoMode - 2, false, true, currentScanline);
-                        dma3VideoMode = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::DMA3_VIDEO_MODE);
-                    }
-
                     // add next hblank event
-                    scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    scheduler->addEvent(Scheduler::EventType::HBLANK,
+                                        PPU::H_TOTAL - ((cyclesSinceStart + PPU::H_VISIBLE_CYCLES) % PPU::H_TOTAL), 
+                                        Scheduler::EventCondition::NULL_CONDITION,
+                                        false);
                     
                     break;
                 }
                 case Scheduler::EventType::VBLANK_END: {
                     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
                     // add next vblank end event
-                    scheduler->addEvent(Scheduler::EventType::VBLANK_END, PPU::V_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    scheduler->addEvent(Scheduler::EventType::VBLANK_END, 
+                                        PPU::V_TOTAL - (cyclesSinceStart % PPU::V_TOTAL), 
+                                        Scheduler::EventCondition::NULL_CONDITION, 
+                                        false);
                     break;
                 }
                 case Scheduler::EventType::HBLANK_END: {
                     ppu->renderScanline(nextScanline);
                     // setting hblank flag to 0
-                    currentScanline += 1;
+                    currentScanline += (cyclesSinceStart - cyclesSinceLastScanline) / PPU::H_TOTAL;    
+                    cyclesSinceLastScanline = cyclesSinceStart - (cyclesSinceStart % PPU::H_TOTAL);
                     currentScanline %= 228;
                     nextScanline = (currentScanline + 1) % 228;
                     
@@ -280,7 +313,10 @@ void GameBoyAdvance::loop() {
                     bus->iORegisters[Bus::IORegister::VCOUNT] = currentScanline;
 
                     // add next hblank end event
-                    scheduler->addEvent(Scheduler::EventType::HBLANK_END, PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION);
+                    scheduler->addEvent(Scheduler::EventType::HBLANK_END, 
+                                        PPU::H_TOTAL - (cyclesSinceStart % PPU::H_TOTAL), 
+                                        Scheduler::EventCondition::NULL_CONDITION, 
+                                        false);
                     break;
                 }
                 default: {
@@ -288,10 +324,10 @@ void GameBoyAdvance::loop() {
                     //assert(false);
                 }
             }
+            //cyclesSinceStart += eventCycles;
             nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         }
-        //DEBUGWARN("done handling events\n");
-        cyclesSinceStart += eventCycles;
+        
     }
 }
 

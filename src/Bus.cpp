@@ -49,7 +49,7 @@ Bus::Bus(PPU* ppu) {
         gamePakSram.push_back(0);
     }
     // TODO, use resize fn for initialization
-    //gamePakRom.resize(32000000);
+    gamePakRom.resize(32000000);
     this->ppu = ppu;
 }
 
@@ -536,7 +536,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     switch(shift) {
         case 0x0:
-        case 0x01: {       
+        case 0x01: {    
+            break;   
         }
         case 0x02: { // BOARD RAM  
             address &= 0x0203FFFF;
@@ -592,7 +593,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             if(0x4000100 <= address && address <= 0x400010F) {
                 // timer addresses
-                DEBUGWARN("howdy\n");
+                //DEBUGWARN("howdy\n");
                 timer->updateTimerUponWrite(address, value, width);
             }
 
@@ -1109,7 +1110,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
-        gamePakRom.push_back(buffer[i]);
+        gamePakRom[i] = buffer[i];
     }
 }
 

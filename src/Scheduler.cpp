@@ -31,68 +31,90 @@
 // }
 
 
-void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition) {
+void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition, bool ignoreCondition) {
     //DEBUGWARN(events.size() << " after\n");
-    if(eventCondition == NULL_CONDITION) {
-        uint64_t startAt = GameBoyAdvance::cyclesSinceStart + cyclesInFuture;
+    // DEBUGWARN(eventType << " :adding event\n");
+    // printEventList();
+    uint64_t startAt = GameBoyAdvance::cyclesSinceStart + cyclesInFuture;
 
-        EventNode* node = &events[eventType];
-        node->event.active = true;
-        node->event.startCycle = startAt;
-        node->next = nullptr;
+    EventNode* node = &events[eventType];
+    node->event.active = true;
+    node->event.startCycle = startAt;
+    node->next = nullptr;
+    node->event.eventCondition = eventCondition;
 
-        if(startNode == nullptr) {
-            startNode = node;
-        } else {
-            removeNode(node);
-
-            EventNode* curr = startNode;
-            EventNode* prev = nullptr;
-            while(curr != nullptr) {
+    if(startNode == nullptr && eventCondition == NULL_CONDITION) {
+        startNode = node;
+    } else {
+        removeNode(node);
+        EventNode* curr = startNode;
+        EventNode* prev = nullptr;
+        while(curr != nullptr) {
+            if(eventCondition == NULL_CONDITION || ignoreCondition) {
                 if((curr->event.startCycle > startAt) || 
-                   (curr->event.startCycle == startAt && eventType < curr->event.eventType)) {
+                (curr->event.startCycle == startAt && eventType < curr->event.eventType)) {
                     break;
                 } 
-                prev = curr;
-                curr = curr->next;
-            }
-            node->next = curr;
-            if(prev != nullptr) {
-                prev->next = node;
             } else {
-                startNode = node;
+                bool found = false;
+                switch(eventCondition) {
+                    case EventCondition::HBLANK_START:
+                    case EventCondition::DMA3_VIDEO_MODE: {
+                        if(curr->event.eventType == EventType::HBLANK ) {
+                            found = true;
+                            node->event.startCycle = curr->event.startCycle;
+                        }
+                        break;
+                    }
+                    case EventCondition::VBLANK_START: {
+                        if(curr->event.eventType == EventType::VBLANK) {
+                            found = true;
+                            node->event.startCycle = curr->event.startCycle;
+                        }                                
+                        break;
+                    }
+                    default: {
+                        assert(false);
+                        break;
+                    }
+                }
+                if(found) {
+                    // putting the event condition event *after* the event that activates the condition
+                    prev = curr;
+                    curr = curr->next;
+                    while((curr->event.eventType < eventType) && curr->event.eventCondition == eventCondition) {
+                        // make sure DMA priority is maintained
+                        curr = curr->next;
+                    }
+                    break;
+                }
             }
+            prev = curr;
+            curr = curr->next;
         }
 
-    } else {
-
-        switch(eventCondition) {
-            case EventCondition::DMA3_VIDEO_MODE: {
-                dma3VideoModeEvents[eventType] = {eventType, 0, true};
-                break;
-            }
-            case EventCondition::VBLANK_START: {
-                vBlankEvents[eventType] = {eventType, 0, true};
-                break;
-            }
-            case EventCondition::HBLANK_START: {
-                hBlankEvents[eventType] = {eventType, 0, true};
-                break;
-            }
-            case EventCondition::NULL_CONDITION: {
-                break;
-            }
+        node->next = curr;
+        if(prev != nullptr) {
+            prev->next = node;
+        } else {
+            startNode = node;
         }
     }
+    // printEventList();
+    // DEBUGWARN(eventType << " :after adding event\n");
+
 }
 
 void Scheduler::removeNode(EventNode* eventNode) {
-    if(startNode == eventNode) {
+    // DEBUGWARN(eventNode->event.eventType << " :removing\n");
+    // printEventList();
+    if(startNode == nullptr) {
         startNode = nullptr;
+    } else if(startNode == eventNode){
+        startNode = startNode->next;
     } else {
         EventNode* curr = startNode;
         while(curr->next != nullptr) {
-            //DEBUGWARN("hey!\n");
             if(curr->next == eventNode) {
                 curr->next = curr->next->next;
                 break;
@@ -101,29 +123,52 @@ void Scheduler::removeNode(EventNode* eventNode) {
         }
     }
     eventNode->next = nullptr;
+    // printEventList();
+    // DEBUGWARN(eventNode->event.eventType << " :removed\n");
 }
 
-Scheduler::EventType Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
-    EventType toReturn = EventType::NULL_EVENT;
-    if(eventCondition == EventCondition::NULL_CONDITION) {
-        if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
-            toReturn = startNode->event.eventType;
-            EventNode* oldStart = startNode;
-            startNode = startNode->next;
-            oldStart->next = nullptr;
-        }    
-    } else {
-        toReturn = getNextConditionalEvent(eventCondition);
-    }
+Scheduler::Event* Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
+    Event* toReturn = nullptr;
+    //if(eventCondition == EventCondition::NULL_CONDITION) {
+    if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
+        // DEBUGWARN(startNode->event.eventType << " found get next event\n");
+        // printEventList();
+        toReturn = &startNode->event;
+        EventNode* oldStart = startNode;
+        startNode = startNode->next;
+        oldStart->next = nullptr;
+        // printEventList();
+        // DEBUGWARN(toReturn << " after removing event\n");
+    }    
+    // } else {
+    //     if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
+    //         EventNode* curr = startNode;
+    //         while(curr != nullptr &&
+    //               curr->event.eventCondition != eventCondition && 
+    //               curr->event.startCycle <= currentCycle) {
+    //             curr = curr->next;
+    //         }
+    //         // DEBUGWARN(startNode->event.eventType << " found get next event\n");
+    //         // printEventList();
+    //         if(curr != nullptr && curr->event.startCycle <= currentCycle && curr->event.eventCondition == eventCondition) {
+    //             toReturn = curr->event.eventType;
+    //             removeNode(curr);
+    //         }
+    //         // printEventList();
+    //         // DEBUGWARN(toReturn << " after removing event\n");
+    //     }    
+
+    // }
     //DEBUGWARN(toReturn << "\n");
     return toReturn;
 }
 
 
-uint64_t Scheduler::peekNextEventStartCycle() {
-    uint64_t toReturn = 0;
+
+Scheduler::Event* Scheduler::peekNextEvent() {
+    Event* toReturn = nullptr;
     if(startNode != nullptr) {
-        toReturn = startNode->event.startCycle;
+        toReturn = &startNode->event;
     }
     return toReturn;
 }
@@ -146,7 +191,6 @@ Scheduler::EventType Scheduler::getNextConditionalEvent(EventCondition eventCond
         case HBLANK_START: {
             for(int i = 0; i < hBlankEvents.size(); i++) {
                 if(vBlankEvents[i].active) {
-                    DEBUGWARN("heyo\n");
                     toReturn = vBlankEvents[i].eventType;
                     vBlankEvents[i].active = false;
                     break;
@@ -173,24 +217,29 @@ Scheduler::EventType Scheduler::getNextConditionalEvent(EventCondition eventCond
 }
 
 void Scheduler::removeEvent(EventType eventType) {
-    //DEBUGWARN("getting called!\n");
     EventNode* node = &events[eventType];
     removeNode(node);
 
-    if(DMA0 <= eventType && eventType <= DMA3) {
-        vBlankEvents[eventType - 2].active = false;
-        hBlankEvents[eventType - 2].active = false;
-        if(eventType == DMA3) {
-            dma3VideoModeEvents[0].active = false;
-        }
-    }
+    // if(DMA0 <= eventType && eventType <= DMA3) {
+    //     vBlankEvents[eventType - 2].active = false;
+    //     hBlankEvents[eventType - 2].active = false;
+    //     if(eventType == DMA3) {
+    //         dma3VideoModeEvents[0].active = false;
+    //     }
+    // }
 }
 
 void Scheduler::printEventList() {
     std::cout << "[\n";
     EventNode* curr = startNode;
+    int size = 0;
     while(curr != nullptr) {
-        std::cout << "{eventType: " << (curr->event.eventType) << " startCycle: " << curr->event.startCycle << " active: " << curr->event.active << "},\n";
+        size++;
+        std::cout << "{eventType: " << (curr->event.eventType) 
+                  << " startCycle: " << curr->event.startCycle 
+                  << " active: " << curr->event.active 
+                  <<  " eventCond: " << curr->event.eventCondition 
+                  << "},\n";
         curr = curr->next;
     }
     std::cout << "]\n";
