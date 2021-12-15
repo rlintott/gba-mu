@@ -9,7 +9,6 @@
 #include <future>
 #include <thread>
 
-
 #include "ARM7TDMI.h"
 #include "Bus.h"
 #include "LCD.h"

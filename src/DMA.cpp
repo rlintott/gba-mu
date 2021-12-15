@@ -20,7 +20,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                        (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
 
     uint8_t startTiming = (control & 0x3000) >> 12;
-
     if(startTiming == 3) {
         if(x == 1 || x == 2) {
             // sound FIFO mode

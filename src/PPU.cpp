@@ -1,11 +1,12 @@
 #include "PPU.h"
 #include "Bus.h"
-#include "assert.h"
 #include <SFML/Graphics.hpp>
 #include <utility>
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include "assert.h"
+
 
 PPU::PPU() {
 

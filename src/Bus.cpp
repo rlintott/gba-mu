@@ -5,7 +5,7 @@
 #include "DMA.h"
 #include "ARM7TDMI.h"
 
-#include <assert.h>
+#include "assert.h"
 
 #include <fstream>
 #include <iostream>
@@ -14,6 +14,7 @@
 Bus::Bus(PPU* ppu) {
     // TODO: make bios configurable
     DEBUG("initializing bus\n");
+
 
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
