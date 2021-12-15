@@ -90,13 +90,6 @@ class Scheduler {
 
         EventNode* startNode = nullptr;
         
-        //std::list<Event> events;
-        std::array<Event, 4> vBlankEvents = {{{DMA0, 0, false},{DMA1, 0, false},{DMA2, 0, false},{DMA3, 0, false}}};
-        std::array<Event, 4> hBlankEvents = {{{DMA0, 0, false},{DMA1, 0, false},{DMA2, 0, false},{DMA3, 0, false}}};
-        std::array<Event, 1> dma3VideoModeEvents = {{{DMA3, 0, false}}};
-
-        EventType getNextConditionalEvent(EventCondition eventCondition);
-
         void removeNode(EventNode* eventNode);
         
 };

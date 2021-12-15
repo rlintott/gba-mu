@@ -6,19 +6,13 @@
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbImmHandler(uint16_t instruction, ARM7TDMI* cpu) {
-    assert((instruction & 0xE000) == 0x2000);
-    DEBUG("in thumb compare/add/subtract immediate\n");
-    
+    assert((instruction & 0xE000) == 0x2000);    
     // uint8_t opcode = (instruction & 0x1800) >> 11;
     constexpr uint8_t opcode = (op & 0x060) >> 5;
 
     uint32_t offset = instruction & 0x00FF;
     //uint8_t rd = (instruction & 0x0700) >> 8;
     constexpr uint8_t rd = (op & 0x01C) >> 2;
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("offset: " << (uint32_t)offset << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     bool carryFlag;
     bool signFlag;
@@ -36,7 +30,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbImmHandler(uint16_t instruction, AR
         // 01b: CMP{S} Rd,#nn      ;compare  Void = Rd - #nn
         uint32_t rdVal = cpu->getRegister(rd);
         uint32_t result = rdVal - offset;
-        DEBUG("result: " << result << "\n");
         signFlag = aluSetsSignBit(result);
         zeroFlag = aluSetsZeroBit(result);
         carryFlag = aluSubtractSetsCarryBit(rdVal, offset);

@@ -7,18 +7,12 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStSpRelHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xF000) == 0x9000);
-    DEBUG("in thumb load store sp relative handler\n");
     //uint8_t opcode = (instruction & 0x0800) >> 11;
     constexpr bool opcode = (op & 0x020);
     //uint8_t rd = (instruction & 0x0700) >> 8;
     constexpr uint8_t rd = (op & 0x01C) >> 2;
     uint16_t offset = (instruction & 0x00FF) << 2;
     uint32_t address = cpu->getRegister(SP_REGISTER) + offset;
-
-    DEBUG("rd " << (uint32_t)rd << "\n");
-    DEBUG("opcode " << (uint32_t)opcode << "\n");
-    DEBUG("offset " << (uint32_t)offset << "\n");
-    DEBUG("address " << (uint32_t)address << "\n");
 
     if constexpr(!opcode) {
         // 0: STR  Rd,[SP,#nn]  ;store 32bit data   WORD[SP+nn] = Rd

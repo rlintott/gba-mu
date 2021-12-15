@@ -7,16 +7,12 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xFC00) == 0x4000);
-    DEBUG("thumb in aluhandler\n");
     //uint8_t opcode = (instruction & 0x03C0) >> 6;
     constexpr uint8_t opcode = (op & 0x00F);
 
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
     bool carryFlag, overflowFlag, signFlag, zeroFlag;
-
-    DEBUG("rs: " << (uint32_t)rs << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     Cycles cycles;
     int internalCycles = 0;

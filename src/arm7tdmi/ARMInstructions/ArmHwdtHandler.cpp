@@ -14,7 +14,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
     constexpr uint8_t opcode = (op & 0x006) >> 1;
 
     assert((instruction & 0x0E000000) == 0);
-    DEBUG("halfword data trans\n");
 
     uint8_t rd = getRd(instruction);
     uint32_t rdVal =
@@ -23,17 +22,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
     uint32_t rnVal =
         (rn == 15) ? cpu->getRegister(rn) + 4 : cpu->getRegister(rn);
 
-    DEBUG((uint32_t)rd << " <- rd\n");
-    DEBUG((uint32_t)rn << " <- rn\n");
-
     uint32_t offset = 0;
-
-    DEBUG((uint32_t)dataTransGetL(instruction) << " <- l\n");
 
     if constexpr(i) {
         // immediate as offset
         offset = (((instruction & 0x00000F00) >> 4) | (instruction & 0x0000000F));
-        DEBUG(offset << " <- immediate offset\n");
     } else {
         // register as offset
         assert(!(instruction & 0x00000F00));
@@ -65,10 +58,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
             cpu->setRegister(rn, address - offset);
         }
     }
-
-    //DEBUG((uint32_t)opcode << " <- opcode\n");
-    DEBUG((uint32_t)offset << " <- offset\n");
-    DEBUG((uint32_t)address << " <- address\n");
 
     if constexpr(opcode  == 0) {
         // Reserved for SWP instruction

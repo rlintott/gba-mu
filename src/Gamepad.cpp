@@ -30,19 +30,6 @@ void Gamepad::getInput(Bus* bus) {
     keysPressedByte2 |= (!sf::Keyboard::isKeyPressed(SHOULDER_RIGHT) << 0);
     keysPressedByte2 |= (!sf::Keyboard::isKeyPressed(SHOULDER_LEFT) << 1);
 
-    // if(sf::Keyboard::isKeyPressed(DPAD_LEFT)) {
-    //     DEBUGWARN("left!\n");
-    // }
-    // if(sf::Keyboard::isKeyPressed(DPAD_RIGHT)) {
-    //     DEBUGWARN("right!\n");
-    // }
-    // if(sf::Keyboard::isKeyPressed(DPAD_UP)) {
-    //     DEBUGWARN("up!\n");
-    // }
-    // if(sf::Keyboard::isKeyPressed(DPAD_DOWN)) {
-    //     DEBUGWARN("down!\n");
-    // }
-
     bus->iORegisters[Bus::IORegister::KEYINPUT] = keysPressedByte1;
     bus->iORegisters[Bus::IORegister::KEYINPUT + 1] = keysPressedByte2;
 }

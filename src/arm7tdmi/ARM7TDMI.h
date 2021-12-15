@@ -886,7 +886,6 @@ bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
 
 inline
 void ARM7TDMI::switchToMode(Mode mode) {
-    //DEBUGWARN((uint32_t)mode << " <- switching to mode\n");
     switch (mode) {
         case SYSTEM:
         case USER: {
@@ -918,7 +917,6 @@ void ARM7TDMI::switchToMode(Mode mode) {
             break;
         }
         case SUPERVISOR: {
-            // DEBUGWARN("supervisor mode\n");
             currentSpsr = &SPSR_svc;
             registers[13] = &r13_svc;
             registers[14] = &r14_svc;
@@ -974,9 +972,8 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
                            (value & 0x00000001);
             psr->Mode = mode;
             
-            // TODO: implemnt less hacky way ti transfer psr
+            // TODO: implemnt less hacky way to transfer psr
             if(psr == &cpsr) {
-                //DEBUGWARN("in transfer to PSR changing mode\n");
                 switchToMode(ARM7TDMI::Mode(mode));
             }   
         }
@@ -1053,7 +1050,6 @@ inline
 uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu) {
     assert(shift < 32U);
     uint32_t rrxMask = (cpu->cpsr).C;
-    DEBUG(rrxMask << " <- rrx mask\n");
     return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
 }
 

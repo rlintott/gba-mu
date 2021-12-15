@@ -5,9 +5,8 @@
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdsHandler(uint32_t instruction, ARM7TDMI* cpu) {
-        // TODO: figure out memory alignment logic (for all data transfer ops)
+    // TODO: figure out memory alignment logic (for all data transfer ops)
     // (verify against existing CPU implementations
-    DEBUG("single data swap\n");
     constexpr bool b = op & 0x040;
     assert((instruction & 0x0F800000) == 0x01000000);
     assert(!(instruction & 0x00300000));
@@ -16,10 +15,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdsHandler(uint32_t instruction, ARM7
     uint8_t rd = getRd(instruction);
     uint8_t rm = getRm(instruction);
     assert((rn != 15) && (rd != 15) && (rm != 15));
-
-    DEBUG((uint32_t)rn << "<- rnIndex\n");
-    DEBUG((uint32_t)rd << "<- rdIndex\n");
-    DEBUG((uint32_t)rm << "<- rmIndex\n");
 
     // SWP{cond}{B} Rd,Rm,[Rn]     ;Rd=[Rn], [Rn]=Rm
     if constexpr(b) {
@@ -34,13 +29,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdsHandler(uint32_t instruction, ARM7
         // SWPB swap word
         // The SWP opcode works like a combination of LDR and STR, that means, 
         // it does read-rotated, but does write-unrotated.
-        DEBUG("swapping word\n");
         uint32_t rnVal = cpu->getRegister(rn);
         uint32_t rmVal = cpu->getRegister(rm);
-        DEBUG(rnVal << " <- rnVal\n");
-        // DEBUG(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8) << " <- rnVal after rotate\n");
-        // DEBUG(bus->read32(rnVal, NONSEQUENTIAL) << " <- read w/o rotate\n");
-        // uint32_t data = bus->read32(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8));
         
         uint32_t data = aluShiftRor(cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL), (rnVal & 3) * 8);
         cpu->setRegister(rd, data);

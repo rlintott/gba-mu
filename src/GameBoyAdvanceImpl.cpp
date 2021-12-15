@@ -78,11 +78,11 @@ uint64_t GameBoyAdvanceImpl::getTotalCyclesElapsed() {
 
 void GameBoyAdvanceImpl::enterMainLoop() {
     screen->initWindow();
+    // add initial events
     scheduler->addEvent(Scheduler::EventType::HBLANK, PPU::H_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION, false);
     scheduler->addEvent(Scheduler::EventType::VBLANK, PPU::V_VISIBLE_CYCLES, Scheduler::EventCondition::NULL_CONDITION, false);
     scheduler->addEvent(Scheduler::EventType::HBLANK_END, 0, Scheduler::EventCondition::NULL_CONDITION, false);
     scheduler->addEvent(Scheduler::EventType::VBLANK_END, 227 * PPU::H_TOTAL, Scheduler::EventCondition::NULL_CONDITION, false);
-    scheduler->printEventList();
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x1);
     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
 
@@ -100,8 +100,6 @@ void GameBoyAdvanceImpl::enterMainLoop() {
 
     // STARTING MAIN EMULATION LOOP!
     while(true) {
-        //uint32_t dmaCycles = dma->step(hBlank, vBlank, currentScanline);
-        //cyclesThisStep += dmaCycles;
         if(debugMode) {
             debugger->step(arm7tdmi.get(), bus.get());
             if(debugger->stepMode) {
@@ -124,14 +122,12 @@ void GameBoyAdvanceImpl::enterMainLoop() {
             uint32_t cpuCycles = arm7tdmi->step();
             cyclesSinceStart += cpuCycles;
         } else {
-            //DEBUGWARN("entering halt mode\n");
             if(((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
                ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
                 // halt mode over, interrupt fired
                 bus->haltMode = false;
             } else {
                 // skip to next event
-                //DEBUGWARN(scheduler->peekNextEventStartCycle() << " nextEventStartCycle\n");
                 cyclesSinceStart = scheduler->peekNextEvent()->startCycle;
             }
         }
@@ -139,9 +135,6 @@ void GameBoyAdvanceImpl::enterMainLoop() {
         Scheduler::Event* nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         
         while(nextEvent != nullptr) {
-            //DEBUGWARN(nextEvent << " next event\n");
-            //DEBUGWARN(cyclesSinceStart << " cyclesSinceStart\n");
-            //scheduler->printEventList();
             uint64_t eventCycles = 0;
             switch(nextEvent->eventType) {
                 case Scheduler::EventType::DMA0: {
@@ -153,7 +146,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
                         eventCycles += dma->dmaX(0, true, false, currentScanline);
                     } else {
-                        // EventConditoin = DMA3Videomode;
+                        // EventCondition == DMA3Videomode;
                         eventCycles += dma->dmaX(0, false, true, currentScanline);
                     }
                     break;
@@ -167,7 +160,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
                         eventCycles += dma->dmaX(1, true, false, currentScanline);
                     } else {
-                        // EventConditoin = DMA3Videomode;
+                        // EventCondition == DMA3Videomode;
                         eventCycles += dma->dmaX(1, false, true, currentScanline);
                     }                   
                     break;
@@ -181,7 +174,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
                         eventCycles += dma->dmaX(2, true, false, currentScanline);
                     } else {
-                        // EventCondition = DMA3Videomode;
+                        // EventCondition == DMA3Videomode;
                         eventCycles += dma->dmaX(2, false, true, currentScanline);
                     }                    
                     break;
@@ -195,7 +188,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
                         eventCycles += dma->dmaX(3, true, false, currentScanline);
                     } else {
-                        // EventCondition = DMA3Videomode;
+                        // EventCondition == DMA3Videomode;
                         eventCycles += dma->dmaX(3, false, true, currentScanline);
                     }                  
                     break;
@@ -217,7 +210,6 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     break;
                 }
                 case Scheduler::EventType::VBLANK: {
-                    //DEBUGWARN("vblank\n");
                     // vblank time!
                     // (do frame stuff)
                     // TODO: put some of this stuff to separate methods / classes
@@ -238,11 +230,10 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     if((frames % 60) == 0) {
                         double smoothing = 0.8;
                         fps = fps * smoothing + ((double)60 / ((getCurrentTime() / 1000.0 - previous60Frame / 1000.0))) * (1.0 - smoothing);
-                
                         std::cout << "fps: " << fps << "\n";
-                        //DEBUGWARN("fps: " << ((double)frames / ((getCurrentTime() / 1000.0) - startTimeSeconds)) << "\n");
                         previous60Frame = previousTime;
                     }
+
                     previousTime = getCurrentTime();
                     screen->drawWindow(ppu->renderCurrentScreen());  
 
@@ -297,7 +288,6 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                         bus->iORegisters[Bus::IORegister::DISPSTAT] |= 0x04;
                         if(bus->iORegisters[Bus::IORegister::DISPSTAT] & 0x20) {
                             // if vcount irq enabled, queue the interrupt!
-                            //DEBUGWARN("VCOUNTER INTERRUPT at scanline " << currentScanline << "\n");
                             arm7tdmi->queueInterrupt(ARM7TDMI::Interrupt::VCounterMatch);
                         }
                     } else {
@@ -320,7 +310,6 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     //assert(false);
                 }
             }
-            //cyclesSinceStart += eventCycles;
             nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
         }
         

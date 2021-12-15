@@ -7,7 +7,6 @@ template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStRegOffHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xF000) == 0x5000);
     assert(!(instruction & 0x0200));
-    DEBUG("in THUMB.7: load/store with register offset\n");
     //uint8_t opcode = (instruction & 0x0C00) >> 10;
     constexpr uint8_t opcode = (op & 0x030) >> 4;
     uint8_t rd = thumbGetRd(instruction);
@@ -15,9 +14,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStRegOffHandler(uint16_t instruct
     //uint8_t ro = (instruction & 0x01C0) >> 6;
     constexpr uint8_t ro = (op & 0x007);
     uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
-    DEBUG("rb: " << (uint32_t)rb << "\n");
-    DEBUG("ro: " << (uint32_t)ro << "\n");
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     if constexpr(opcode == 0) {
         // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd

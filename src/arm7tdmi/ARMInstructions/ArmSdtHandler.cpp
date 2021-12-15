@@ -16,7 +16,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdtHandler(uint32_t instruction, ARM7
     // used as address
     // ;*** restriction: must be located in range PC+/-4095+8, if so,
     // ;*** assembler will calculate offset and use PC (R15) as base.
-    DEBUG("in single data transfer\n");
     assert((instruction & 0x0C000000) == (instruction & 0x04000000));
     uint8_t rd = getRd(instruction);
     uint32_t rdVal = (rd == 15) ? cpu->getRegister(rd) + 8 : cpu->getRegister(rd);
@@ -56,11 +55,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdtHandler(uint32_t instruction, ARM7
         offset = instruction & 0x00000FFF;
     }
     uint32_t address = rnVal;
-    DEBUG(address << " < - address\n");
-    DEBUG(offset << " < - offset\n");
-    DEBUG((uint32_t)rn << " < - rn\n");
-    DEBUG((uint32_t)rd << " < - rd\n");
-    DEBUG(dataTransGetL(instruction) << " < - l\n");
 
     // U - Up/Down Bit (0=down; subtract offset
     // from base, 1=up; add to base)
@@ -97,15 +91,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdtHandler(uint32_t instruction, ARM7
             cpu->setRegister(rd, (uint32_t)(cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL)));
         } else {  // transfer 32 bits
             if ((address & 0x00000003) == 2) {
-                DEBUG("1\n");
-                //DEBUGWARN("here!\n");
                 // aligned to half-word but not word
                 uint32_t low = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
                 uint32_t hi = (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
                 uint32_t full = ((hi << 16) | low);
-                DEBUG("2\n");
                 cpu->setRegister(rd, full);
-                DEBUG("3\n");
             } else {
 
                 // aligned to word

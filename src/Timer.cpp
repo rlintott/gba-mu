@@ -5,7 +5,6 @@
 #include "GameBoyAdvanceImpl.h"
 
 
-
 /*
     update IORegister state in bus because about to read from the timer
 */
@@ -48,7 +47,6 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
 void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width) {
     
     while(width != 0) {
-        //DEBUGWARN(address << " writing to addr\n");
         uint8_t byte = value & 0xFF;
 
         switch(address) {
@@ -77,7 +75,6 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
                 break;
             }
             case 0x4000106: {
-                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 1);
                 break;
             }
@@ -86,17 +83,14 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
                 break;
             }            
             case 0x4000108: {
-                //DEBUGWARN("LO!" << (uint32_t)byte << "\n");
                 setTimerXReloadLo(byte, 2);
                 break;
             }
             case 0x4000109: {
-                //DEBUGWARN("HI!" << (uint32_t)byte << "\n");
                 setTimerXReloadHi(byte, 2);
                 break;
             }
             case 0x400010A: {
-                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 2);
                 break;
             }
@@ -113,7 +107,6 @@ void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width
                 break;
             }
             case 0x400010E: {
-                //DEBUGWARN("hi\n");
                 setTimerXControlLo(byte, 3);
                 break;
             }
@@ -139,9 +132,6 @@ void Timer::setTimerXControlHi(uint8_t val, uint8_t x) {
 
 inline
 void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
-    //((uint32_t) x << "setTimerXControlLo x \n");
-    // DEBUGWARN("x: " << (uint32_t)x << "\n");
-    // DEBUGWARN("prescaler addr: " << timerPrescaler << "\n");
     Scheduler::EventType timerEvent;
     switch(x) {
         case 0: { timerEvent = Scheduler::EventType::TIMER0; break; }
@@ -177,9 +167,6 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
     timerIrqEnable[x] = val & 0x40;
     timerStart[x] = val & 0x80;
 
-    //DEBUGWARN((uint32_t) timerCountUp[x] << " setTimerXControlLo countup \n");
-    //DEBUGWARN((uint32_t) timerStart[x] << "setTimerXControlLo start \n");
-
     if((val & 0x80) && !(val & 0x4)) {
         // only schedule if the timer is not count-up (since count up timers will automatically overflow)
         // timer enabled, so schedule new event
@@ -189,7 +176,6 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
             scheduler->addEvent(timerEvent, 0, Scheduler::EventCondition::NULL_CONDITION, false);
         } else {
             // add event at time when timer will go off
-            //DEBUGWARN("adding timer event to scheduler!\n");
             scheduler->addEvent(timerEvent, 
                                 (0x10000 - timerCounter[x]) * timerPrescaler[x], 
                                 Scheduler::EventCondition::NULL_CONDITION,
@@ -201,7 +187,6 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
 inline
 void Timer::setTimerXReloadHi(uint8_t val, uint8_t x) {
     timerReload[x] = (timerReload[x] & 0x00FF) | ((uint16_t)val << 8); 
-    //DEBUGWARN("timer reload hi in fn " << timerReload[x] << "\n");
 }
 
 inline

@@ -6,7 +6,6 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBranchHandler(uint32_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0x0E000000) == 0x0A000000);
-    DEBUG("in branch handler\n");
 
     int32_t offset = ((instruction & 0x00FFFFFF) << 2);
     if(offset & 0x02000000) {
@@ -24,7 +23,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBranchHandler(uint32_t instruction, A
 
     if constexpr(!(op & 0x100)) {
         // B
-        DEBUG("B\n");
     } else {
         // BL LR=PC+4
         cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER));

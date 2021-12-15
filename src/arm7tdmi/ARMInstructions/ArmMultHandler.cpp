@@ -7,7 +7,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armMultHandler(uint32_t instruction, ARM
 
     constexpr uint8_t opcode = (op & 0x1E0) >> 5;
     constexpr bool s = (op & 0x010);
-    DEBUG("in multiply instr\n");
     // rd is different for multiply
     uint8_t rd = (instruction & 0x000F0000) >> 16;
     uint8_t rm = getRm(instruction);
@@ -34,12 +33,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armMultHandler(uint32_t instruction, ARM
         cpu->setRegister(rd, (uint32_t)result);
         internalCycles = mulGetExecutionTimeMVal(rsVal) + 1;
     } else if constexpr(opcode ==  0b0100) {  // UMULL{cond}{S} RdLo,RdHi,Rm,Rs ;RdHiLo=Rm*Rs
-        DEBUG("umull\n");
         uint32_t rsVal = cpu->getRegister(rs);
         uint8_t rdhi = rd;
         uint8_t rdlo = (instruction & 0x0000F000) >> 12;
         longResult._unsigned = (uint64_t)cpu->getRegister(rm) * (uint64_t)rsVal;
-        DEBUG(longResult._unsigned << " <- result\n");
         // high destination reg
         cpu->setRegister(rdhi, (uint32_t)(longResult._unsigned >> 32));
         cpu->setRegister(rdlo, (uint32_t)longResult._unsigned);
@@ -90,12 +87,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armMultHandler(uint32_t instruction, ARM
     }
     
   if constexpr(s) {
-        DEBUG("s flag set!\n");
         if constexpr(!(opcode & 0b0100)) {  // regular mult opcode,
             cpu->cpsr.Z = aluSetsZeroBit((uint32_t)result);
             cpu->cpsr.N = aluSetsSignBit((uint32_t)result);
         } else {
-            DEBUG("long mul cpsr setting\n");
             cpu->cpsr.Z = (longResult._unsigned == 0);
             cpu->cpsr.N = (longResult._unsigned >> 63);
         }

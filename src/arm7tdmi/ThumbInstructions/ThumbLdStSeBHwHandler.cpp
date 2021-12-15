@@ -9,7 +9,6 @@ ARM7TDMI::FetchPCMemoryAccess
 ARM7TDMI::thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xF000) == 0x5000);
     assert(instruction & 0x0200);
-    DEBUG("THUMB.8: load/store sign-extended byte/halfword\n");
     //uint8_t opcode = (instruction & 0x0C00) >> 10;
     constexpr uint8_t opcode = (op & 0x030) >> 4;
     uint8_t rd = thumbGetRd(instruction);
@@ -17,9 +16,6 @@ ARM7TDMI::thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
     //uint8_t ro = (instruction & 0x01C0) >> 6;
     constexpr uint8_t ro = (op & 0x007);
     uint32_t address = cpu->getRegister(rb) + cpu->getRegister(ro);
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("address: " << (uint32_t)address << "\n");
-    DEBUG("rd: " << cpu->getRegister(rd) << "\n");
 
     Cycles cycles;
 

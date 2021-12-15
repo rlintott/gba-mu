@@ -7,7 +7,6 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAddSubHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xF800) == 0x1800);
-    DEBUG("in thumb addsub immediate\n");
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rs = thumbGetRs(instruction);
     uint32_t op2;

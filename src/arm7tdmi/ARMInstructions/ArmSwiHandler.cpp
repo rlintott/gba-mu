@@ -5,9 +5,7 @@
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSwiHandler(uint32_t instruction, ARM7TDMI* cpu) {
-   // DEBUGWARN("UNDEFINED ARM OPCODE! " << std::bitset<32>(instruction).to_string() << std::endl);
     constexpr uint16_t opcode = (op & 0xF00);
-
     if constexpr(opcode == 0xF00) {
         // 1111b: SWI{cond} nn   ;software interrupt
         cpu->switchToMode(Mode::SUPERVISOR);

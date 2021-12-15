@@ -7,15 +7,11 @@
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::shiftHandler(uint16_t instruction) {
     assert((instruction & 0xE000) == 0);
-    DEBUG("in thumb shift handler\n");
 
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint8_t offset = (instruction & 0x07C0) >> 6;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
-
-    DEBUG("offset: " << (uint32_t)offset << "\n");
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     uint32_t rsVal = getRegister(rs);
 
@@ -63,7 +59,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::shiftHandler(uint16_t instruction) {
 
     }
     setRegister(rd, result);
-    DEBUG("result: " << std::bitset<32>(result).to_string() << "\n");
     cpsr.C = carryFlag;
     cpsr.Z = (result == 0);
     cpsr.N = (bool)(result & 0x80000000);
@@ -74,7 +69,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::shiftHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::addSubHandler(uint16_t instruction) {
     assert((instruction & 0xF800) == 0x1800);
-    DEBUG("in thumb addsub immediate\n");
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rs = thumbGetRs(instruction);
     uint32_t op2;
@@ -137,14 +131,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::addSubHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::immHandler(uint16_t instruction) {
     assert((instruction & 0xE000) == 0x2000);
-    DEBUG("in thumb compare/add/subtract immediate\n");
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint32_t offset = instruction & 0x00FF;
     uint8_t rd = (instruction & 0x0700) >> 8;
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("offset: " << (uint32_t)offset << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     bool carryFlag;
     bool signFlag;
@@ -165,7 +154,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::immHandler(uint16_t instruction) {
             // 01b: CMP{S} Rd,#nn      ;compare  Void = Rd - #nn
             uint32_t rdVal = getRegister(rd);
             uint32_t result = rdVal - offset;
-            DEBUG("result: " << result << "\n");
             signFlag = aluSetsSignBit(result);
             zeroFlag = aluSetsZeroBit(result);
             carryFlag = aluSubtractSetsCarryBit(rdVal, offset);
@@ -207,15 +195,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::immHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::aluHandler(uint16_t instruction) {
     assert((instruction & 0xFC00) == 0x4000);
-    DEBUG("thumb in aluhandler\n");
     uint8_t opcode = (instruction & 0x03C0) >> 6;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
     bool carryFlag, overflowFlag, signFlag, zeroFlag;
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("rs: " << (uint32_t)rs << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     Cycles cycles;
     int internalCycles = 0;
@@ -463,7 +446,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::aluHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::bxHandler(uint16_t instruction) {
     assert((instruction & 0xFC00) == 0x4400);
-    DEBUG("in thumb HiReg/BX handler\n");
     uint8_t opcode = (instruction & 0x0300) >> 8;
     uint8_t rs = thumbGetRs(instruction);
     uint8_t rd = thumbGetRd(instruction);
@@ -486,10 +468,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::bxHandler(uint16_t instruction) {
     if(rd == PC_REGISTER) {
         rsVal &= 0xFFFFFFFE;
     }
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("rs: " << (uint32_t)rs << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     switch (opcode) {
         case 0: {
@@ -530,8 +508,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::bxHandler(uint16_t instruction) {
             if (rs == PC_REGISTER || !(rsVal & 0x1)) {
                 // R15: CPU switches to ARM state, and PC is auto-aligned as
                 // (($+4) AND NOT 2).
-                DEBUG("in here\n");
-
                 // For BX/BLX, when Bit 0 of the value in Rs is zero:
                 // Processor will be switched into ARM mode!
                 // If so, Bit 1 of Rs must be cleared (32bit word aligned).
@@ -544,7 +520,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::bxHandler(uint16_t instruction) {
 
             assert(msbd == 0);
             rsVal &= 0xFFFFFFFE;
-            DEBUG(rsVal << " <- rsVal\n");
             setRegister(PC_REGISTER, rsVal);
 
             return BRANCH;
@@ -556,15 +531,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::bxHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadPcRelativeHandler(uint16_t instruction) {
     assert((instruction & 0xF800) == 0x4800);
-    DEBUG("in THUMB.6: load PC-relative \n");
     uint16_t offset = (instruction & 0x00FF) << 2;
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint32_t address =
         ((getRegister(PC_REGISTER) + 2) & 0xFFFFFFFD) + offset;
-    uint32_t value =
-        aluShiftRor(bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL), (address & 3) * 8);
-    DEBUG("rd " << (uint32_t)rd << "\n");
-    DEBUG("offset " << (uint32_t)offset << "\n");
+    uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, 
+                                 Bus::CycleType::NONSEQUENTIAL), 
+                                 (address & 3) * 8);
     setRegister(rd, value);
     bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return NONSEQUENTIAL;
@@ -574,15 +547,11 @@ inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreRegOffsetHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0x5000);
     assert(!(instruction & 0x0200));
-    DEBUG("in THUMB.7: load/store with register offset\n");
     uint8_t opcode = (instruction & 0x0C00) >> 10;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
     uint8_t ro = (instruction & 0x01C0) >> 6;
     uint32_t address = getRegister(rb) + getRegister(ro);
-    DEBUG("rb: " << (uint32_t)rb << "\n");
-    DEBUG("ro: " << (uint32_t)ro << "\n");
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     switch (opcode) {
         case 0: {
@@ -619,15 +588,11 @@ ARM7TDMI::FetchPCMemoryAccess
 ARM7TDMI::loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0x5000);
     assert(instruction & 0x0200);
-    DEBUG("THUMB.8: load/store sign-extended byte/halfword\n");
     uint8_t opcode = (instruction & 0x0C00) >> 10;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
     uint8_t ro = (instruction & 0x01C0) >> 6;
     uint32_t address = getRegister(rb) + getRegister(ro);
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("address: " << (uint32_t)address << "\n");
-    DEBUG("rd: " << getRegister(rd) << "\n");
 
     Cycles cycles;
 
@@ -679,7 +644,6 @@ ARM7TDMI::loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreImmediateOffsetHandler(uint16_t instruction) {
     assert((instruction & 0xE000) == 0x6000);
-    DEBUG("in THUMB.9: load/store with immediate offset\n");
     uint8_t opcode = (instruction & 0x1800) >> 11;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
@@ -689,7 +653,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreImmediateOffsetHandler(uint16_t
             // 0: STR  Rd,[Rb,#nn]  ;store 32bit data   WORD[Rb+nn] = Rd
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = getRegister(rb) + offset;
-            DEBUG("str rd: " << (uint32_t)rd << "\n");
             bus->write32(address & 0xFFFFFFFC, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
@@ -697,7 +660,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreImmediateOffsetHandler(uint16_t
             // 1: LDR  Rd,[Rb,#nn]  ;load  32bit data   Rd = WORD[Rb+nn]
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = getRegister(rb) + offset;
-            DEBUG("address: " << address << "\n");
             uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             // if(rd == PC_REGISTER) {
@@ -736,17 +698,11 @@ inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreHalfwordHandler(uint16_t instruction) {
 
     assert((instruction & 0xF000) == 0x8000);
-    DEBUG("in load store halfword\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = thumbGetRd(instruction);
     uint8_t rb = thumbGetRb(instruction);
     uint32_t offset = (instruction & 0x07C0) >> 5;
     uint32_t address = getRegister(rb) + offset;
-    DEBUG("rd " << (uint32_t)rd << "\n");
-    DEBUG("rb " << (uint32_t)rb << "\n");
-    DEBUG("address " << (uint32_t)address << "\n");
-    DEBUG("opcode " << (uint32_t)opcode << "\n");
-    DEBUG("offset " << (uint32_t)offset << "\n");
 
     switch (opcode) {
         case 0: {
@@ -757,10 +713,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreHalfwordHandler(uint16_t instru
             break;
         }
         case 1: {
-            DEBUG("load\n");
-            DEBUG("rd " << (uint32_t)rd << "\n");
-            DEBUG("rb " << (uint32_t)rb << "\n");
-            DEBUG("offset " << (uint32_t)offset << "\n");
             // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
             uint32_t value = aluShiftRor(bus->read16(address & 0xFFFFFFFE, 
                                          Bus::CycleType::NONSEQUENTIAL),
@@ -777,16 +729,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreHalfwordHandler(uint16_t instru
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreSpRelativeHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0x9000);
-    DEBUG("in thumb load store sp relative handler\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint16_t offset = (instruction & 0x00FF) << 2;
     uint32_t address = getRegister(SP_REGISTER) + offset;
-
-    DEBUG("rd " << (uint32_t)rd << "\n");
-    DEBUG("opcode " << (uint32_t)opcode << "\n");
-    DEBUG("offset " << (uint32_t)offset << "\n");
-    DEBUG("address " << (uint32_t)address << "\n");
 
     switch (opcode) {
         case 0: {
@@ -810,14 +756,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreSpRelativeHandler(uint16_t inst
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::getRelativeAddressHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0xA000);
-    DEBUG("in THUMB.12: get relative address\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint16_t offset = (instruction & 0x00FF) << 2;
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
-    DEBUG("offset: " << (uint32_t)offset << "\n");
 
     switch (opcode) {
         case 0: {
@@ -840,7 +781,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::getRelativeAddressHandler(uint16_t instr
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::addOffsetToSpHandler(uint16_t instruction) {
     assert((instruction & 0xFF00) == 0xB000);
-    DEBUG("in THUMB.13: add offset to stack pointer\n");
     uint8_t opcode = (instruction & 0x0080) >> 7;
     uint16_t offset = (instruction & 0x007F) << 2;
 
@@ -864,13 +804,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::addOffsetToSpHandler(uint16_t instructio
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStoreHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0xC000);
-    DEBUG("in THUMB.15: multiple load/store\n");
     uint8_t opcode = (instruction & 0x0800) >> 11;
     uint8_t rList = instruction & 0x00FF;
     uint8_t rb = (instruction & 0x0700) >> 8;
     uint32_t rbValue = getRegister(rb);
     uint32_t oldRbValue = rbValue;
-    DEBUG("rbValue: " << rbValue << "\n");
 
     bool firstAccess = true;
 
@@ -882,7 +820,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStoreHandler(uint16_t instru
             // 0: STMIA Rb!,{Rlist}   ;store in memory, increments Rb (post-increment store)
             for(int i = 0; i < 8; i++) {
                 if(rList & 0x01) {
-                    DEBUG("writing rlist val to mem\n");
                     if(firstAccess) {
                         bus->write32(rbValue, getRegister(i), Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
@@ -902,7 +839,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStoreHandler(uint16_t instru
             if(((uint32_t)rList >> rb) & 0x1) {
                 // if rb included in rList, Store OLD base if Rb is FIRST entry in Rlist, 
                 // otherwise store NEW base (STM/ARMv4)
-                DEBUG("rb included in rlist!\n");
                 if(!(rList << (8 - rb))) {
                     // rb is first entry in rList
                     setRegister(rb, oldRbValue);   
@@ -910,7 +846,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStoreHandler(uint16_t instru
                     setRegister(rb, rbValue);
                 }
             } else {
-                DEBUG("rb not included in rlist!\n");
                 setRegister(rb, rbValue);
             }    
             break;
@@ -949,7 +884,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStoreHandler(uint16_t instru
 
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStorePushPopHandler(uint16_t instruction) {
-    DEBUG("in THUMB.14: push/pop registers\n");
     assert((instruction & 0xF000) == 0xB000);
     assert((instruction & 0x0600) == 0x0400);
     uint8_t opcode = (instruction & 0x0800) >> 11;
@@ -958,8 +892,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::multipleLoadStorePushPopHandler(uint16_t
     uint32_t spValue = getRegister(SP_REGISTER);
     bool firstAccess = true;
     bool branch = false;
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
 
     // In THUMB mode stack is always meant to be 'full descending', 
     // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
@@ -1029,16 +961,12 @@ static uint32_t signExtend9Bit(uint16_t value) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::conditionalBranchHandler(uint16_t instruction) {
     assert((instruction & 0xF000) == 0xD000);
-    DEBUG("in THUMB.16: conditional branch\n");
     uint8_t opcode = (instruction & 0x0F00) >> 8;
     uint32_t offset = signExtend9Bit((instruction & 0x00FF) << 1);
     bool jump = false;
 
-    DEBUG("opcode: " << (uint64_t)opcode << "\n");
-
     // Destination address must by halfword aligned (ie. bit 0 cleared)
     // Return: No flags affected, PC adjusted if condition true
-
     switch (opcode) {
         case 0x0: {
             // 0: BEQ label        ;Z=1         ;equal (zero) (same)
@@ -1135,7 +1063,6 @@ static uint32_t signExtend12Bit(uint32_t value) {
 }
 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::unconditionalBranchHandler(uint16_t instruction) {
-    DEBUG("in thumb unconditional branch\n");
     assert((instruction & 0xF800) == 0xE000);
     uint32_t offset = signExtend12Bit((instruction & 0x07FF) << 1);
     setRegister(PC_REGISTER, (getRegister(PC_REGISTER) + 2 + offset) & 0xFFFFFFFE);
@@ -1150,7 +1077,6 @@ static uint32_t signExtend23Bit(uint32_t value) {
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::longBranchHandler(uint16_t instruction) {
     uint8_t opcode = (instruction & 0xF800) >> 11;
-    DEBUG("in thumb long branch handler\n");
 
     switch(opcode) {
         case 0x1E: {
@@ -1158,7 +1084,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::longBranchHandler(uint16_t instruction) 
             assert((instruction & 0xF800) == 0xF000);
             uint32_t offsetHiBits = signExtend23Bit(((uint32_t)(instruction & 0x07FF)) << 12);            
             setRegister(LINK_REGISTER, getRegister(PC_REGISTER) + 2 + offsetHiBits);
-            //DEBUGWARN("first half\n");
             return SEQUENTIAL;
         }
         case 0x1F: {
@@ -1169,7 +1094,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::longBranchHandler(uint16_t instruction) 
             // The destination address range is (PC+4)-400000h..+3FFFFEh, 
             setRegister(PC_REGISTER, (getRegister(LINK_REGISTER) + offsetLoBits));
             setRegister(LINK_REGISTER, temp);  
-            //DEBUGWARN("second half\n");     
             return BRANCH;
         }
         case 0x1D: {
@@ -1187,9 +1111,7 @@ inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::softwareInterruptHandler(uint16_t instruction) {
     // 11011111b: SWI nn   ;software interrupt
     // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
-    assert((instruction & 0xFF00) == 0xDF00);
-    //DEBUGWARN("software interrupt!\n");
-    
+    assert((instruction & 0xFF00) == 0xDF00);    
 
     // CPSR=<changed>  ;Enter svc/abt
     switchToMode(Mode::SUPERVISOR);
@@ -1214,8 +1136,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::softwareInterruptHandler(uint16_t instru
 /* ~~~~~~~~~~~~~~~ Undefined Operation ~~~~~~~~~~~~~~~~~~~~*/
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::undefinedOpHandler(uint16_t instruction) {
-    DEBUG("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string() << std::endl);
-    
+    DEBUGWARN("UNDEFINED THUMB OPCODE! " << std::bitset<16>(instruction).to_string() << std::endl);
     // switchToMode(ARM7TDMI::Mode::UNDEFINED);
     // TODO: what is behaviour of thumb undefined instruction?
     bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);

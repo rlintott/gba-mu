@@ -3,7 +3,6 @@
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStPushPopHandler(uint16_t instruction, ARM7TDMI* cpu) {
-    DEBUG("in THUMB.14: push/pop registers\n");
     assert((instruction & 0xF000) == 0xB000);
     assert((instruction & 0x0600) == 0x0400);
     //uint8_t opcode = (instruction & 0x0800) >> 11;
@@ -15,11 +14,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStPushPopHandler(uint16_t ins
     bool firstAccess = true;
     bool branch = false;
 
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-
     // In THUMB mode stack is always meant to be 'full descending', 
     // ie. PUSH is equivalent to 'STMFD/STMDB' and POP to 'LDMFD/LDMIA' in ARM mode.
-
     if constexpr(!opcode) {
         // 0: PUSH {Rlist}{LR}   ;store in memory, decrements SP (R13)
         if constexpr(pcLrBit) {

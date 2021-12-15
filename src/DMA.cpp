@@ -50,15 +50,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
     }
 
-    // TODO: Game Pak DRQ  - DMA3 only -  (0=Normal, 1=DRQ <from> Game Pak, DMA3)
-
-    //DEBUGWARN("dma start\n");
-    //DEBUGWARN(hBlank << "\n");
-    //DEBUGWARN("x " << (uint32_t)x << "\n");
-    //DEBUGWARN("control " << (uint32_t)control << "\n");
-    //DEBUGWARN("startTiming: " << (uint32_t)startTiming << "\n");
-    //DEBUGWARN("dma:  " << (uint32_t)x << "\n");
-    
+    // TODO: Game Pak DRQ  - DMA3 only -  (0=Normal, 1=DRQ <from> Game Pak, DMA3)    
 
     // TODO: implement this
     // if(startTiming == 3) {
@@ -109,29 +101,17 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         // SPECIAL BEHAVIOURS FOR DIFFERENT X
         switch(x) {
             case 0: {
-                // DEBUGWARN("before mask 0 src addr: " << dmaXSourceAddr[x] << "\n");
-                // DEBUGWARN(ARM7TDMI::aluShiftRor(bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
-                //                                     (dmaXSourceAddr[x] & 1) * 8) << "\n");
-
                 dmaXSourceAddr[x] &= internalMemMask;
                 dmaXDestAddr[x] &= internalMemMask;
-                //DEBUGWARN("after mask 0 src addr: " << dmaXSourceAddr[x] << "\n");
-                // DEBUGWARN(ARM7TDMI::aluShiftRor(bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
-                //                                     (dmaXSourceAddr[x] & 1) * 8) << "\n");
-                //exit(0)ma;
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
                 }
-                //DEBUGWARN("word count: " << dmaXWordCount[x] << "\n");
                 break;
             }
             case 1: {
                 dmaXSourceAddr[x] &= anyMemMask;
                 dmaXDestAddr[x] &= internalMemMask;
-                // DEBUGWARN("1 src addr: " << dmaXSourceAddr[x] << "\n");
-                // DEBUGWARN(ARM7TDMI::aluShiftRor(bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
-                //                                     (dmaXSourceAddr[x] & 1) * 8) << "\n");
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
@@ -141,9 +121,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             case 2: {
                 dmaXSourceAddr[x] &= anyMemMask;
                 dmaXDestAddr[x] &= internalMemMask;
-                // DEBUGWARN("2 src addr: " << dmaXSourceAddr[x] << "\n");
-                // DEBUGWARN(ARM7TDMI::aluShiftRor(bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
-                //                                     (dmaXSourceAddr[x] & 1) * 8) << "\n");
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
@@ -153,9 +130,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             case 3: {
                 dmaXSourceAddr[x] &= anyMemMask;
                 dmaXDestAddr[x] &= anyMemMask;
-                // DEBUGWARN("3 src addr: " << dmaXSourceAddr[x] << "\n");
-                // DEBUGWARN(ARM7TDMI::aluShiftRor(bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
-                //                                     (dmaXSourceAddr[x] & 1) * 8) << "\n");
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma3MaxWordCount;
@@ -170,23 +144,12 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     }
 
-    // DEBUGWARN(dmaXWordCount[x] << " is wordCount \n"); 
-    // DEBUGWARN((uint32_t)x << " is x \n"); 
-    // if(x == 3 && dmaXDestAddr[x] >= 0xD000000) {
-    //     //DEBUGWARN("gamepak rom writing\n");
-    //     // TODO: temporarily disabling dma gamepak ROM writing. implement it
-    //     //return 0;
-    // }
-
     bool thirtyTwoBit = control & 0x0400; //  (0=16bit, 1=32bit)
     bool firstAccess = true;
  
     uint8_t destAdjust = (control & 0x0060) >> 5;
     uint8_t srcAdjust = (control & 0x0180) >> 7;
     assert(srcAdjust != 3);
-
-    //DEBUGWARN(thirtyTwoBit << " is thirtyTwoBit \n"); 
-    //DEBUGWARN(dmaXWordCount[x] << "\n");
 
     uint32_t offset = thirtyTwoBit ? 4 : 2;
 
@@ -197,7 +160,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             if(firstAccess) { 
                 uint32_t value = bus->read32(dmaXSourceAddr[x] & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
                 //uint32_t value = bus->read32(dmaXSourceAddr[x], Bus::NONSEQUENTIAL);
-                //DEBUGWARN("value: " << value << "\n");
                 bus->write32(dmaXDestAddr[x] & 0xFFFFFFFC, value, Bus::NONSEQUENTIAL);
                 firstAccess = false;
             } else {
@@ -211,7 +173,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 firstAccess = false;
             } else {
                 uint16_t value = bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::SEQUENTIAL);
-                //DEBUGWARN("value: " << value << "\n");
                 bus->write16(dmaXDestAddr[x] & 0xFFFFFFFE, value, Bus::SEQUENTIAL);
             }
         }
@@ -221,7 +182,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         // (0=Increment,1=Decrement,2=Fixed,3=prohibited)
         switch(srcAdjust) {
             case 0: {
-                //DEBUGWARN("incrementing\n");
                 dmaXSourceAddr[x] += offset;
                 break;
             }
@@ -242,7 +202,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         switch(destAdjust) {
             case 0:
             case 3: {
-                //DEBUGWARN((uint32_t)destAdjust << " destAdjust\n");
                 dmaXDestAddr[x] += offset;
                 break;
             }
@@ -274,10 +233,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     if(!(control & 0x0200)) {
         // DMA Repeat (0=Off, 1=On) (Must be zero if Bit 11 set)
         // if not dma repeat, set enable bit = 0 when done transfer
-        //DEBUGWARN("no dma repeat: setting dma enabled to false\n");
         bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] &= 0x7F;
         dmaXEnabled[x] = false;
-        //DEBUGWARN("imm after setting: " << (uint32_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_L + 1 + ioRegOffset]) << "\n");
     } else {
         // else, dma repeat is set, so schedule next dma
         if((startTiming == 2 && scanline >= (PPU::SCREEN_HEIGHT - 1)) || startTiming == 1 || 
@@ -305,7 +262,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     }
     if(control & 0x4000) {
         //irq at end of word count
-        DEBUGWARN("irq\n");
         switch(x) {
             case 0: {
                 cpu->queueInterrupt(ARM7TDMI::Interrupt::DMA0);
@@ -328,8 +284,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         }
     }
-    //DEBUGWARN("temp cycles " << tempCycles << "\n");
-    //DEBUGWARN(bus->ppuMemDirty << "\n");
 
     return tempCycles;
 }
@@ -402,10 +356,8 @@ void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately) {
         }
     }
 
-    //DEBUGWARN("removing old\n");
     // remove old event
     scheduler->removeEvent(eventType);
-    //DEBUGWARN("removed old\n");
 
     if((upperControlByte & 0x80) || immediately) {
         // enabling dma

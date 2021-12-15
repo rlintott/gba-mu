@@ -6,7 +6,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbSwiHandler(uint16_t instruction, AR
     // 11011111b: SWI nn   ;software interrupt
     // 10111110b: BKPT nn  ;software breakpoint (ARMv5 and up) not used in ARMv4T
     assert((instruction & 0xFF00) == 0xDF00);
-    //DEBUGWARN("software interrupt!\n");
 
     // cpu->cpsr=<changed>  ;Enter svc/abt
     cpu->switchToMode(Mode::SUPERVISOR);

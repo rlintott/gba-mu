@@ -13,9 +13,6 @@
 
 Bus::Bus() {
     // TODO: make bios configurable
-    DEBUG("initializing bus\n");
-
-
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
     }
@@ -49,7 +46,7 @@ Bus::Bus() {
     for(int i = 0; i < 69000; i++) {
         gamePakSram.push_back(0);
     }
-    // TODO, use resize fn for initialization
+    // TODO, does gamepak have to be initialized with 32MB of memory?
     gamePakRom.resize(32000000);
 }
 
@@ -261,7 +258,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0:
         case 0x01: {
             if(0x00004000 <= address && address <= 0x01FFFFFF)  {
-                //DEBUGWARN("reading from unused memory! address " << address << "\n");
                 break;
             }
             switch(width) {
@@ -283,7 +279,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             break;
         }
         case 0x02: { // board RAM 
-            DEBUG("reading from wramBoard\n");
             address &= 0x0203FFFF;
             switch(width) {
                 case 32: {
@@ -308,8 +303,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x03: {   
             // mirrored every 8000 bytes
             address &= 0x03007FFF;
-            //DEBUGWARN("start\n");
-            DEBUG("reading from wramChip addr: " << address << "\n");
             if(address > 0x03007FFF) {
                 break;
             }
@@ -328,7 +321,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                     break;
                 }
             }     
-            //DEBUGWARN("end\n");
             break;
         }      
         case 0x04: {
@@ -427,12 +419,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
-            // if(address - 0x08000000 > gamePakRom.size()) {
-            //     DEBUGWARN("bigger!\n");
-            //     DEBUGWARN(address - 0x08000000 << "\n");
-            //     DEBUGWARN(gamePakRom.size() << " <- gamepakrom size\n");
-            // }
-            DEBUG("reading from gamepak\n");
             switch(width) {
                 case 32: {
                     memAccessCycles += 7;
@@ -451,7 +437,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                     break;
                 }
             } 
-            DEBUG("done reading from gamepak\n");
             break;  
         } 
         case 0x0A:
@@ -522,9 +507,6 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         }
         default: {  
             // TODO: implement unused memory access behaviour (and check for unused memory writes)
-            if(0x10000000 <= address && address <= 0xFFFFFFFF) {
-                //DEBUGWARN("reading from unused memory! address " << address << "\n");
-            }
             break;
         }
 
@@ -547,7 +529,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         }
         case 0x02: { // BOARD RAM  
             address &= 0x0203FFFF;
-            //DEBUGWARN("start write at 0x02000000\n");
+
             switch(width) {
                 case 32: {
                     memAccessCycles += 5;
@@ -592,8 +574,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                     break;
                 }
             } 
-            //DEBUGWARN("end\n");    
-            //DEBUGWARN("done writing to ram chip\n");
             break;        
         }
         case 0x04: {
@@ -602,7 +582,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             if(0x4000100 <= address && address <= 0x400010F) {
                 // timer addresses
-                //DEBUGWARN("howdy\n");
                 timer->updateTimerUponWrite(address, value, width);
             }
 
@@ -612,10 +591,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 // dma addresses
                 dma->updateDmaUponWrite(address, value, width);
             }
-
-            // DEBUGWARN("width " << (uint32_t)width << "\n");
-            // DEBUGWARN("value " << value << "\n");
-            // DEBUGWARN("addr " << address << "\n");
 
             switch(width) {
                 case 32: {
@@ -640,30 +615,24 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // setting a bit (acknowledging an interrupt) changes that bit to zero
             // so do val &= ~val
             if(0x4000200 <= address && address <= 0x4000203) {
-                //DEBUGWARN("eyo1\n");
+
                 uint8_t tempWidth = width;
                 uint32_t tempAddress = address;
                 uint32_t tempValue = value;
                 while(tempWidth != 0) {
-                    //DEBUGWARN("heyo\n");
-                    //DEBUGWARN("tempAddress " << tempAddress << "\n");
                     
                     if(tempAddress == 0x04000202 || tempAddress == 0x04000203) {
-                        //DEBUGWARN("before " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
                         iORegisters[tempAddress - 0x04000000] = iORegisters[tempAddress - 0x04000000] & (~tempValue);
-                        //DEBUGWARN("after " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
                     }
                     
                     tempWidth -= 8;
                     tempAddress += 1;
                     tempValue = tempValue >> 8;
                 }
-                //DEBUGWARN("eyo2\n");
             }   
 
             if(address == 0x04000301) {
                 // halt register hit
-                //DEBUGWARN("hey!\n");
                 if(!(iORegisters[HALTCNT] & 0x80)) {
                     haltMode = true;
                 }
@@ -698,7 +667,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             break;
         } 
         case 0x06: {  
-            // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
+
             // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
             // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
                 if(address & 0x00010000) {
@@ -759,12 +728,6 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0
-
-            if(address - 0x08000000 > gamePakRom.size()) {
-                DEBUGWARN("bigger!\n");
-                DEBUGWARN(address - 0x08000000 << "\n");
-            }
-            //DEBUGWARN("writing to gampak\n");
 
             switch(width) {
                 case 32: {
@@ -867,252 +830,9 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         }
         default: {
             // TODO: implement unused memory access behaviour (and check for unused memory writes)
-            if(0x10000000 <= address && address <= 0xFFFFFFFF) {
-                DEBUGWARN("writing to unused memory! address " << address << "\n");
-            }            
             break;
         }
     }
-
-    // if(address <= 0x00003FFF) {
-    // } else if (0x02000000 <= address && address <= 0x02FFFFFF) {
-    // } else if (0x03000000 <= address && address <= 0x03FFFFFF) {
-    // } else if (0x04000000 <= address && address <= 0x040003FE) {
-    //     if(0x04000000 <= address && address < 0x04000056) {
-    //     }
-
-    //     if(0x4000100 <= address && address <= 0x400010F) {
-    //         // timer addresses
-    //         timer->updateTimerUponWrite(address, value, width);
-    //     }
-    //     // DEBUGWARN("width " << (uint32_t)width << "\n");
-    //     // DEBUGWARN("value " << value << "\n");
-    //     // DEBUGWARN("addr " << address << "\n");
-
-    //     switch(width) {
-    //         case 32: {
-    //             writeToArray32(&iORegisters, address, 0x04000000, value); 
-    //             break;
-    //         }
-    //         case 16: {
-    //             writeToArray16(&iORegisters, address, 0x04000000, value);      
-    //             break;      
-    //         }
-    //         case 8: {
-    //             writeToArray8(&iORegisters, address, 0x04000000, value);         
-    //             break;  
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     } 
-
-    //     // SPECIAL CASE when writing to interrupt request register
-    //     // setting a bit (acknowledging an interrupt) changes that bit to zero
-    //     // so do val &= ~val
-    //     if(0x4000200 <= address && address <= 0x4000203) {
-    //         //DEBUGWARN("eyo1\n");
-    //         uint8_t tempWidth = width;
-    //         uint32_t tempAddress = address;
-    //         uint32_t tempValue = value;
-    //         while(tempWidth != 0) {
-    //             //DEBUGWARN("heyo\n");
-    //             //DEBUGWARN("tempAddress " << tempAddress << "\n");
-                
-    //             if(tempAddress == 0x04000202 || tempAddress == 0x04000203) {
-    //                 //DEBUGWARN("before " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
-    //                 iORegisters[tempAddress - 0x04000000] = iORegisters[tempAddress - 0x04000000] & (~tempValue);
-    //                 //DEBUGWARN("after " << (uint32_t)iORegisters[tempAddress - 0x04000000] << "\n");
-    //             }
-                
-    //             tempWidth -= 8;
-    //             tempAddress += 1;
-    //             tempValue = tempValue >> 8;
-    //         }
-    //         //DEBUGWARN("eyo2\n");
-    //     }          
-
-    // } else if (0x05000000 <= address && address <= 0x05FFFFFF) { 
-    //     //DEBUGWARN("writing to palette ram: [" << address << "] = " << value << " " << (uint32_t)width << "\n");
-    //     address &= 0x050003FF;
-    //     switch(width) {
-    //         case 32: {
-    //             writeToArray32(&paletteRam, address, 0x05000000, value); 
-    //             break;
-    //         }
-    //         case 16: {
-    //             writeToArray16(&paletteRam, address, 0x05000000, value);         
-    //             break;    
-    //         }
-    //         case 8: {
-    //             /*
-    //             Writes to BG (6000000h-600FFFFh) (or 6000000h-6013FFFh in Bitmap mode) 
-    //             and to Palette (5000000h-50003FFh) are writing the new 8bit value to
-    //              BOTH upper and lower 8bits of the addressed halfword, ie. "[addr AND NOT 1]=data*101h".
-    //              */
-    //             writeToArray16(&paletteRam, address & 0xFFFFFFFE, 0x05000000, value * 0x101); 
-    //             break;            
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     } 
-
-    // } else if (0x06000000 <= address && address <= 0x06FFFFFF) {    
-    //     // DEBUGWARN("vram: writing " << value << " to " << address - 0x06000000 << "\n");
-    //     // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
-    //     // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
-    //         if(address & 0x00010000) {
-    //             address &= 0x06007FFF;
-    //             address += 0x10000;
-    //         } else {
-    //             address &= 0x0600FFFF;
-    //         }
-    //     //address = (address & 0x0607FFF);
-    //     switch(width) {
-    //         case 32: {
-    //             writeToArray32(&vRam, address, 0x06000000, value);
-    //             break;
-    //         }
-    //         case 16: {
-    //             writeToArray16(&vRam, address, 0x06000000, value);    
-    //             break;        
-    //         }
-    //         case 8: {
-    //             writeToArray8(&vRam, address, 0x06000000, value);      
-    //             break;      
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     }
-
-    // } else if (0x07000000 <= address && address <= 0x07FFFFFF) {    
-    //     // TODO: there are more hblank rules to implement
-    //     address &= 0x070003FF;
-    //     switch(width) {
-    //         case 32: {
-    //             writeToArray32(&objAttributes, address, 0x07000000, value);
-    //             break;
-    //         }
-    //         case 16: {
-    //             writeToArray16(&objAttributes, address, 0x07000000, value);          
-    //             break;  
-    //         }
-    //         case 8: {
-    //             // 8 bit Writes to OBJ (6010000h-6017FFFh) (or 6014000h-6017FFFh in Bitmap mode) 
-    //             // and to OAM (7000000h-70003FFh) are ignored, the memory content remains unchanged.
-    //             // writeToArray8(&objAttributes, address, 0x07000000, value);            
-    //             break;
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     }   
-
-    // } else if (0x08000000 <= address && address <= 0x09FFFFFF) {
-    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-    //     // waitstate 0
-
-    //     if(address - 0x08000000 > gamePakRom.size()) {
-    //         DEBUGWARN("bigger!\n");
-    //         DEBUGWARN(address - 0x08000000 << "\n");
-    //     }
-    //     //DEBUGWARN("writing to gampak\n");
-
-    //     switch(width) {
-    //         case 32: {
-    //             //writeToArray32(&gamePakRom, address, 0x08000000, value);
-    //             break;
-    //         }
-    //         case 16: {
-    //             //writeToArray16(&gamePakRom, address, 0x08000000, value);         
-    //             break;   
-    //         }
-    //         case 8: {
-    //             //writeToArray8(&gamePakRom, address, 0x08000000, value);          
-    //             break;  
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     }   
-
-    // } else if (0x0A000000 <= address && address <= 0x0BFFFFFF) {
-    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-    //     // waitstate 1
-    //     //assert(false);
-    //     switch(width) {
-    //         case 32: {
-    //             //writeToArray32(&gamePakRom, address, 0x0A000000, value);
-    //             break;
-    //         }
-    //         case 16: {
-    //             //writeToArray16(&gamePakRom, address, 0x0A000000, value);         
-    //             break;   
-    //         }
-    //         case 8: {
-    //             //writeToArray8(&gamePakRom, address, 0x0A000000, value);           
-    //             break;
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     }   
-
-    // } else if (0x0C000000 <= address && address <= 0x0DFFFFFF) {
-    //     //  TODO: *** Separate timings for sequential, and non-sequential accesses.
-    //     // waitstate 2
-    //     //assert(false);
-    //     switch(width) {
-    //         case 32: {
-    //             //writeToArray32(&gamePakRom, address, 0x0C000000, value);
-    //             break;
-    //         }
-    //         case 16: {
-    //             //writeToArray16(&gamePakRom, address, 0x0C000000, value);            
-    //             break;
-    //         }
-    //         case 8: {
-    //             //writeToArray8(&gamePakRom, address, 0x0C000000, value);            
-    //             break;
-    //         }
-    //         default: {
-    //             assert(false);
-    //         }
-    //     }   
-    // } else if (0x0E000000 <= address && address <= 0xFFFFFFF) {
-        // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
-        // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
-    //     address &= 0x0E00FFFF;
-
-    //     switch(width) {
-    //         case 32: {
-    //             value = ARM7TDMI::aluShiftRor(value, address * 8);
-    //             writeToArray8(&gamePakSram, address, 0x0E000000, value); 
-    //             break;
-    //         }
-    //         case 16: {
-    //             value = ARM7TDMI::aluShiftRor(value, address * 8);
-    //             writeToArray8(&gamePakSram, address, 0x0E000000, value); 
-    //             break;
-    //         }
-    //         case 8: {
-    //             writeToArray8(&gamePakSram, address, 0x0E000000, value); 
-    //             break;           
-    //         }
-    //         default: {
-    //             assert(false);
-    //             break;
-    //         }
-    //     } 
-    // } 
 }
 
 

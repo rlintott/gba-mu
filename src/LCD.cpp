@@ -28,9 +28,6 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
         }
     } else {
         float xShift = xRes/2.0 - (PPU::SCREEN_WIDTH * yScale / 2.0);
-        // float xShift = 0.0;
-        // yScale /= 2.0;
-        // float yShift = yRes / 4.0;
         for(int x = 0; x < PPU::SCREEN_WIDTH; x++) {
             for(int y = 0; y < PPU::SCREEN_HEIGHT; y++) {  
                 sf::Vertex* quad = &pixels[(y * PPU::SCREEN_WIDTH + x) * 4];
@@ -108,12 +105,10 @@ void LCD::drawWindow(std::array<uint16_t, 38400>& pixelBuffer) {
                 sf::View view = sf::View(visibleArea);
                 gbaWindow->setView(view);
                 changeResolution(pixels, (float)event.size.width, (float)event.size.height);
-                //debugGui->setAbsoluteView({0, 0, (float)event.size.width, (float)event.size.height});
             }
         }
         gbaWindow->clear(sf::Color::Black);
         gbaWindow->draw(pixels);
-        
         
         gbaWindow->display();
     }

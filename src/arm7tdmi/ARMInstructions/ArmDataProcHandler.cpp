@@ -10,7 +10,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
     constexpr bool r = (op & 0x1);
     constexpr uint8_t opcode = ((op & 0x1E0) >> 5);
     constexpr bool s = (op & 0x010);
-    DEBUG("dataProc\n");
 
     uint32_t op2; 
     uint8_t shiftCarryBit;
@@ -24,13 +23,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
             rotate right by twice the value in the rotate field.
         */
 
-        DEBUG("shifting immediate\n");
         uint32_t imm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
         op2 = ARM7TDMI::aluShiftRor(imm, is % 32);
-
-        DEBUG(imm << " is imm\n");
-        DEBUG((uint32_t)is << " is shift amount\n");
 
         // carry out bit is the least significant discarded bit of rm
         if (is > 0) {
@@ -38,7 +33,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         } else {
             shiftCarryBit = cpu->cpsr.C;
         }
-        DEBUG((uint32_t)shiftCarryBit << " is carryBit\n");
     } else {
         /* ~~~~~~~~~ else: shifted register value as 2nd operand ~~~~~~~~~~ */
         uint8_t shiftType = (instruction & 0x00000060) >> 5U;
@@ -73,10 +67,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         }
 
         bool immOpIsZero = r ? false : shiftAmount == 0;
-        DEBUG((uint32_t)shiftType << " is shift type \n");
-        DEBUG((uint32_t)shiftAmount << " is shiftAmount \n");
-        DEBUG(r << " = r \n");
-        DEBUG(immOpIsZero << " = immOpIsZero \n");
         if(doShift) {
             if (shiftType == 0) {  // Logical Shift Left
                 /*
@@ -92,8 +82,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
                 if (!immOpIsZero) {
                     op2 = ARM7TDMI::aluShiftLsl(rm, shiftAmount);
                     shiftCarryBit = (shiftAmount > 32) ? 0 : ((rm >> (32 - shiftAmount)) & 1);
-                    DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-                    DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
                 } else {  // no op performed, carry flag stays the same
                     op2 = rm;
                     shiftCarryBit = cpu->cpsr.C;
@@ -124,8 +112,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
                 if (!immOpIsZero) {
                     op2 = ARM7TDMI::aluShiftAsr(rm, shiftAmount);
                     shiftCarryBit = (shiftAmount >= 32) ? (rm & 0x80000000) : ((rm >> (shiftAmount - 1)) & 1);
-                    DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-                    DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
                 } else {
                     /*
                         The form of the shift field which might be expected to give ASR
@@ -170,11 +156,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
     bool signBit = (cpu->cpsr).N;
     bool zeroBit = (cpu->cpsr).Z;
 
-    DEBUG((uint32_t)rn << "<- rn\n");
-    DEBUG((uint32_t)rd << "<- rd\n");
-    DEBUG((uint32_t)opcode << "<- opcode\n");
-
-
     uint32_t rnVal;
     // if rn == pc regiser, have to add to it to account for pipelining /
     // prefetching
@@ -192,8 +173,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
             rnVal = cpu->getRegister(rn) + 4;
         }
     }
-
-    DEBUG(op2 << " <- op2 (after shift)\n");
 
     if constexpr(opcode == 0x0) {  // AND
         uint32_t result = rnVal & op2;
@@ -222,7 +201,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         carryBit = ARM7TDMI::aluSubtractSetsCarryBit(op2, rnVal);
         overflowBit = ARM7TDMI::aluSubtractSetsOverflowBit(op2, rnVal, result);
     } else if constexpr(opcode == 0x4) {  // ADD
-        DEBUG("in add! rd=" << (uint32_t)rd << " rn= " << (uint32_t)rn << std::endl);
         uint32_t result = rnVal + op2;
         cpu->setRegister(rd, result);
         zeroBit = ARM7TDMI::aluSetsZeroBit(result);
@@ -231,10 +209,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         overflowBit = ARM7TDMI::aluAddSetsOverflowBit(rnVal, op2, result);
     } else if constexpr(opcode == 0x5) {  // ADC
         uint64_t result = (uint64_t)rnVal + (uint64_t)op2 + (uint64_t)(cpu->cpsr).C;
-        DEBUG(result << " in ADC, result was\n");
-        DEBUG(rnVal << " in ADC, rnval was\n");
-        DEBUG(op2 << " in ADC, op2 was\n");
-        DEBUG((uint32_t)(cpu->cpsr).C << " in ADC, cpsr.C was\n");
         cpu->setRegister(rd, (uint32_t)result);
         zeroBit = ARM7TDMI::aluSetsZeroBit((uint32_t)result);
         signBit = ARM7TDMI::aluSetsSignBit((uint32_t)result);
@@ -283,10 +257,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         signBit = ARM7TDMI::aluSetsSignBit(result);
         carryBit = shiftCarryBit;
     } else if constexpr(opcode == 0xD) {  // MOV
-        DEBUG("in mov\n");
         uint32_t result = op2;
-
-        DEBUG(result << " mov result\n");
         cpu->setRegister(rd, result);
         zeroBit = ARM7TDMI::aluSetsZeroBit(result);
         carryBit = shiftCarryBit;
@@ -307,17 +278,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
 
     if constexpr(s) {
         if(rd != ARM7TDMI::PC_REGISTER) {
-            DEBUG("s flag set! in dataproc\n");
-            DEBUG(carryBit << " carryBit\n");
-            DEBUG(zeroBit << " zeroBit\n");
-            DEBUG(signBit << " signBit\n");
-            DEBUG(overflowBit << " overflowBit\n");
             cpu->cpsr.Z = zeroBit;
             cpu->cpsr.C = carryBit;
             cpu->cpsr.N = signBit;
             cpu->cpsr.V = overflowBit;
         } else {
-            DEBUG("changing cpsr / mode in dataproc\n");
             cpu->cpsr = *(cpu->getCurrentModeSpsr());
             cpu->switchToMode(ARM7TDMI::Mode((*(cpu->getCurrentModeSpsr())).Mode));
         }

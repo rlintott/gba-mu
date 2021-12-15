@@ -7,8 +7,6 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAddOffSpHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xFF00) == 0xB000);
-    DEBUG("in THUMB.13: add offset to stack pointer\n");
-
     constexpr bool opcode = (op & 0x002);
     //uint8_t opcode = (instruction & 0x0080) >> 7;
     uint16_t offset = (instruction & 0x007F) << 2;

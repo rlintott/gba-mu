@@ -8,12 +8,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBranchXHandler(uint32_t instruction, 
     assert(((instruction & 0x0FFFFF00) >> 8) == 0b00010010111111111111);
     constexpr uint8_t opcode = op & 0x00F;
 
-    DEBUG("bx handler\n");
     // for this op rn is where rm usually is
     uint8_t rn = cpu->getRm(instruction);
     assert(rn != PC_REGISTER);
     uint32_t rnVal = cpu->getRegister(rn);
-    DEBUG(rnVal << "\n");
     
     if constexpr(opcode == 0x1) {
         // // BX PC=Rn, T=Rn.0
@@ -34,15 +32,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBranchXHandler(uint32_t instruction, 
         have effect on subsequent opcodes that use R15, or [R15+disp] as operand.
     */
     bool t = rnVal & 0x1;
-    DEBUG(t << " \n");
     cpu->cpsr.T = t;
-    DEBUG((bool)cpsr.T << " cpsr.T \n");
     if (t) {
         rnVal &= 0xFFFFFFFE;
     } else {
         rnVal &= 0xFFFFFFFC;
     }
-    DEBUG(rnVal << "\n");
     cpu->setRegister(PC_REGISTER, rnVal);
 
     return BRANCH;

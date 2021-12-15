@@ -7,7 +7,6 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xF000) == 0x8000);
-    DEBUG("in load store halfword\n");
     //uint8_t opcode = (instruction & 0x0800) >> 11;
     constexpr bool opcode = (op & 0x020);
     uint8_t rd = thumbGetRd(instruction);
@@ -15,11 +14,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStHwHandler(uint16_t instruction,
     //uint32_t offset = (instruction & 0x07C0) >> 5;
     constexpr uint32_t offset = (op & 0x01F) << 1;
     uint32_t address = cpu->getRegister(rb) + offset;
-    DEBUG("rd " << (uint32_t)rd << "\n");
-    DEBUG("rb " << (uint32_t)rb << "\n");
-    DEBUG("address " << (uint32_t)address << "\n");
-    DEBUG("opcode " << (uint32_t)opcode << "\n");
-    DEBUG("offset " << (uint32_t)offset << "\n");
 
     if constexpr(!opcode) {
         // 0: STRH Rd,[Rb,#nn]  ;store 16bit data   HALFWORD[Rb+nn] = Rd
@@ -27,10 +21,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStHwHandler(uint16_t instruction,
                      (uint16_t)cpu->getRegister(rd), 
                      Bus::CycleType::NONSEQUENTIAL);
     } else {
-        DEBUG("load\n");
-        DEBUG("rd " << (uint32_t)rd << "\n");
-        DEBUG("rb " << (uint32_t)rb << "\n");
-        DEBUG("offset " << (uint32_t)offset << "\n");
         // 1: LDRH Rd,[Rb,#nn]  ;load  16bit data   Rd = HALFWORD[Rb+nn]
         uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, 
                                      Bus::CycleType::NONSEQUENTIAL),

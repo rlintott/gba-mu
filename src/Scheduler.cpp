@@ -25,15 +25,8 @@
     } while (0)
 #endif
 
-// Scheduler::Scheduler() {
-//     // events.push_back({NULL_EVENT, 0xFFFFFFFFFFFFFFFF, false});
-//     // frontIt = events.begin();
-// }
-
 
 void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition, bool ignoreCondition) {
-    //DEBUGWARN(events.size() << " after\n");
-    // DEBUGWARN(eventType << " :adding event\n");
     // printEventList();
     uint64_t startAt = GameBoyAdvanceImpl::cyclesSinceStart + cyclesInFuture;
 
@@ -100,14 +93,9 @@ void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCond
             startNode = node;
         }
     }
-    // printEventList();
-    // DEBUGWARN(eventType << " :after adding event\n");
-
 }
 
 void Scheduler::removeNode(EventNode* eventNode) {
-    // DEBUGWARN(eventNode->event.eventType << " :removing\n");
-    // printEventList();
     if(startNode == nullptr) {
         startNode = nullptr;
     } else if(startNode == eventNode){
@@ -123,47 +111,20 @@ void Scheduler::removeNode(EventNode* eventNode) {
         }
     }
     eventNode->next = nullptr;
-    // printEventList();
-    // DEBUGWARN(eventNode->event.eventType << " :removed\n");
 }
 
 Scheduler::Event* Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
     Event* toReturn = nullptr;
-    //if(eventCondition == EventCondition::NULL_CONDITION) {
+
     if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
-        // DEBUGWARN(startNode->event.eventType << " found get next event\n");
-        // printEventList();
         toReturn = &startNode->event;
         EventNode* oldStart = startNode;
         startNode = startNode->next;
         oldStart->next = nullptr;
-        // printEventList();
-        // DEBUGWARN(toReturn << " after removing event\n");
     }    
-    // } else {
-    //     if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
-    //         EventNode* curr = startNode;
-    //         while(curr != nullptr &&
-    //               curr->event.eventCondition != eventCondition && 
-    //               curr->event.startCycle <= currentCycle) {
-    //             curr = curr->next;
-    //         }
-    //         // DEBUGWARN(startNode->event.eventType << " found get next event\n");
-    //         // printEventList();
-    //         if(curr != nullptr && curr->event.startCycle <= currentCycle && curr->event.eventCondition == eventCondition) {
-    //             toReturn = curr->event.eventType;
-    //             removeNode(curr);
-    //         }
-    //         // printEventList();
-    //         // DEBUGWARN(toReturn << " after removing event\n");
-    //     }    
 
-    // }
-    //DEBUGWARN(toReturn << "\n");
     return toReturn;
 }
-
-
 
 Scheduler::Event* Scheduler::peekNextEvent() {
     Event* toReturn = nullptr;
@@ -173,60 +134,10 @@ Scheduler::Event* Scheduler::peekNextEvent() {
     return toReturn;
 }
 
-
-Scheduler::EventType Scheduler::getNextConditionalEvent(EventCondition eventCondition) {
-    EventType toReturn = EventType::NULL_EVENT;
-
-    switch(eventCondition) {
-        case VBLANK_START: {
-            for(int i = 0; i < vBlankEvents.size(); i++) {
-                if(vBlankEvents[i].active) {
-                    toReturn = vBlankEvents[i].eventType;
-                    vBlankEvents[i].active = false;
-                    break;
-                }
-            }
-            break;
-        }
-        case HBLANK_START: {
-            for(int i = 0; i < hBlankEvents.size(); i++) {
-                if(vBlankEvents[i].active) {
-                    toReturn = vBlankEvents[i].eventType;
-                    vBlankEvents[i].active = false;
-                    break;
-                }
-            }
-            break;
-        }
-        case DMA3_VIDEO_MODE: {
-            for(int i = 0; i < dma3VideoModeEvents.size(); i++) {
-                if(vBlankEvents[i].active) {
-                    toReturn = vBlankEvents[i].eventType;
-                    vBlankEvents[i].active = false;
-                    break;
-                }
-            }
-            break;
-        }
-        default: {
-            assert(false);
-        }
-
-    }
-    return toReturn;
-}
-
 void Scheduler::removeEvent(EventType eventType) {
     EventNode* node = &events[eventType];
     removeNode(node);
 
-    // if(DMA0 <= eventType && eventType <= DMA3) {
-    //     vBlankEvents[eventType - 2].active = false;
-    //     hBlankEvents[eventType - 2].active = false;
-    //     if(eventType == DMA3) {
-    //         dma3VideoModeEvents[0].active = false;
-    //     }
-    // }
 }
 
 void Scheduler::printEventList() {

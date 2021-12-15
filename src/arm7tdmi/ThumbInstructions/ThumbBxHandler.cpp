@@ -7,7 +7,6 @@
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbBxHandler(uint16_t instruction, ARM7TDMI* cpu) {
     assert((instruction & 0xFC00) == 0x4400);
-    DEBUG("in thumb HiReg/BX handler\n");
     //uint8_t opcode = (instruction & 0x0300) >> 8;
     constexpr uint8_t opcode = (op & 0x00C) >> 2;
     uint8_t rs = thumbGetRs(instruction);
@@ -33,10 +32,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbBxHandler(uint16_t instruction, ARM
     if(rd == PC_REGISTER) {
         rsVal &= 0xFFFFFFFE;
     }
-
-    DEBUG("opcode: " << (uint32_t)opcode << "\n");
-    DEBUG("rs: " << (uint32_t)rs << "\n");
-    DEBUG("rd: " << (uint32_t)rd << "\n");
 
     if constexpr(opcode == 0) {
         // 0: ADD Rd,Rs   ;add        Rd = Rd+Rs
@@ -72,8 +67,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbBxHandler(uint16_t instruction, ARM
         if (rs == PC_REGISTER || !(rsVal & 0x1)) {
             // R15: CPU switches to ARM state, and PC is auto-aligned as
             // (($+4) AND NOT 2).
-            DEBUG("in here\n");
-
             // For BX/BLX, when Bit 0 of the value in Rs is zero:
             // Processor will be switched into ARM mode!
             // If so, Bit 1 of Rs must be cleared (32bit word aligned).
@@ -85,7 +78,6 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbBxHandler(uint16_t instruction, ARM
         }
         assert(msbd == 0);
         rsVal &= 0xFFFFFFFE;
-        DEBUG(rsVal << " <- rsVal\n");
         cpu->setRegister(PC_REGISTER, rsVal);
 
         return BRANCH; 
