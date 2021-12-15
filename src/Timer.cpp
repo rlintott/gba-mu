@@ -186,13 +186,14 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
         if(timerCounter[x] > 0xFFFF) { // if overflow
             DEBUGWARN("timer overflowed outside of scheduled event!\n");
             // schedule timer to run immediately
-            scheduler->addEvent(timerEvent, 0, Scheduler::EventCondition::NULL_CONDITION);
+            scheduler->addEvent(timerEvent, 0, Scheduler::EventCondition::NULL_CONDITION, false);
         } else {
             // add event at time when timer will go off
             //DEBUGWARN("adding timer event to scheduler!\n");
             scheduler->addEvent(timerEvent, 
                                 (0x10000 - timerCounter[x]) * timerPrescaler[x], 
-                                Scheduler::EventCondition::NULL_CONDITION);
+                                Scheduler::EventCondition::NULL_CONDITION,
+                                false);
         }
     }
 }
@@ -226,6 +227,7 @@ void Timer::timerXOverflowEvent(uint8_t x) {
     calculateTimerXCounter(x, GameBoyAdvance::cyclesSinceStart);
     if(timerCounter[x] <= 0xFFFF) {
         DEBUGWARN("timer didn't overflow! scheduling error\n");
+        scheduler->printEventList();
         return;
     }
 
@@ -258,7 +260,8 @@ void Timer::timerXOverflowEvent(uint8_t x) {
     }
     scheduler->addEvent(timerEvent,
                        (0x10000 - timerCounter[x]) * timerPrescaler[x], 
-                        Scheduler::EventCondition::NULL_CONDITION);
+                        Scheduler::EventCondition::NULL_CONDITION, 
+                        false);
 }
 
 inline

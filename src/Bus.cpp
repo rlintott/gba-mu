@@ -5,7 +5,7 @@
 #include "DMA.h"
 #include "ARM7TDMI.h"
 
-#include <assert.h>
+#include "assert.h"
 
 #include <fstream>
 #include <iostream>
@@ -14,6 +14,7 @@
 Bus::Bus(PPU* ppu) {
     // TODO: make bios configurable
     DEBUG("initializing bus\n");
+
 
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
@@ -49,7 +50,7 @@ Bus::Bus(PPU* ppu) {
         gamePakSram.push_back(0);
     }
     // TODO, use resize fn for initialization
-    //gamePakRom.resize(32000000);
+    gamePakRom.resize(32000000);
     this->ppu = ppu;
 }
 
@@ -542,7 +543,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
     switch(shift) {
         case 0x0:
-        case 0x01: {       
+        case 0x01: {    
+            break;   
         }
         case 0x02: { // BOARD RAM  
             address &= 0x0203FFFF;
@@ -601,14 +603,17 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             if(0x4000100 <= address && address <= 0x400010F) {
                 // timer addresses
-                DEBUGWARN("howdy\n");
+                //DEBUGWARN("howdy\n");
                 timer->updateTimerUponWrite(address, value, width);
             }
 
+            // TODO: there's a more efficient way to do this I think,
+            // send the changed register to DMA AFTER the write happens
             if(0x40000BA <= address && address <= 0x40000DF) {
                 // dma addresses
                 dma->updateDmaUponWrite(address, value, width);
             }
+
             // DEBUGWARN("width " << (uint32_t)width << "\n");
             // DEBUGWARN("value " << value << "\n");
             // DEBUGWARN("addr " << address << "\n");
@@ -655,8 +660,15 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                     tempValue = tempValue >> 8;
                 }
                 //DEBUGWARN("eyo2\n");
-            }          
+            }   
 
+            if(address == 0x04000301) {
+                // halt register hit
+                //DEBUGWARN("hey!\n");
+                if(!(iORegisters[HALTCNT] & 0x80)) {
+                    haltMode = true;
+                }
+            }           
             break;
         }
         case 0x05: {  
@@ -1108,7 +1120,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
     for (int i = 0; i < buffer.size(); i++) {
-        gamePakRom.push_back(buffer[i]);
+        gamePakRom[i] = buffer[i];
     }
 }
 

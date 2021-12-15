@@ -110,10 +110,7 @@ class ARM7TDMI {
 
     // accounts for modes, ex in IRQ mode, getting register 14 will return value
     // of R14_irq
-    uint32_t getRegister(uint8_t index);
-    uint32_t getUserRegister(uint8_t index);
 
-    void setRegister(uint8_t index, uint32_t value);
 
     void setCurrInstruction(uint32_t instruction);
 
@@ -131,9 +128,17 @@ class ARM7TDMI {
     
     static uint32_t aluShiftRor(uint32_t value, uint8_t shift);
     static uint32_t aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu);
+
+    uint32_t getRegister(uint8_t index);
+    void setRegister(uint8_t index, uint32_t value);
   
    private:
     
+    uint32_t getUserRegister(uint8_t index);
+    
+    // accounts for modes, ex in IRQ mode, setting register 14 will set value of
+    // R14_irq
+    void setUserRegister(uint8_t index, uint32_t value);
 
     bool interruptsEnabled();
 
@@ -196,8 +201,8 @@ class ARM7TDMI {
         uint64_t _unsigned;
     };
 
-    // registers can be dynamically changed to support different registers for
-    // different CPU modes
+    registers can be dynamically changed to support different registers for
+    different CPU modes
     std::array<uint32_t *, 16> registers = {
         &r0,  &r1, &r2, &r3, &r4, &r5, &r6, &r7, &r8, &r9, &r10, &r11, &r12,
         &r13,  // stack pointer
@@ -212,7 +217,7 @@ class ARM7TDMI {
         &r15   // program counter
     };
 
-    // all the possible registers
+    all the possible registers
     uint32_t r0 = 0;
     uint32_t r1 = 0;
     uint32_t r2 = 0;
@@ -245,6 +250,7 @@ class ARM7TDMI {
     uint32_t r13_und = 0x0;
     uint32_t r14_und = 0x0;
 
+
     static constexpr uint8_t PC_REGISTER = 15;
     static constexpr uint8_t LINK_REGISTER = 14;
     static constexpr uint8_t SP_REGISTER = 13;
@@ -257,9 +263,7 @@ class ARM7TDMI {
     uint8_t zeroBit = 0;
     uint8_t signBit = 0;
 
-
-    // todo: deprecate in favour of shifting op2 in place and only returning
-    // carry
+    // todo: deprecate in favour of shifting op2 in place and only returning carry
     struct AluShiftResult {
         uint32_t op2;
         uint8_t carry;
@@ -385,11 +389,6 @@ class ARM7TDMI {
     bool conditionalHolds(uint8_t cond);
 
     Cycles executeInstruction(uint32_t rawInstruction);
-
-    // accounts for modes, ex in IRQ mode, setting register 14 will set value of
-    // R14_irq
-    void setUserRegister(uint8_t index, uint32_t value);
-
 
     void switchToMode(Mode mode);
 

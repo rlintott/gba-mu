@@ -39,8 +39,10 @@ void ARM7TDMI::initializeWithRom() {
     setRegister(0, 0x08000000);
     setRegister(1, 0x000000EA); 
     setRegister(SP_REGISTER, 0x03007F00); // stack pointer
-    r13_svc = 0x03007FE0; // SP_svc=03007FE0h
-    r13_irq = 0x03007FA0; // SP_irq=03007FA0h
+    //r13_svc = 0x03007FE0; // SP_svc=03007FE0h
+    svcRegisterBank[0] = 0x03007FE0;
+    //r13_irq = 0x03007FA0; // SP_irq=03007FA0h
+    irqRegisterBank[0] = 0x03007FA0;
 
     bus->resetCycleCountTimeline();
     uint32_t pcAddress = getRegister(PC_REGISTER);
@@ -49,8 +51,6 @@ void ARM7TDMI::initializeWithRom() {
     // emulate filling the pipeline
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-
-
 }
 
 ARM7TDMI::~ARM7TDMI() {}
@@ -718,15 +718,28 @@ ARM7TDMI::ProgramStatusRegister ARM7TDMI::getCpsr() {
     return cpsr;
 }
 
-uint32_t ARM7TDMI::getRegister(uint8_t index) { return *(registers[index]); }
+inline
+uint32_t ARM7TDMI::getRegister(uint8_t index) { return registers[index]; }
 
-uint32_t ARM7TDMI::getUserRegister(uint8_t index) { return *(userRegisters[index]); }
+uint32_t ARM7TDMI::getUserRegister(uint8_t index) { 
+    DEBUGWARN("in get user\n");
+    if(13 <= index && index <= 14 && Mode(cpsr.Mode) != Mode::SYSTEM && Mode(cpsr.Mode) != Mode::USER) {
+        return userRegisterBank[index - 13];
+    }
+    return registers[index]; 
+}
 
+inline
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
-    *(registers[index]) = value;
+    registers[index] = value;
 }
 void ARM7TDMI::setUserRegister(uint8_t index, uint32_t value) {
-    *(userRegisters[index]) = value;
+    DEBUGWARN("in set user\n");
+    if(13 <= index && index <= 14 &&  Mode(cpsr.Mode) != Mode::SYSTEM && Mode(cpsr.Mode) != Mode::USER) {
+        userRegisterBank[index - 13] = value;
+    } else {
+        registers[index] = value;
+    }
 }
 
 inline
@@ -745,6 +758,13 @@ void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
     currInstruction = instruction;
 }
 
+uint32_t ARM7TDMI::getRegister(uint8_t reg) {
+    return registers[reg];
+}
+
+uint32_t ARM7TDMI::setRegister(uint8_t reg, uint32_t value) {
+    registers[reg] = value;
+}
 
 /*
   Bit   Expl.
@@ -778,3 +798,4 @@ void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
 
 //     return value;
 // }
+

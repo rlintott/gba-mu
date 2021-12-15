@@ -46,6 +46,6 @@ class GameBoyAdvance {
     double startTimeSeconds = 0.0;
     uint64_t totalCycles= 0;
 
-    bool debugMode = false;
+    bool debugMode = true;
 
 };

@@ -20,7 +20,7 @@ class DMA {
         ARM7TDMI *cpu;
         Scheduler* scheduler;
 
-        void scheduleDmaX(uint32_t x, uint8_t upperControlByte);
+        void scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately);
 
         static const uint32_t internalMemMask = 0x07FFFFFF;
         static const uint32_t anyMemMask      = 0x0FFFFFFF;

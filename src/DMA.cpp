@@ -1,6 +1,8 @@
 #include "DMA.h"
 #include "Bus.h"
 #include "ARM7TDMI.h"
+#include "assert.h"
+#include "GameBoyAdvance.h"
 #include "PPU.h"
 #include "Scheduler.h"
 #include "assert.h"
@@ -19,7 +21,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                        (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
 
     uint8_t startTiming = (control & 0x3000) >> 12;
-
     if(startTiming == 3) {
         if(x == 1 || x == 2) {
             // sound FIFO mode
@@ -265,7 +266,21 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
-        
+        GameBoyAdvance::cyclesSinceStart += 2;
+
+        if(GameBoyAdvance::cyclesSinceStart >= scheduler->peekNextEvent()->startCycle) {
+            // another event occurred during this dma! exit to handle that event
+            // while scheduling this one immediately to resume after the event
+            if((scheduler->peekNextEvent()->eventType) < Scheduler::convertDmaValToDmaEvent(x)) {
+                DEBUGWARN((uint32_t)x << " :x hello\n");
+                scheduler->printEventList();
+                scheduleDmaX(x, control, true);
+                dmaXWordCount[x] -= (i + 1);;
+                scheduler->printEventList();
+                DEBUGWARN("bybye\n");
+                return tempCycles;
+            }
+        }
     }
     tempCycles += bus->getMemoryAccessCycles();
     DEBUGWARN("done dma \n"); 
@@ -299,7 +314,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         uint16_t control = (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset]) |
                     (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
         
-        scheduleDmaX(x, control);
+        scheduleDmaX(x, control, false);
 
     }
     if(control & 0x4000) {
@@ -350,22 +365,22 @@ void DMA::updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width) {
         switch(address & 0xFF) {
             case 0xBB: {
                 // dma 0
-                scheduleDmaX(0, byte);
+                scheduleDmaX(0, byte, false);
                 break;
             }
             case 0xC7: {
                 // dma 1
-                scheduleDmaX(1, byte);
+                scheduleDmaX(1, byte, false);
                 break;
             }
             case 0xD3: {
                 // dma 2
-                scheduleDmaX(2, byte);
+                scheduleDmaX(2, byte, false);
                 break;
             }
             case 0xDF: {
                 //dma 3
-                scheduleDmaX(3, byte);
+                scheduleDmaX(3, byte, false);
                 break;
             }
             default: {
@@ -380,7 +395,7 @@ void DMA::updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width) {
     }
 }
 
-void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte) {
+void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately) {
     Scheduler::EventType eventType;
     switch(x) {
         case 0: {
@@ -401,10 +416,12 @@ void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte) {
         }
     }
 
+    //DEBUGWARN("removing old\n");
     // remove old event
     scheduler->removeEvent(eventType);
+    //DEBUGWARN("removed old\n");
 
-    if(upperControlByte & 0x80) {
+    if((upperControlByte & 0x80) || immediately) {
         // enabling dma
         uint32_t ioRegOffset =  0xC * x;
 
@@ -414,27 +431,32 @@ void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte) {
 
         uint8_t startTiming = (control & 0x3000) >> 12;
 
+        uint32_t cyclesInFuture = 2;
+        if(immediately) {
+            cyclesInFuture = 0;
+        }
+
         switch(startTiming) {
             case 0: {
-                scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NULL_CONDITION);
+                scheduler->addEvent(eventType, cyclesInFuture, Scheduler::EventCondition::NULL_CONDITION, immediately);
                 break;
             }
             case 1: {
-                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::VBLANK_START);
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::VBLANK_START, immediately);
                 break;
             }
             case 2: {
-                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::HBLANK_START);
+                scheduler->addEvent(eventType, 0, Scheduler::EventCondition::HBLANK_START, immediately);
                 break;
             }
             case 3: {
                 // special
                 assert(x != 0);
                 if(x == 1 || x == 2) {
-                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::NULL_CONDITION);
+                    scheduler->addEvent(eventType, cyclesInFuture, Scheduler::EventCondition::NULL_CONDITION, immediately);
                 } else {
                     // x == 3
-                    scheduler->addEvent(eventType, 2, Scheduler::EventCondition::DMA3_VIDEO_MODE);
+                    scheduler->addEvent(eventType, cyclesInFuture, Scheduler::EventCondition::DMA3_VIDEO_MODE, immediately);
                 }
 
                 break;
