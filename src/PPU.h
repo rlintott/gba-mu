@@ -31,14 +31,15 @@ class PPU {
 
         std::array<uint16_t, SCREEN_WIDTH * SCREEN_HEIGHT> pixelBuffer = {};
 
-        void connectBus(Bus* bus);
+        void connectBus(std::shared_ptr<Bus> bus);
 
         void updateOamState(uint32_t address, uint8_t value);
 
         void setObjectsDirty();
 
     private:
-        Bus* bus; 
+        std::shared_ptr<Bus> bus; 
+        std::shared_ptr<Scheduler> scheduler;
 
         uint32_t indexBgPalette4Bpp(uint8_t index);
         uint32_t indexBgPalette8Bpp(uint8_t index);
@@ -120,5 +121,4 @@ class PPU {
             {64, 64}
         };
 
-        Scheduler* scheduler;
 };

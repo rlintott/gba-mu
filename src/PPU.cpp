@@ -1,5 +1,5 @@
 #include "PPU.h"
-#include "Bus.h"
+#include "memory/Bus.h"
 #include <SFML/Graphics.hpp>
 #include <utility>
 #include <algorithm>
@@ -121,7 +121,7 @@ void PPU::renderScanline(uint16_t scanline) {
 
 }
 
-void PPU::connectBus(Bus* _bus) {
+void PPU::connectBus(std::shared_ptr<Bus> _bus) {
     this->bus = _bus;
 }
 

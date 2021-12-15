@@ -1,6 +1,6 @@
 #include "LCD.h"
 // TODO: common include file for defines (like DEBUG)
-#include "ARM7TDMI.h"
+#include "arm7tdmi/ARM7TDMI.h"
 #include "PPU.h"
 
 /**
@@ -44,7 +44,7 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
 }
 
 void LCD::initWindow() {
-    gbaWindow = new sf::RenderWindow(sf::VideoMode(PPU::SCREEN_WIDTH * defaultScreenSize, 
+    gbaWindow = std::make_shared<sf::RenderWindow>(sf::VideoMode(PPU::SCREEN_WIDTH * defaultScreenSize, 
                                                    PPU::SCREEN_HEIGHT * defaultScreenSize), 
                                                    "RyBoyAdvance");
     pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);

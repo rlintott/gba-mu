@@ -1,4 +1,4 @@
-#include "Bus.h"
+#include "memory/Bus.h"
 #include "Gamepad.h"
 
 void Gamepad::getInput(Bus* bus) {

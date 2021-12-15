@@ -1,8 +1,8 @@
 #include "Timer.h"
-#include "Bus.h"
-#include "ARM7TDMI.h"
+#include "memory/Bus.h"
+#include "arm7tdmi/ARM7TDMI.h"
 #include "Scheduler.h"
-#include "GameBoyAdvance.h"
+#include "GameBoyAdvanceImpl.h"
 
 
 
@@ -13,25 +13,25 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
     // manually preparing the memory so that what's read will be up to date
     switch(address) {
         case 0x4000100: {
-            calculateTimerXCounter(0, GameBoyAdvance::cyclesSinceStart);
+            calculateTimerXCounter(0, GameBoyAdvanceImpl::cyclesSinceStart);
             bus->iORegisters[Bus::IORegister::TM0CNT_L] = timerCounter[0]; 
             bus->iORegisters[Bus::IORegister::TM0CNT_L + 1] = (timerCounter[0]) >> 8; 
             break;
         }
         case 0x4000104: {
-            calculateTimerXCounter(1, GameBoyAdvance::cyclesSinceStart);
+            calculateTimerXCounter(1, GameBoyAdvanceImpl::cyclesSinceStart);
             bus->iORegisters[Bus::IORegister::TM1CNT_L] = timerCounter[1]; 
             bus->iORegisters[Bus::IORegister::TM1CNT_L + 1] = (timerCounter[1]) >> 8; 
             break;
         }
         case 0x4000108: {
-            calculateTimerXCounter(2, GameBoyAdvance::cyclesSinceStart);
+            calculateTimerXCounter(2, GameBoyAdvanceImpl::cyclesSinceStart);
             bus->iORegisters[Bus::IORegister::TM2CNT_L] = timerCounter[2]; 
             bus->iORegisters[Bus::IORegister::TM2CNT_L + 1] = (timerCounter[2]) >> 8; 
             break;
         }
         case 0x400010C: {
-            calculateTimerXCounter(3, GameBoyAdvance::cyclesSinceStart);
+            calculateTimerXCounter(3, GameBoyAdvanceImpl::cyclesSinceStart);
             bus->iORegisters[Bus::IORegister::TM3CNT_L] = timerCounter[3]; 
             bus->iORegisters[Bus::IORegister::TM3CNT_L + 1] = (timerCounter[3]) >> 8; 
             break;
@@ -168,7 +168,7 @@ void Timer::setTimerXControlLo(uint8_t val, uint8_t x) {
         timerCounter[x] = timerReload[x];
     }
 
-    uint64_t cyclesPassed = GameBoyAdvance::cyclesSinceStart;
+    uint64_t cyclesPassed = GameBoyAdvanceImpl::cyclesSinceStart;
 
     // update counter
     calculateTimerXCounter(x, cyclesPassed);
@@ -209,22 +209,21 @@ void Timer::setTimerXReloadLo(uint8_t val, uint8_t x) {
     timerReload[x] = (timerReload[x] & 0xFF00) | (uint16_t)val; 
 }
 
-void Timer::connectBus(Bus* bus) {
+void Timer::connectBus(std::shared_ptr<Bus> bus) {
     this->bus = bus;
-    this->bus->connectTimer(this);
 }
 
-void Timer::connectCpu(ARM7TDMI* cpu) {
+void Timer::connectCpu(std::shared_ptr<ARM7TDMI> cpu) {
     this->cpu = cpu;
 }
 
-void Timer::connectScheduler(Scheduler* scheduler) {
+void Timer::connectScheduler(std::shared_ptr<Scheduler> scheduler) {
     this->scheduler = scheduler;
 }
 
 
 void Timer::timerXOverflowEvent(uint8_t x) {
-    calculateTimerXCounter(x, GameBoyAdvance::cyclesSinceStart);
+    calculateTimerXCounter(x, GameBoyAdvanceImpl::cyclesSinceStart);
     if(timerCounter[x] <= 0xFFFF) {
         DEBUGWARN("timer didn't overflow! scheduling error\n");
         scheduler->printEventList();

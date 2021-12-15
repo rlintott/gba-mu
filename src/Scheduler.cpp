@@ -1,5 +1,5 @@
 #include "Scheduler.h"
-#include "GameBoyAdvance.h"
+#include "GameBoyAdvanceImpl.h"
 #include <iostream>
 #include "assert.h"
 
@@ -35,7 +35,7 @@ void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCond
     //DEBUGWARN(events.size() << " after\n");
     // DEBUGWARN(eventType << " :adding event\n");
     // printEventList();
-    uint64_t startAt = GameBoyAdvance::cyclesSinceStart + cyclesInFuture;
+    uint64_t startAt = GameBoyAdvanceImpl::cyclesSinceStart + cyclesInFuture;
 
     EventNode* node = &events[eventType];
     node->event.active = true;

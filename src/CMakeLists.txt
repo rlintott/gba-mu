@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS "-O3")
 set(CAPSTONE_ZIP ../capstone-3.0.5-rc2.tar.gz)
 set(CAPSTONE_DIR capstone-3.0.5-rc2)
 set(CAPSTONE_LIB ${CAPSTONE_DIR}/libcapstone.a)
+set(INCLUDE_DIR ../include)
 
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}
@@ -18,46 +19,51 @@ add_custom_command(
 
 find_package(SFML 2.5 COMPONENTS graphics audio REQUIRED)
 
-add_library(gba_lib
-    ARM7TDMI.cpp 
+add_library(gba_lib 
+    ../include/GameBoyAdvance.hpp
+    GameBoyAdvance.cpp)
+target_include_directories(gba_lib INTERFACE ${INCLUDE_DIR})
+
+add_library(core
+    arm7tdmi/ARM7TDMI.cpp 
     util/static_for.h
 
-    ArmInstructions/ArmDataProcHandler.cpp 
-    ArmInstructions/ArmPsrHandler.cpp 
-    ArmInstructions/ArmSdtHandler.cpp 
-    ArmInstructions/ArmMultHandler.cpp 
-    ArmInstructions/ArmHwdtHandler.cpp 
-    ArmInstructions/ArmSdsHandler.cpp 
-    ArmInstructions/ArmBdtHandler.cpp 
-    ArmInstructions/ArmBranchHandler.cpp 
-    ArmInstructions/ArmBranchXHandler.cpp 
-    ArmInstructions/ArmSwiHandler.cpp 
-    ArmInstructions/ArmUndefHandler.cpp
+    arm7tdmi/ArmInstructions/ArmDataProcHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmPsrHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmSdtHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmMultHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmHwdtHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmSdsHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmBdtHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmBranchHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmBranchXHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmSwiHandler.cpp 
+    arm7tdmi/ArmInstructions/ArmUndefHandler.cpp
 
-    ThumbInstructions/ThumbAddOffSpHandler.cpp        
-    ThumbInstructions/ThumbCondBHandler.cpp           
-    ThumbInstructions/ThumbLdStRegOffHandler.cpp      
-    ThumbInstructions/ThumbMultLdStPushPopHandler.cpp
-    ThumbInstructions/ThumbAddSubHandler.cpp          
-    ThumbInstructions/ThumbImmHandler.cpp             
-    ThumbInstructions/ThumbLdStSeBHwHandler.cpp       
-    ThumbInstructions/ThumbRelAddrHandler.cpp
-    ThumbInstructions/ThumbAluHandler.cpp             
-    ThumbInstructions/ThumbLdPcRelHandler.cpp         
-    ThumbInstructions/ThumbLdStSpRelHandler.cpp       
-    ThumbInstructions/ThumbShiftHandler.cpp
-    ThumbInstructions/ThumbBHandler.cpp               
-    ThumbInstructions/ThumbLdStHwHandler.cpp          
-    ThumbInstructions/ThumbLongBHandler.cpp           
-    ThumbInstructions/ThumbSwiHandler.cpp
-    ThumbInstructions/ThumbBxHandler.cpp              
-    ThumbInstructions/ThumbLdStImmOffHandler.cpp      
-    ThumbInstructions/ThumbMultLdStHandler.cpp        
-    ThumbInstructions/ThumbUndefHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbAddOffSpHandler.cpp        
+    arm7tdmi/ThumbInstructions/ThumbCondBHandler.cpp           
+    arm7tdmi/ThumbInstructions/ThumbLdStRegOffHandler.cpp      
+    arm7tdmi/ThumbInstructions/ThumbMultLdStPushPopHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbAddSubHandler.cpp          
+    arm7tdmi/ThumbInstructions/ThumbImmHandler.cpp             
+    arm7tdmi/ThumbInstructions/ThumbLdStSeBHwHandler.cpp       
+    arm7tdmi/ThumbInstructions/ThumbRelAddrHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbAluHandler.cpp             
+    arm7tdmi/ThumbInstructions/ThumbLdPcRelHandler.cpp         
+    arm7tdmi/ThumbInstructions/ThumbLdStSpRelHandler.cpp       
+    arm7tdmi/ThumbInstructions/ThumbShiftHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbBHandler.cpp               
+    arm7tdmi/ThumbInstructions/ThumbLdStHwHandler.cpp          
+    arm7tdmi/ThumbInstructions/ThumbLongBHandler.cpp           
+    arm7tdmi/ThumbInstructions/ThumbSwiHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbBxHandler.cpp              
+    arm7tdmi/ThumbInstructions/ThumbLdStImmOffHandler.cpp      
+    arm7tdmi/ThumbInstructions/ThumbMultLdStHandler.cpp        
+    arm7tdmi/ThumbInstructions/ThumbUndefHandler.cpp
 
-    ARM7TDMI.h
-    Bus.cpp Bus.h
-    GameBoyAdvance.cpp GameBoyAdvance.h
+    arm7tdmi/ARM7TDMI.h
+    memory/Bus.cpp memory/Bus.h
+    GameBoyAdvanceImpl.cpp GameBoyAdvanceImpl.h
     Scheduler.cpp Scheduler.h
     LCD.cpp LCD.h
     PPU.cpp PPU.h
@@ -71,12 +77,10 @@ set_property(SOURCE ARM7TDMI.h APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BI
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}/include)
 
-target_link_libraries(gba_lib ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_LIB})  
-target_link_libraries(gba_lib sfml-graphics sfml-audio)  
+target_link_libraries(core PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_LIB})  
+target_link_libraries(core PUBLIC sfml-graphics sfml-audio)
+target_link_libraries(gba_lib PRIVATE core)
 
-add_executable(gba main.cpp)
-add_executable(debug debug.cpp)
-
-target_link_libraries(gba gba_lib)
-target_link_libraries(debug gba_lib)
+add_executable(gba gba.cpp)
+target_link_libraries(gba PUBLIC gba_lib)
 

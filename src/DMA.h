@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <memory>
 
 class Bus;
 class ARM7TDMI;
@@ -7,18 +8,18 @@ class Scheduler;
 class DMA {
 
     public:
-        void connectBus(Bus* bus);
-        void connectCpu(ARM7TDMI* cpu);
-        void connectScheduler(Scheduler* scheduler);
+        void connectBus(std::shared_ptr<Bus> bus);
+        void connectCpu(std::shared_ptr<ARM7TDMI> cpu);
+        void connectScheduler(std::shared_ptr<Scheduler> scheduler);
 
         uint32_t dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
 
         void updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width);
 
     private:
-        Bus *bus;
-        ARM7TDMI *cpu;
-        Scheduler* scheduler;
+        std::shared_ptr<Bus> bus;
+        std::shared_ptr<ARM7TDMI> cpu;
+        std::shared_ptr<Scheduler> scheduler;
 
         void scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately);
 

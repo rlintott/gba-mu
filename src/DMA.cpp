@@ -1,8 +1,8 @@
 #include "DMA.h"
-#include "Bus.h"
-#include "ARM7TDMI.h"
+#include "arm7tdmi/ARM7TDMI.h"
+#include "memory/Bus.h"
 #include "assert.h"
-#include "GameBoyAdvance.h"
+#include "GameBoyAdvanceImpl.h"
 #include "PPU.h"
 #include "Scheduler.h"
 #include "assert.h"
@@ -11,7 +11,6 @@
 // TODO: DMA specs not fully implemented yet
 // TODO: fix mgba suite ROM Load DMA0 tests, which fail
 uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
-    DEBUGWARN("dma " << (uint32_t)x << "\n");
     // TODO: optimization of this....
     // TODO: The 'Special' setting (Start Timing=3) depends on the DMA channel:DMA0=Prohibited, DMA1/DMA2=Sound FIFO, DMA3=Video Capture
     uint32_t ioRegOffset =  0xC * x;
@@ -194,16 +193,11 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     // writing / reading from memeory
 
     for(uint32_t i = 0; i < dmaXWordCount[x]; i++) {
-        DEBUGWARN(i << " is i \n"); 
-        DEBUGWARN(dmaXDestAddr[x] << " is dest \n"); 
-        DEBUGWARN(dmaXSourceAddr[x] << " is source \n"); 
         if(thirtyTwoBit) {
             if(firstAccess) { 
-                DEBUGWARN("1 32\n");
                 uint32_t value = bus->read32(dmaXSourceAddr[x] & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
                 //uint32_t value = bus->read32(dmaXSourceAddr[x], Bus::NONSEQUENTIAL);
                 //DEBUGWARN("value: " << value << "\n");
-                DEBUGWARN("2 32\n");
                 bus->write32(dmaXDestAddr[x] & 0xFFFFFFFC, value, Bus::NONSEQUENTIAL);
                 firstAccess = false;
             } else {
@@ -212,9 +206,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         } else {
             if(firstAccess) { 
-                DEBUGWARN("1 16\n");
                 uint16_t value = bus->read16(dmaXSourceAddr[x] & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL);
-                DEBUGWARN("2 16\n");
                 bus->write16(dmaXDestAddr[x] & 0xFFFFFFFE, value, Bus::NONSEQUENTIAL);
                 firstAccess = false;
             } else {
@@ -225,7 +217,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
 
         // TODO: TEMPORARY CYCLE COUNTING UNTIL WAITSTATES DONE PROPERLY
-        DEBUGWARN("here\n");
         // iterating source memory pointer
         // (0=Increment,1=Decrement,2=Fixed,3=prohibited)
         switch(srcAdjust) {
@@ -266,24 +257,19 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
-        GameBoyAdvance::cyclesSinceStart += 2;
+        GameBoyAdvanceImpl::cyclesSinceStart += 2;
 
-        if(GameBoyAdvance::cyclesSinceStart >= scheduler->peekNextEvent()->startCycle) {
+        if(GameBoyAdvanceImpl::cyclesSinceStart >= scheduler->peekNextEvent()->startCycle) {
             // another event occurred during this dma! exit to handle that event
             // while scheduling this one immediately to resume after the event
             if((scheduler->peekNextEvent()->eventType) < Scheduler::convertDmaValToDmaEvent(x)) {
-                DEBUGWARN((uint32_t)x << " :x hello\n");
-                scheduler->printEventList();
                 scheduleDmaX(x, control, true);
                 dmaXWordCount[x] -= (i + 1);;
-                scheduler->printEventList();
-                DEBUGWARN("bybye\n");
                 return tempCycles;
             }
         }
     }
     tempCycles += bus->getMemoryAccessCycles();
-    DEBUGWARN("done dma \n"); 
 
     if(!(control & 0x0200)) {
         // DMA Repeat (0=Off, 1=On) (Must be zero if Bit 11 set)
@@ -349,11 +335,11 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 }
 
 
-void DMA::connectBus(Bus* bus) {
+void DMA::connectBus(std::shared_ptr<Bus> bus) {
     this->bus = bus;
 }
 
-void DMA::connectCpu(ARM7TDMI* cpu) {
+void DMA::connectCpu(std::shared_ptr<ARM7TDMI> cpu) {
     this->cpu = cpu;
 }
 
@@ -470,6 +456,6 @@ void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately) {
 }
 
 
-void DMA::connectScheduler(Scheduler* scheduler) {
+void DMA::connectScheduler(std::shared_ptr<Scheduler> scheduler) {
     this->scheduler = scheduler;
 }
