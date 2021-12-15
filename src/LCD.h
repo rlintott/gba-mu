@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <memory>
 
 class LCD {
 
@@ -10,10 +11,8 @@ class LCD {
 
     private: 
         static void drawPixel();
-        sf::RenderWindow* gbaWindow;
+        std::shared_ptr<sf::RenderWindow> gbaWindow;
         sf::VertexArray pixels;
         sf::Event event;
         int defaultScreenSize = 7;
-
-    
 };

@@ -1,6 +1,6 @@
 #include "Debugger.h"
-#include "ARM7TDMI.h"
-#include "Bus.h"
+#include "arm7tdmi/ARM7TDMI.h"
+#include "memory/Bus.h"
 
 
 #define WORD_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"

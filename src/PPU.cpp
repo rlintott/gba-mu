@@ -1,5 +1,5 @@
 #include "PPU.h"
-#include "Bus.h"
+#include "memory/Bus.h"
 #include <SFML/Graphics.hpp>
 #include <utility>
 #include <algorithm>
@@ -33,13 +33,10 @@ void PPU::renderScanline(uint16_t scanline) {
 
     switch(bgMode) {
         case 0: {
-            //DEBUGWARN("in bg mode 0\n");
-            //if(bus->ppuMemDirty) {
             // render spritebuffer for [scanline+2, 159] 
             renderSprites((scanline + 2) % 228);
             // render bgbuffer for [scanline+1, 159]  
             renderBg((scanline + 1) % 228);
-            //}
             break;
         }
         case 1: {
@@ -59,7 +56,6 @@ void PPU::renderScanline(uint16_t scanline) {
         case 3: {
             // simple bitmap mode
             for(int x = 0; x < SCREEN_WIDTH; x++) {
-                // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
                 bgBuffer[scanline * SCREEN_WIDTH + x] = (bus->vRam[((scanline * SCREEN_WIDTH + x) << 1) + 1] << 8) | 
                                                            (bus->vRam[(scanline * SCREEN_WIDTH + x) << 1]); 
             } 
@@ -70,14 +66,12 @@ void PPU::renderScanline(uint16_t scanline) {
             if(!(bus->iORegisters[Bus::IORegister::DISPCNT] & 0x10)) {
                 // page 0
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
-                    // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
                     bgBuffer[scanline * SCREEN_WIDTH + x] = 
                         indexBgPalette8Bpp(bus->vRam[(scanline * SCREEN_WIDTH + x)]);
                 } 
             } else {
                 // page 1
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
-                    // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
                     bgBuffer[scanline * SCREEN_WIDTH + x] = 
                         indexBgPalette8Bpp(bus->vRam[(scanline * SCREEN_WIDTH + x + 0xA000)]);
                 }   
@@ -90,7 +84,6 @@ void PPU::renderScanline(uint16_t scanline) {
             if(!(bus->iORegisters[Bus::IORegister::DISPCNT] & 0x10)) {
                 // page 0
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
-                    // DEBUGWARN("reading from vRam memory " << scanline * 480 + x << "\n");
                     if(scanline >= 128 || x >= 160) {
                         bgBuffer[scanline * SCREEN_WIDTH + x] = indexBgPalette8Bpp(0);
                     } else {
@@ -115,13 +108,10 @@ void PPU::renderScanline(uint16_t scanline) {
             assert(false);
             break;
         }
-
     }
-    // DEBUGWARN("end of render\n");
-
 }
 
-void PPU::connectBus(Bus* _bus) {
+void PPU::connectBus(std::shared_ptr<Bus> _bus) {
     this->bus = _bus;
 }
 
@@ -203,8 +193,7 @@ void PPU::renderSprites(uint16_t scanline) {
 
         // TODO: sign extend (objAttr2 & 0x03FF) in case offset is negaqtive
         uint32_t offset = 0x10000 + ((objAttr2 & 0x03FF)/* charName */ * 0x20); 
-        // DEBUGWARN(offset << "\n");
-        // DEBUGWARN(objAttr2 << "\n");
+
         uint8_t paletteBank = (objAttr2 & 0xF000) >> 8;
         bool colorMode = objAttr0 & 0x2000; // 16 colors (4bpp) if cleared; 256 colors (8bpp) if set.
         uint8_t priority = (objAttr2 & 0x0C00) >> 10;
@@ -333,7 +322,6 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
         // check if x screen enabled
         return;
     }
-    //DEBUGWARN(scanline << "\n");
 
     uint16_t bgCnt = bus->iORegisters[0x8 + x * 2] | (bus->iORegisters[0x8 + x * 2 + 1] << 8);
     uint8_t priority = bgCnt & 0x3;
@@ -361,14 +349,14 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
         uint8_t screenBlockX = x / 32;
         for(uint8_t y = 0; y < height; y++) {
             /*
-            In 'Text Modes', the screen size is organized as follows: 
-            The screen consists of one or more 256x256 pixel (32x32 tiles) areas. 
-            When Size=0: only 1 area (SC0), 
-            when Size=1 or Size=2: two areas (SC0,SC1 either horizontally or vertically arranged next to each other), 
-            when Size=3: four areas (SC0,SC1 in upper row, SC2,SC3 in lower row). 
-            Whereas SC0 is defined by the normal BG Map base address 
-            (Bit 8-12 of BGxCNT), SC1 uses same address +2K, SC2 address +4K, SC3 address +6K. 
-            When the screen is scrolled it'll always wraparound.
+                In 'Text Modes', the screen size is organized as follows: 
+                The screen consists of one or more 256x256 pixel (32x32 tiles) areas. 
+                When Size=0: only 1 area (SC0), 
+                when Size=1 or Size=2: two areas (SC0,SC1 either horizontally or vertically arranged next to each other), 
+                when Size=3: four areas (SC0,SC1 in upper row, SC2,SC3 in lower row). 
+                Whereas SC0 is defined by the normal BG Map base address 
+                (Bit 8-12 of BGxCNT), SC1 uses same address +2K, SC2 address +4K, SC3 address +6K. 
+                When the screen is scrolled it'll always wraparound.
             */
             uint8_t screenBlockY = y / 32;
             uint8_t screenBlock = (screenBlockX + screenBlockY * (width / 32));
@@ -406,9 +394,7 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
 
             for(uint8_t tileY = 0; tileY < 8; tileY++) {
                 screenY = (((uint32_t)y * 8 + (vFlipOffset + vFlipMultiplier * tileY)) - vOffset) % ((uint32_t)height * 8);
-                // if(vFlipMultiplier == (uint8_t)(-1)) {
-                //    DEBUGWARN("screenY: " << screenY << "\n");
-                // }
+
                 if(screenY != scanline) {
                     continue;
                 }
@@ -425,21 +411,12 @@ void PPU::renderBgX(uint16_t scanline, uint8_t x) {
                    } else {
                         if(tileX % 2) {
                             // tile x odd
-                            if((((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4)) == 0) {
-                                // DEBUGWARN("is zero 1!\n");
-                                // DEBUGWARN("offset: " << offset << "\n");
-                                // DEBUGWARN("tileY: " << (uint32_t)tileY << "\n");
-                                // DEBUGWARN("tileX: " << (uint32_t)tileX << "\n");
-                                // DEBUGWARN("addr: " << (offset + ((tileY * 8 + tileX) / 2)) << "\n");
-                            }
+                            // TODO: clean this up...
                             bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
                                 indexBgPalette4Bpp(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF0) >> 4) | paletteBank) | 
                                 ((uint32_t)priority << 16);
                         } else {
                             // tile x even
-                            if(((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF) | paletteBank) == 0) {
-                               // DEBUGWARN("is zero 2!\n");
-                            }
                             bgBuffer[bgBufferOffset + screenY * SCREEN_WIDTH + screenX] = 
                                 indexBgPalette4Bpp((bus->vRam[offset + ((tileY * 8 + tileX) / 2)] & 0xF) | paletteBank) |
                                 ((uint32_t)priority << 16);
@@ -514,7 +491,6 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
             for(int priority = 3; priority >= 0; priority-- ) {
                 uint32_t spriteOffset = (bgPriorities[priority].first) * SCREEN_HEIGHT * SCREEN_WIDTH;
                 uint32_t bgOffset = (bgPriorities[priority].second) * SCREEN_HEIGHT * SCREEN_WIDTH;
-                //DEBUGWARN("bg: " << (uint32_t)bgPriorities[priority].second << " prio: " << (uint32_t)bgPriorities[priority].first << "\n");
 
                 uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
                 uint32_t bgPixel = bgBuffer[bgOffset + y * SCREEN_WIDTH + x];
