@@ -16,7 +16,7 @@ class Debugger {
         void updateState(ARM7TDMI* cpu, Bus* bus);
         void printState();
         void step(ARM7TDMI* cpu, Bus* bus);
-        bool stepMode = true;
+        bool stepMode = false;
         std::string disassembleArm(uint32_t instruction);
 
     private:
@@ -79,5 +79,5 @@ class Debugger {
         std::string instr;
         uint32_t instrWord;
 
-        uint32_t breakpoint = 0x08005AFE;
+        uint32_t breakpoint = 0x08000B84;
 };

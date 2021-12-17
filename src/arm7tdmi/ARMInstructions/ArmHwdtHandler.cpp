@@ -75,9 +75,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
 
     } else if constexpr(opcode == 2) {// LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign extended)
         // TODO: better way to do this?
-        assert(dataTransGetL(instruction));
+        assert(l);
         uint32_t val = (uint32_t)(cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL));
-        if constexpr((bool)(op & 0x008)) {
+        if (val & 0x00000080) {
             cpu->setRegister(rd, 0xFFFFFF00 | val);
         } else {
             cpu->setRegister(rd, val);
@@ -91,13 +91,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
             // strange case: LDRSH Rd,[odd]  -->  LDRSB Rd,[odd] ;sign-expand BYTE value
             assert(dataTransGetL(instruction));
             uint32_t val = (uint32_t)(cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL));
-            if constexpr((bool)(op & 0x008)) {
+            if (val & 0x00000080) {
                 cpu->setRegister(rd, 0xFFFFFF00 | val);
             } else {
                 cpu->setRegister(rd, val);
             }
         } else {
-            assert(dataTransGetL(instruction));
+            assert(l);
             uint32_t val = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
             if (val & 0x00008000) {
                 cpu->setRegister(rd, 0xFFFF0000 | val);
