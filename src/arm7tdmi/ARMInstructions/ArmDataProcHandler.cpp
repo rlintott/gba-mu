@@ -12,7 +12,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
     constexpr bool s = (op & 0x010);
 
     uint32_t op2; 
-    uint8_t shiftCarryBit;
+    bool shiftCarryBit;
 
     // -----SHIFTING------
     if constexpr(i) {
@@ -66,7 +66,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
             shiftAmount = (instruction & 0x00000F80) >> 7U;
         }
 
-        bool immOpIsZero = r ? false : shiftAmount == 0;
+        bool immOpIsZero = r ? false : (shiftAmount == 0);
         if(doShift) {
             if (shiftType == 0) {  // Logical Shift Left
                 /*

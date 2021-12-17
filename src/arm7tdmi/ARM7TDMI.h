@@ -772,7 +772,7 @@ uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
     if(shift >= 32) {
         return (value & 0x80000000) ? 0xFFFFFFFF : 0x0;
     } else {
-       return (value & 0x80000000) ? ~(~value >> shift) : value >> shift; 
+       return (value & 0x80000000) ? (~(~value >> shift)) : (value >> shift); 
     }
 }
 
