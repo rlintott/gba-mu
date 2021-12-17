@@ -1,22 +1,27 @@
 #include <cstdint>
+#include <memory>
 
 class Bus;
 class ARM7TDMI;
+class Scheduler;
 
 class DMA {
 
     public:
-        void connectBus(Bus* bus);
-        void connectCpu(ARM7TDMI* cpu);
+        void connectBus(std::shared_ptr<Bus> bus);
+        void connectCpu(std::shared_ptr<ARM7TDMI> cpu);
+        void connectScheduler(std::shared_ptr<Scheduler> scheduler);
 
-        // return 0 if DMA did not occur, else return # of cycles DMA took
-        uint32_t step(bool hBlank, bool vBlank, uint16_t scanline);
+        uint32_t dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
+
+        void updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width);
 
     private:
-        Bus *bus;
-        ARM7TDMI *cpu;
-        
-        uint32_t dma(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
+        std::shared_ptr<Bus> bus;
+        std::shared_ptr<ARM7TDMI> cpu;
+        std::shared_ptr<Scheduler> scheduler;
+
+        void scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately);
 
         static const uint32_t internalMemMask = 0x07FFFFFF;
         static const uint32_t anyMemMask      = 0x0FFFFFFF;

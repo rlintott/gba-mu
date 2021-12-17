@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <memory>
 
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
@@ -32,6 +33,7 @@
 class PPU;
 class Timer;
 class ARM7TDMI;
+class DMA;
 
 class Bus {
     // TODO: implement an OPEN BUS (ie if retreiving invalid mem location, return value last on bus)
@@ -40,10 +42,12 @@ class Bus {
     // eg. "LDMIA [801fff8h],r0-r7" will have non-sequential timing at 8020000h.
 
    public:
-    Bus(PPU* ppu);
+    Bus();
     ~Bus();
 
-    void connectTimer(Timer* timer);
+    void connectTimer(std::shared_ptr<Timer> timer);
+    void connectDma(std::shared_ptr<DMA> dma);
+    void connectPpu(std::shared_ptr<PPU> ppu);
 
     enum CycleType {
         SEQUENTIAL,
@@ -97,10 +101,13 @@ class Bus {
                 Initialized to 0D000020h (by hardware). Unlike all other I/O registers, this register is mirrored across the whole I/O area (in increments of 64K, ie. at 4000800h, 4010800h, 4020800h, ..., 4FF0800h)
                 TODO: implement more logic for this
         */
-        INTERNAL_MEM_CNT = 0x04000800 - 0x04000000
+        INTERNAL_MEM_CNT = 0x04000800 - 0x04000000,
+
+        HALTCNT = 0x04000301 - 0x04000000   // HALTCNT - BYTE - Undocumented - Low Power Mode Control (W)
+
     };
 
-    
+    bool haltMode = false;
 
     /* General Internal Memory */
 
@@ -196,7 +203,8 @@ class Bus {
 
     uint32_t memAccessCycles = 0;
 
-    PPU* ppu;
-    Timer* timer; 
+    std::shared_ptr<PPU> ppu;
+    std::shared_ptr<Timer> timer; 
+    std::shared_ptr<DMA> dma;
 
 };

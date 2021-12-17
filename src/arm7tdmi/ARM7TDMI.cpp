@@ -7,16 +7,13 @@
 #include <type_traits>
 #include <string.h>
 
-#include "Bus.h"
-#include "Timer.h"
+#include "../memory/Bus.h"
+#include "../Timer.h"
 
-#include "ArmOpcodeHandlers.cpp"
-#include "ThumbOpcodeHandlers.cpp"
+#include "legacy/ArmOpcodeHandlers.cpp"
+#include "legacy/ThumbOpcodeHandlers.cpp"
 #include "assert.h"
 
-
-ARM7TDMI::ARM7TDMI() {
-}
 
 void ARM7TDMI::initializeWithRom() {
     switchToMode(SYSTEM);
@@ -35,12 +32,9 @@ void ARM7TDMI::initializeWithRom() {
     bus->resetCycleCountTimeline();
     uint32_t pcAddress = getRegister(PC_REGISTER);
     currInstruction = bus->read32(pcAddress, Bus::CycleType::NONSEQUENTIAL);
-    DEBUG(std::bitset<32>(currInstruction).to_string() << " <- boot location instruction \n");
     // emulate filling the pipeline
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
     bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-
-
 }
 
 ARM7TDMI::~ARM7TDMI() {}
@@ -51,48 +45,45 @@ uint32_t ARM7TDMI::getCurrentInstruction() {
 
 
 uint32_t ARM7TDMI::step() {
-    //DEBUG((uint32_t)cpsr.Mode << " <- current mode\n");
     // TODO: give this method a better name
     bus->resetCycleCountTimeline();
-    //DEBUGWARN("cpsr.i: " << (uint32_t)cpsr.I << "\n");
-   // DEBUGWARN("start\n");
 
     if((bus->iORegisters[Bus::IORegister::IME] & 0x1) && 
        (!cpsr.I) &&
        ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
        ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
         // interrupts is enabled
-        //DEBUGWARN("irq fn start\n");
-        //DEBUGWARN("IF lo: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF]) << "\n");
-        //DEBUGWARN("IF hi: " << (uint32_t)(bus->iORegisters[Bus::IORegister::IF + 1]) << "\n");
         irq();
-        //DEBUGWARN("irq fn ended\n");
-
     }
 
     if (!cpsr.T) {  // check state bit, is CPU in ARM state?
 
         uint8_t cond = (currInstruction & 0xF0000000) >> 28;
-        DEBUG("in arm state\n");
 
+        // increment PC
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 4);
-
-        if(conditionalHolds(cond)) {
+        if(conditionalHolds(cond)) { 
+            #ifdef COMPILE_TIME_LUT
+            currentPcAccessType = 
+                armLut[((currInstruction & 0x0FF00000) >> 16) | 
+                       ((currInstruction & 0x0F0) >> 4)](currInstruction, this);
+            #else
             currentPcAccessType = executeArmInstruction(currInstruction);
+            #endif
         } else {
             currentPcAccessType = SEQUENTIAL;
         }
-        // increment PC
-
+        
     } else {  // THUMB state
-        //DEBUG("in thumb state. Going to execute thumb instruction " << std::bitset<16>(currInstruction).to_string() << "\n");
         setRegister(PC_REGISTER, getRegister(PC_REGISTER) + 2);
+        #ifdef COMPILE_TIME_LUT
+        currentPcAccessType = thumbLut[(currInstruction >> 6)](currInstruction, this);
+        #else
         currentPcAccessType = executeThumbInstruction(currInstruction);
+        #endif
     }
 
     getNextInstruction(currentPcAccessType);
-
-    //DEBUGWARN("end\n");
 
     // TODO: just return one cycle per instr for now
     return 1 + (bus->getMemoryAccessCycles());
@@ -100,7 +91,6 @@ uint32_t ARM7TDMI::step() {
 
 inline
 void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
-    DEBUG("getting instruction from: " << getRegister(PC_REGISTER) << "\n");
     currInstrAddress = getRegister(PC_REGISTER);
     if(cpsr.T) {
         currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
@@ -108,46 +98,10 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
         currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
     }
     return;
-
-    // switch(currentPcAccessType) {
-    //     case SEQUENTIAL: {
-    //         currInstruction = 
-    //             cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::SEQUENTIAL) :
-    //                      bus->read32(currInstrAddress, Bus::CycleType::SEQUENTIAL);
-    //         break;
-    //     }
-    //     case NONSEQUENTIAL: {
-    //         currInstruction = 
-    //             cpsr.T ? bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL) :
-    //                      bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);                
-    //         break;
-    //     }
-    //     case BRANCH: {
-    //         if(cpsr.T) {
-    //             currInstruction = bus->read16(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
-    //             DEBUG(std::bitset<16>(currInstruction).to_string() << " <- instruction after branching \n");
-    //             // emulate filling the pipeline
-    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 2, 16);
-    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 16);
-    //         } else {
-    //             currInstruction = bus->read32(currInstrAddress, Bus::CycleType::NONSEQUENTIAL);
-    //             DEBUG(std::bitset<32>(currInstruction).to_string() << " <- instruction after branching \n");
-    //             // emulate filling the pipeline
-    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 4, 32);
-    //             //bus->addCycleToExecutionTimeline(Bus::CycleType::SEQUENTIAL, pcAddress + 8, 32);
-    //         }
-    //         break;
-    //     }
-    //     case NONE: {
-    //         break;
-    //     }
-    // }
 }
 
 inline
 void ARM7TDMI::irq() {
-    //DEBUGWARN("irq1\n");
-
     uint32_t returnAddr = getRegister(PC_REGISTER) + 4;
     
     switchToMode(Mode::IRQ);
@@ -157,7 +111,6 @@ void ARM7TDMI::irq() {
     setRegister(PC_REGISTER, 0x18);
     setRegister(LINK_REGISTER, returnAddr);
     getNextInstruction(FetchPCMemoryAccess::BRANCH);
-    //DEBUGWARN("irq2\n");
 }
 
 void ARM7TDMI::queueInterrupt(Interrupt interrupt) {
@@ -165,67 +118,10 @@ void ARM7TDMI::queueInterrupt(Interrupt interrupt) {
     bus->iORegisters[Bus::IORegister::IF + 1] |= (((uint16_t)interrupt >> 8) & 0xFF);
 }
 
-void ARM7TDMI::connectBus(Bus *bus) { 
+void ARM7TDMI::connectBus(std::shared_ptr<Bus> bus) { 
     this->bus = bus; 
 }
 
-inline
-void ARM7TDMI::switchToMode(Mode mode) {
-    //DEBUGWARN((uint32_t)mode << " <- switching to mode\n");
-    switch (mode) {
-        case SYSTEM:
-        case USER: {
-            currentSpsr = &cpsr;
-            registers[8] = &r8;
-            registers[9] = &r9;
-            registers[10] = &r10;
-            registers[11] = &r11;
-            registers[12] = &r12;
-            registers[13] = &r13;
-            registers[14] = &r14;
-            break;
-        }
-        case FIQ: {
-            currentSpsr = &SPSR_fiq;
-            registers[8] = &r8_fiq;
-            registers[9] = &r9_fiq;
-            registers[10] = &r10_fiq;
-            registers[11] = &r11_fiq;
-            registers[12] = &r12_fiq;
-            registers[13] = &r13_fiq;
-            registers[14] = &r14_fiq;
-            break;
-        }
-        case IRQ: {
-            currentSpsr = &SPSR_irq;
-            registers[13] = &r13_irq;
-            registers[14] = &r14_irq;
-            break;
-        }
-        case SUPERVISOR: {
-            // DEBUGWARN("supervisor mode\n");
-            currentSpsr = &SPSR_svc;
-            registers[13] = &r13_svc;
-            registers[14] = &r14_svc;
-            break;
-        }
-        case ABORT: {
-            currentSpsr = &SPSR_abt;
-            registers[13] = &r13_abt;
-            registers[14] = &r14_abt;
-            break;
-        }
-        case UNDEFINED: {
-            currentSpsr = &SPSR_und;
-            registers[13] = &r13_abt;
-            registers[14] = &r14_abt;
-            break;
-        }
-    }
-    // SPSR_svc=CPSR   ;save CPSR flags
-    *(getCurrentModeSpsr()) = cpsr;
-    cpsr.Mode = mode;
-}
 
 inline
 bool ARM7TDMI::conditionalHolds(uint8_t cond) {
@@ -285,46 +181,6 @@ bool ARM7TDMI::conditionalHolds(uint8_t cond) {
     }
 }
 
-inline
-void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
-                             ProgramStatusRegister *psr) {
-    if (field & 0b1000) {
-        // TODO: is this correct? it says   f =  write to flags field     Bit
-        // 31-24 (aka _flg)
-        psr->N = (bool)(value & 0x80000000);
-        psr->Z = (bool)(value & 0x40000000);
-        psr->C = (bool)(value & 0x20000000);
-        psr->V = (bool)(value & 0x10000000);
-        psr->Q = (bool)(value & 0x08000000);
-        psr->Reserved = (psr->Reserved & 0b0001111111111111111) | ((value & 0x07000000) >> 8);
-    }
-    if (field & 0b0100) {
-        // reserved, don't change
-    }
-    if (field & 0b0010) {
-        // reserverd don't change
-    }
-    if (cpsr.Mode != USER) {
-        if (field & 0b0001) {
-            psr->I = (bool)(value & 0x00000080);
-            psr->F = (bool)(value & 0x00000040);
-            // t bit may not be changed, for THUMB/ARM switching use BX
-            // instruction.
-            assert(!(bool)(value & 0x00000020));
-            psr->T = (bool)(value & 0x00000020);
-            uint8_t mode = (value & 0x00000010) | (value & 0x00000008) |
-                           (value & 0x00000004) | (value & 0x00000002) |
-                           (value & 0x00000001);
-            psr->Mode = mode;
-            
-            // TODO: implemnt less hacky way ti transfer psr
-            if(psr == &cpsr) {
-                //DEBUGWARN("in transfer to PSR changing mode\n");
-                switchToMode(ARM7TDMI::Mode(mode));
-            }   
-        }
-    }
-}
 
 /*
 ARM Binary Opcode Format
@@ -338,8 +194,7 @@ ARM Binary Opcode Format
     |_Cond__|0_0_0_1_0_0_1_0_1_1_1_1_1_1_1_1_1_1_1_1|0_0|L|1|__Rn___| BX,BLX
     |_Cond__|0_0_0_0_0_0|A|S|__Rd___|__Rn___|__Rs___|1_0_0_1|__Rm___| Multiply
     |_Cond__|0_0_0_0_1|U|A|S|_RdHi__|_RdLo__|__Rs___|1_0_0_1|__Rm___| MulLong
-    |_Cond__|0_0_0_1_0|Op_|0|Rd/RdHi|Rn/RdLo|__Rs___|1|y|x|0|__Rm___|
-MulHalfARM9
+    |_Cond__|0_0_0_1_0|Op_|0|Rd/RdHi|Rn/RdLo|__Rs___|1|y|x|0|__Rm___| MulHalfARM9
     |_Cond__|0_0_0|P|U|0|W|L|__Rn___|__Rd___|0_0_0_0|1|S|H|1|__Rm___| TransReg10
     |_Cond__|0_0_0|P|U|1|W|L|__Rn___|__Rd___|OffsetH|1|S|H|1|OffsetL| TransImm10
     |_Cond__|0_1_0|P|U|B|W|L|__Rn___|__Rd___|_________Offset________| TransImm9
@@ -394,8 +249,8 @@ decoding from highest to lowest specifity to ensure corredct opcode parsed
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeArmInstruction(uint32_t instruction) {
 
-    switch (instruction & 0b00001110000000000000000000000000) {  // mask 1
-        case 0b00000000000000000000000000000000: {
+    switch ((instruction & 0b00001110000000000000000000000000) >> 25) {  // mask 1
+        case 0b0: {
 
             if ((instruction & 0b00001111111111111111111111010000) == 0b00000001001011111111111100010000) {  // BX,BLX
                 return branchAndExchangeHandler(instruction);
@@ -424,7 +279,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeArmInstruction(uint32_t instructi
             }
             break;
         }
-        case 0b00000010000000000000000000000000: {
+        case 0b0000001: {
             if ((instruction & 0b00001111101100000000000000000000) == 0b00000011001000000000000000000000) {  // PSR Imm
                 return psrHandler(instruction);
 
@@ -433,24 +288,21 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeArmInstruction(uint32_t instructi
                 return dataProcHandler(instruction);
             }
         }
-        case 0b00001000000000000000000000000000: { // block transfer
+        case 0b0000100: { // block transfer
             return blockDataTransHandler(instruction);
 
         }
-        case 0b00001010000000000000000000000000: { // B,BL,BLX
+        case 0b0000101: { // B,BL,BLX
             return branchHandler(instruction);
 
         }
-        case 0b00001110000000000000000000000000: { // SWI
-            // TODO: implement software interrupt
-            //DEBUGWARN("ARM SWI!!!\n");
+        case 0b0000111: { // SWI
             return swiHandler(instruction);
         }
-        case 0b00000100000000000000000000000000: {  // transImm9
+        case 0b0000010: {  // transImm9
             return singleDataTransHandler(instruction);
-
         }
-        case 0b00000110000000000000000000000000: {
+        case 0b0000011: {
             if ((instruction & 0b00001110000000000000000000010000) == 0b00000110000000000000000000000000) {  // TransReg9
                 return singleDataTransHandler(instruction);
 
@@ -525,8 +377,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeArmInstruction(uint32_t instructi
 */
 inline
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruction) {
-    switch (instruction & 0b1110000000000000) {  // mask 1
-        case 0b0000000000000000: { // case 000
+    switch ((instruction & 0b1110000000000000) >> 13) {  // mask 1
+        case 0b0: { // case 000
             if((instruction & 0b0001100000000000) == 0b0001100000000000) {
                 // 2: 00011xxxxxxxxxxx ADD/SUB
                 return addSubHandler(instruction);
@@ -535,11 +387,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruc
                 return shiftHandler(instruction);
             }
         }
-        case 0b0010000000000000: { // case 001
+        case 0b001: { // case 001
             // 3: 001xxxxxxxxxxxxx Immedi.
             return immHandler(instruction);
         }
-        case 0b0100000000000000: { // case 010
+        case 0b010: { // case 010
             switch(instruction & 0b0001000000000000) {
                 case 0b0000000000000000: {
                     switch(instruction & 0b0001110000000000) {
@@ -572,11 +424,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruc
             }
             break;
         }
-        case 0b0110000000000000: { // case 011
+        case 0b011: { // case 011
             // 9: 011xxxxxxxxxxxxx ""{B}
             return loadStoreImmediateOffsetHandler(instruction);
         }
-        case 0b1000000000000000: { // case 100
+        case 0b100: { // case 100
             if(instruction & 0b0001000000000000) {
                 // 11: 1001xxxxxxxxxxxx "" SP
                 return loadStoreSpRelativeHandler(instruction);
@@ -586,7 +438,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruc
             }
             break;
         }
-        case 0b1010000000000000: { // case 101
+        case 0b101: { // case 101
             if(instruction & 0b0001000000000000) {
                 if(instruction & 0b0000010000000000) {
                     // 14: 1011x10xxxxxxxxx PUSH/POP
@@ -600,7 +452,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruc
                 return getRelativeAddressHandler(instruction);
             }
         }
-        case 0b1100000000000000: { // case 110
+        case 0b110: { // case 110
             if(instruction & 0b0001000000000000) {
                 if((instruction & 0b0001111100000000) == 0b0001111100000000) {
                     // 17: 11011111xxxxxxxx SWI
@@ -614,7 +466,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::executeThumbInstruction(uint16_t instruc
                 return multipleLoadStoreHandler(instruction);
             }           
         }
-        case 0b1110000000000000: { // case 111
+        case 0b111: { // case 111
             if(instruction & 0b0001000000000000) {
                 // 19: 1111xxxxxxxxxxxx BL,BLX
                 return longBranchHandler(instruction);
@@ -647,16 +499,9 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
             rotate right by twice the value in the rotate field.
         */
 
-        DEBUG("shifting immediate\n");
         uint32_t imm = instruction & 0x000000FF;
         uint8_t is = (instruction & 0x00000F00) >> 7U;
         uint32_t op2 = aluShiftRor(imm, is % 32);
-
-        DEBUG(std::bitset<32>(imm).to_string() << " before shift \n");
-        DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
-
-        DEBUG(imm << " is imm\n");
-        DEBUG((uint32_t)is << " is shift amount\n");
 
         // carry out bit is the least significant discarded bit of rm
         if (is > 0) {
@@ -664,7 +509,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
         } else {
             carryBit = cpsr.C;
         }
-        DEBUG((uint32_t)carryBit << " is carryBit\n");
         return {op2, carryBit};
     }
 
@@ -696,10 +540,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
     }
 
     bool immOpIsZero = r ? false : shiftAmount == 0;
-    DEBUG((uint32_t)shiftType << " is shift type \n");
-    DEBUG((uint32_t)shiftAmount << " is shiftAmount \n");
-    DEBUG(r << " = r \n");
-    DEBUG(immOpIsZero << " = immOpIsZero \n");
 
     if (shiftType == 0) {  // Logical Shift Left
         /*
@@ -715,8 +555,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
         if (!immOpIsZero) {
             op2 = aluShiftLsl(rm, shiftAmount);
             carryBit = (shiftAmount > 32) ? 0 : ((rm >> (32 - shiftAmount)) & 1);
-            DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-            DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
         } else {  // no op performed, carry flag stays the same
             op2 = rm;
             carryBit = cpsr.C;
@@ -747,8 +585,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
         if (!immOpIsZero) {
             op2 = aluShiftAsr(rm, shiftAmount);
             carryBit = (shiftAmount >= 32) ? (rm & 0x80000000) : ((rm >> (shiftAmount - 1)) & 1);
-            DEBUG(std::bitset<32>(rm).to_string() << " before shift \n");
-            DEBUG(std::bitset<32>(op2).to_string() << " after shift \n");
         } else {
             /*
                 The form of the shift field which might be expected to give ASR
@@ -785,47 +621,6 @@ ARM7TDMI::AluShiftResult ARM7TDMI::aluShift(uint32_t instruction, bool i,
     return {op2, carryBit};
 }
 
-// TODO: separate these utility functions into a different file
-// TODO: make sure all these shift functions are correct
-inline
-uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
-    if(shift >= 32) {
-        return 0;
-    } else {
-        return value << shift;
-    }
-}
-
-inline
-uint32_t ARM7TDMI::aluShiftLsr(uint32_t value, uint8_t shift) {
-    if(shift >= 32) {
-        return 0;
-    } else {
-        return value >> shift;
-    }
-}
-
-inline
-uint32_t ARM7TDMI::aluShiftAsr(uint32_t value, uint8_t shift) {
-    if(shift >= 32) {
-        return (value & 0x80000000) ? 0xFFFFFFFF : 0x0;
-    } else {
-       return (value & 0x80000000) ? ~(~value >> shift) : value >> shift; 
-    }
-}
-
-uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
-    assert(shift < 32U);
-    return (value >> shift) | (value << (-((int8_t)shift) & 31U));
-}
-
-inline
-uint32_t ARM7TDMI::aluShiftRrx(uint32_t value, uint8_t shift, ARM7TDMI *cpu) {
-    assert(shift < 32U);
-    uint32_t rrxMask = (cpu->cpsr).C;
-    DEBUG(rrxMask << " <- rrx mask\n");
-    return ((value >> shift) | (value << (-shift & 31U))) | (rrxMask << 31U);
-}
 
 ARM7TDMI::ProgramStatusRegister *ARM7TDMI::getCurrentModeSpsr() {
     return currentSpsr;
@@ -835,117 +630,21 @@ ARM7TDMI::ProgramStatusRegister ARM7TDMI::getCpsr() {
     return cpsr;
 }
 
-uint32_t ARM7TDMI::getRegister(uint8_t index) { return *(registers[index]); }
 
-uint32_t ARM7TDMI::getUserRegister(uint8_t index) { return *(userRegisters[index]); }
+uint32_t ARM7TDMI::getRegister(uint8_t index) { 
+    return *(registers[index]); 
+}
+
+uint32_t ARM7TDMI::getUserRegister(uint8_t index) {
+    return *(userRegisters[index]); 
+}
 
 void ARM7TDMI::setRegister(uint8_t index, uint32_t value) {
     *(registers[index]) = value;
 }
+
 void ARM7TDMI::setUserRegister(uint8_t index, uint32_t value) {
     *(userRegisters[index]) = value;
-}
-
-bool ARM7TDMI::aluSetsZeroBit(uint32_t value) { return value == 0; }
-
-bool ARM7TDMI::aluSetsSignBit(uint32_t value) { return value >> 31; }
-
-bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
-    return !(rnValue < op2);
-}
-
-bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2,
-                                          uint32_t result) {
-    // todo: there is a more efficient way to do this
-    return (!(rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            (result & 0x80000000)) ||
-           ((rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            !(result & 0x80000000));
-}
-
-bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
-    return (0xFFFFFFFFU - op2) < rnValue;
-}
-
-bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2,
-                                     uint32_t result) {
-    // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            !(result & 0x80000000)) ||
-            (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            (result & 0x80000000));
-}
-
-bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
-    return result >> 32;
-}
-
-bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
-                                              uint32_t result, ARM7TDMI *cpu) {
-    // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            !((rnValue + op2) & 0x80000000)) ||
-           (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            ((rnValue + op2) & 0x80000000)) ||
-           // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) &&
-           // !(((uint32_t)result) & 0x80000000)) ||  never happens
-           (!((rnValue + op2) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
-            ((result)&0x80000000));
-}
-
-bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
-    return !(result >> 32);
-}
-
-bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
-                                              uint32_t result, ARM7TDMI *cpu) {
-    // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && ((~op2) & 0x80000000) &&
-            !((rnValue + (~op2)) & 0x80000000)) ||
-           (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) &&
-            ((rnValue + (~op2)) & 0x80000000)) ||
-           // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) &&
-           // !(result & 0x80000000)) || never happens
-           (!((rnValue + (~op2)) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
-            (result & 0x80000000));
-}
-
-// not guaranteed to always be rn, check the spec first
-inline
-uint8_t ARM7TDMI::getRn(uint32_t instruction) {
-    return (instruction & 0x000F0000) >> 16;
-}
-
-// not guaranteed to always be rd, check the spec first
-inline
-uint8_t ARM7TDMI::getRd(uint32_t instruction) {
-    return (instruction & 0x0000F000) >> 12;
-}
-
-// not guaranteed to always be rs, check the spec first
-inline
-uint8_t ARM7TDMI::getRs(uint32_t instruction) {
-    return (instruction & 0x00000F00) >> 8;
-}
-
-inline
-uint8_t ARM7TDMI::getRm(uint32_t instruction) {
-    return (instruction & 0x0000000F);
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRs(uint16_t instruction) {
-    return (instruction & 0x0038) >> 3;
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRd(uint16_t instruction) {
-    return (instruction & 0x0007);
-}
-
-inline
-uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
-    return (instruction & 0x0038) >> 3;
 }
 
 inline
@@ -956,78 +655,6 @@ uint8_t ARM7TDMI::getOpcode(uint32_t instruction) {
 inline
 bool ARM7TDMI::sFlagSet(uint32_t instruction) {
     return (instruction & 0x00100000);
-}
-
-uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
-    return 0 | (((uint32_t)psr.N) << 31) | (((uint32_t)psr.Z) << 30) |
-           (((uint32_t)psr.C) << 29) | (((uint32_t)psr.V) << 28) |
-           (((uint32_t)psr.Q) << 27) | (((uint32_t)psr.Reserved) << 26) |
-           (((uint32_t)psr.I) << 7) | (((uint32_t)psr.F) << 6) |
-           (((uint32_t)psr.T) << 5) | (((uint32_t)psr.Mode) << 0);
-}
-
-inline
-bool ARM7TDMI::dataTransGetP(uint32_t instruction) {
-    return instruction & 0x01000000;
-}
-
-inline
-bool ARM7TDMI::dataTransGetU(uint32_t instruction) {
-    return instruction & 0x00800000;
-}
-
-inline
-bool ARM7TDMI::dataTransGetB(uint32_t instruction) {
-    return instruction & 0x00400000;
-}
-
-inline
-bool ARM7TDMI::dataTransGetW(uint32_t instruction) {
-    return instruction & 0x00200000;
-}
-
-inline
-bool ARM7TDMI::dataTransGetL(uint32_t instruction) {
-    return instruction & 0x00100000;
-}
-
-
-/*
-Execution Time: 1S+mI for MUL, and 1S+(m+1)I for MLA. 
-Whereas 'm' depends on whether/how many most significant 
-bits of Rs are all zero or all one. That is m=1 for 
-Bit 31-8, m=2 for Bit 31-16, m=3 for Bit 31-24, and m=4 otherwise.
-*/
-uint8_t ARM7TDMI::mulGetExecutionTimeMVal(uint32_t value) {
-    uint32_t masked = value & 0xFFFFFF00;
-    if(masked == 0xFFFFFF00 || !masked) {
-        return 1;
-    }
-    masked >>= 8;
-    if(masked == 0xFFFFFF00 || !masked) {
-        return 2;
-    }
-    masked >>= 8;
-    if(masked == 0xFFFFFF00 || !masked) {
-        return 3;
-    }
-    return 4;
-}
-
-uint8_t ARM7TDMI::umullGetExecutionTimeMVal(uint32_t value) {
-    uint32_t masked = value & 0xFFFFFF00;
-    if(!masked) {
-        return 1;
-    }
-    masked >>= 8;
-    if(!masked) {
-        return 2;
-    }
-    masked >>= 8;
-    if(!masked) {
-        return 3;
-    }
-    return 4;
 }
 
 
@@ -1052,19 +679,6 @@ void ARM7TDMI::setCurrInstruction(uint32_t instruction) {
   6     F - FIQ disable     (0=Enable, 1=Disable)                     ; Control
   5     T - State Bit       (0=ARM, 1=THUMB) - Do not change manually!; Bits
   4-0   M4-M0 - Mode Bits   (See below)                               ;/
+eturn value;
+
 */
-// uint32_t ARM7TDMI::psrToInt(ProgramStatusRegister psr) {
-//     uint32_t value = 0;
-
-//     value |= ((bool)psr.N << 31);
-//     value |= ((bool)psr.Z << 30);
-//     value |= ((bool)psr.C << 29);
-//     value |= ((bool)psr.V << 28);
-//     value |= ((bool)psr.Q << 27);
-//     value |= ((bool)psr.I << 7);
-//     value |= ((bool)psr.F << 6);
-//     value |= ((bool)psr.T << 5);
-//     value |= (psr.Mode & 0x1F);
-
-//     return value;
-// }
