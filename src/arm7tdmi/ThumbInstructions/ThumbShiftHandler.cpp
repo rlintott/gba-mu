@@ -16,9 +16,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbShiftHandler(uint16_t instruction, 
 
     bool carryFlag;
     uint32_t result;
-
     if constexpr(opcode == 0) {
-
         // 00b: LSL{S} Rd,Rs,#Offset (logical/arithmetic shift left)
         if(offset == 0) {
             result = rsVal;
@@ -26,25 +24,28 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbShiftHandler(uint16_t instruction, 
         } else {
             result = aluShiftLsl(rsVal, offset);
             // TODO: put the logic for shift carry bit into functions
-            carryFlag = (rsVal >> (32 - offset)) & 1;
+            carryFlag = aluLslSetsCarryBit(rsVal, offset);
+
         }
     } else if constexpr(opcode == 1) {
         // 01b: LSR{S} Rd,Rs,#Offset (logical shift right)
         if(offset == 0) {
             result = aluShiftLsr(rsVal, 32);
+            carryFlag = aluLsrSetsCarryBit(rsVal, 32);
         } else {
             result = aluShiftLsr(rsVal, offset);
+            carryFlag = aluLsrSetsCarryBit(rsVal, offset);
         }
-        carryFlag = (rsVal >> (offset - 1)) & 1;
+        
     } else if constexpr(opcode == 2) {
-
         // 10b: ASR{S} Rd,Rs,#Offset (arithmetic shift right)
         if(offset == 0) {
             result = aluShiftAsr(rsVal, 32);
+            carryFlag = aluAsrSetsCarryBit(rsVal, 32);
         } else {
             result = aluShiftAsr(rsVal, offset);
+            carryFlag = aluAsrSetsCarryBit(rsVal, offset);
         }
-        carryFlag = (rsVal >> (offset - 1)) & 1;
     } else {
         // opcode == 3
         // 11b: Reserved (used for add/subtract instructions)

@@ -50,7 +50,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, AR
         signFlag = aluSetsSignBit(result);
         zeroFlag = aluSetsZeroBit(result);
         // TODO:
-        carryFlag = !(offset) ? cpu->cpsr.C : ((rdVal >> (32 - offset)) & 1);
+        if(!offset) {
+            carryFlag = cpu->cpsr.C;
+        } else {
+            carryFlag = aluLslSetsCarryBit(rdVal, offset);
+        }
         overflowFlag = cpu->cpsr.V;
         cpu->setRegister(rd, result);
         internalCycles = 1;
@@ -64,7 +68,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, AR
         signFlag = aluSetsSignBit(result);
         zeroFlag = aluSetsZeroBit(result);
         // TODO:
-        carryFlag = !(offset) ? cpu->cpsr.C : (rdVal >> (offset - 1)) & 1;
+        carryFlag = !(offset) ? cpu->cpsr.C : aluLsrSetsCarryBit(rdVal, offset);
         overflowFlag = cpu->cpsr.V;
         cpu->setRegister(rd, result);
         internalCycles = 1;
@@ -78,7 +82,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, AR
         signFlag = aluSetsSignBit(result);
         zeroFlag = aluSetsZeroBit(result);
         // TODO:
-        carryFlag = !(offset) ? (cpu->cpsr.C) : ((rdVal >> (offset - 1)) & 1);
+        carryFlag = !(offset) ? (cpu->cpsr.C) : aluAsrSetsCarryBit(rdVal, offset);
         overflowFlag = cpu->cpsr.V;
         cpu->setRegister(rd, result);
         internalCycles = 1;        
@@ -103,8 +107,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, AR
         signFlag = aluSetsSignBit((uint32_t)result);
         zeroFlag = aluSetsZeroBit((uint32_t)result);
         carryFlag = aluSubWithCarrySetsCarryBit(result);
-        overflowFlag =
-            aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
+        overflowFlag = aluSubWithCarrySetsOverflowBit(rdVal, rsVal, result, cpu);
         cpu->setRegister(rd, result);  
     } else if constexpr(opcode == 0x7) {
         // 7: ROR{S} Rd,Rs     ;rotate right      Rd = Rd ROR (Rs AND 0FFh)
@@ -117,8 +120,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbAluHandler(uint16_t instruction, AR
         zeroFlag = aluSetsZeroBit(result);
         overflowFlag = cpu->cpsr.V;
         // TODO:
-        carryFlag =
-            !(offset) ? (cpu->cpsr.C) : (rdVal >> ((offset % 32) - 1)) & 1;
+        carryFlag = !(offset) ? (cpu->cpsr.C) : aluRorSetsCarryBit(rdVal, offset);
         cpu->setRegister(rd, result);
         internalCycles = 1;        
     } else if constexpr(opcode == 0x8) {

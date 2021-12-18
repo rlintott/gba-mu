@@ -308,6 +308,13 @@ class ARM7TDMI {
     static bool aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                                uint32_t result, ARM7TDMI *cpu);
 
+    static bool aluLslSetsCarryBit(uint32_t value, uint32_t offset);
+    static bool aluLsrSetsCarryBit(uint32_t value, uint32_t offset);
+    static bool aluRorSetsCarryBit(uint32_t value, uint32_t offset);
+    static bool aluAsrSetsCarryBit(uint32_t value, uint32_t offset);
+
+
+
     static uint8_t getRd(uint32_t instruction);
     static uint8_t getRn(uint32_t instruction);
     static uint8_t getRs(uint32_t instruction);
@@ -785,10 +792,15 @@ uint32_t ARM7TDMI::aluShiftRor(uint32_t value, uint8_t shift) {
 
 
 inline
-bool ARM7TDMI::aluSetsZeroBit(uint32_t value) { return value == 0; }
+bool ARM7TDMI::aluSetsZeroBit(uint32_t value) { 
+    return value == 0;
+}
 
 inline
-bool ARM7TDMI::aluSetsSignBit(uint32_t value) { return value >> 31; }
+bool ARM7TDMI::aluSetsSignBit(uint32_t value) { 
+    return value >> 31; 
+}
+
 inline
 bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
     return !(rnValue < op2);
@@ -796,11 +808,6 @@ bool ARM7TDMI::aluSubtractSetsCarryBit(uint32_t rnValue, uint32_t op2) {
 inline
 bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                           uint32_t result) {
-    // todo: there is a more efficient way to do this
-    // return (!(rnValue & 0x80000000) && (op2 & 0x80000000) &&
-    //         (result & 0x80000000)) ||
-    //        ((rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-    //         !(result & 0x80000000));
     return ((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
@@ -810,11 +817,6 @@ bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
 inline
 bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                      uint32_t result) {
-    // todo: there is a more efficient way to do this
-    // return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-    //         !(result & 0x80000000)) ||
-    //         (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-    //         (result & 0x80000000));
     return !((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
@@ -824,15 +826,6 @@ bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
 inline
 bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
-    // todo: there is a more efficient way to do this
-    // return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-    //         !((rnValue + op2) & 0x80000000)) ||
-    //        (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-    //         ((rnValue + op2) & 0x80000000)) ||
-    //        // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) &&
-    //        // !(((uint32_t)result) & 0x80000000)) ||  never happens
-    //        (!((rnValue + op2) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
-    //         ((result)&0x80000000));
     return !((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
@@ -844,6 +837,41 @@ inline
 bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
     return ((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
+}
+
+inline 
+bool ARM7TDMI::aluLslSetsCarryBit(uint32_t value, uint32_t offset) {
+    if(offset <= 32) {
+        return (value >> (32 - offset)) & 0x1;
+    } else {
+        return 0;
+    }
+}
+
+inline 
+bool ARM7TDMI::aluLsrSetsCarryBit(uint32_t value, uint32_t offset) {
+    // TODO: could this be done better?
+    // TODO, yes, you are redoing the shift calculation, dont need to 
+    if(offset <= 32 && offset > 0) {
+        return ((value >> (offset - 1)) & 1);
+    } else {
+        return 0;
+    }
+}
+
+inline 
+bool ARM7TDMI::aluRorSetsCarryBit(uint32_t value, uint32_t offset) {
+    return ((value >> ((offset % 32) - 1)) & 1);
+}
+
+inline 
+bool ARM7TDMI::aluAsrSetsCarryBit(uint32_t value, uint32_t offset) {
+    // TODO: could this be done better?
+    if(offset < 32 && offset > 0) {
+        return ((value >> (offset - 1)) & 1);
+    } else {
+        return value & 0x80000000;
+    }
 }
 
 inline
