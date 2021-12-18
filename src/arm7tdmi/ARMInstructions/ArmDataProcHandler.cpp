@@ -215,14 +215,14 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armDataProcHandler(uint32_t instruction,
         carryBit = ARM7TDMI::aluAddWithCarrySetsCarryBit(result);
         overflowBit = ARM7TDMI::aluAddWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
     } else if constexpr(opcode == 0x6) {  // SBC
-        uint64_t result = (uint64_t)rnVal + ~((uint64_t)op2) + (uint64_t)(cpu->cpsr).C;
+        uint64_t result = (uint64_t)rnVal + ~((uint64_t)op2) + (uint64_t)(cpu->cpsr.C);
         cpu->setRegister(rd, (uint32_t)result);
         zeroBit = ARM7TDMI::aluSetsZeroBit((uint32_t)result);
         signBit = ARM7TDMI::aluSetsSignBit((uint32_t)result);
         carryBit = ARM7TDMI::aluSubWithCarrySetsCarryBit(result);
         overflowBit = ARM7TDMI::aluSubWithCarrySetsOverflowBit(rnVal, op2, (uint32_t)result, cpu);
     } else if constexpr(opcode == 0x7) {  // RSC
-        uint64_t result = (uint64_t)op2 + ~((uint64_t)rnVal) + (uint64_t)(cpu->cpsr).C;
+        uint64_t result = (uint64_t)op2 + ~((uint64_t)rnVal) + (uint64_t)(cpu->cpsr.C);
         cpu->setRegister(rd, (uint32_t)result);
         zeroBit = ARM7TDMI::aluSetsZeroBit((uint32_t)result);
         signBit = ARM7TDMI::aluSetsSignBit((uint32_t)result);
