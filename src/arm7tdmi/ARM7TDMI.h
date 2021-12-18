@@ -797,10 +797,11 @@ inline
 bool ARM7TDMI::aluSubtractSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                           uint32_t result) {
     // todo: there is a more efficient way to do this
-    return (!(rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            (result & 0x80000000)) ||
-           ((rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            !(result & 0x80000000));
+    // return (!(rnValue & 0x80000000) && (op2 & 0x80000000) &&
+    //         (result & 0x80000000)) ||
+    //        ((rnValue & 0x80000000) && !(op2 & 0x80000000) &&
+    //         !(result & 0x80000000));
+    return ((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
 bool ARM7TDMI::aluAddSetsCarryBit(uint32_t rnValue, uint32_t op2) {
@@ -810,10 +811,11 @@ inline
 bool ARM7TDMI::aluAddSetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                      uint32_t result) {
     // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            !(result & 0x80000000)) ||
-            (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            (result & 0x80000000));
+    // return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
+    //         !(result & 0x80000000)) ||
+    //         (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
+    //         (result & 0x80000000));
+    return !((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
 bool ARM7TDMI::aluAddWithCarrySetsCarryBit(uint64_t result) {
@@ -823,31 +825,25 @@ inline
 bool ARM7TDMI::aluAddWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
     // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
-            !((rnValue + op2) & 0x80000000)) ||
-           (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
-            ((rnValue + op2) & 0x80000000)) ||
-           // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) &&
-           // !(((uint32_t)result) & 0x80000000)) ||  never happens
-           (!((rnValue + op2) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
-            ((result)&0x80000000));
+    // return ((rnValue & 0x80000000) && (op2 & 0x80000000) &&
+    //         !((rnValue + op2) & 0x80000000)) ||
+    //        (!(rnValue & 0x80000000) && !(op2 & 0x80000000) &&
+    //         ((rnValue + op2) & 0x80000000)) ||
+    //        // ((rnValue + op2) & 0x80000000) && (cpsr.C & 0x80000000) &&
+    //        // !(((uint32_t)result) & 0x80000000)) ||  never happens
+    //        (!((rnValue + op2) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
+    //         ((result)&0x80000000));
+    return !((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 inline
 bool ARM7TDMI::aluSubWithCarrySetsCarryBit(uint64_t result) {
     return !(result >> 32);
 }
+
 inline
 bool ARM7TDMI::aluSubWithCarrySetsOverflowBit(uint32_t rnValue, uint32_t op2,
                                               uint32_t result, ARM7TDMI *cpu) {
-    // todo: there is a more efficient way to do this
-    return ((rnValue & 0x80000000) && ((~op2) & 0x80000000) &&
-            !((rnValue + (~op2)) & 0x80000000)) ||
-           (!(rnValue & 0x80000000) && !((~op2) & 0x80000000) &&
-            ((rnValue + (~op2)) & 0x80000000)) ||
-           // (((rnValue + (~op2)) & 0x80000000) && (cpsr.C & 0x80000000) &&
-           // !(result & 0x80000000)) || never happens
-           (!((rnValue + (~op2)) & 0x80000000) && !(cpu->cpsr.C & 0x80000000) &&
-            (result & 0x80000000));
+    return ((rnValue ^ op2) & 0x80000000) && ((rnValue ^ result) & 0x80000000);
 }
 
 inline

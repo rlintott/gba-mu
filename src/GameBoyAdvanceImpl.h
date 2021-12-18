@@ -48,6 +48,6 @@ class GameBoyAdvanceImpl {
     double startTimeSeconds = 0.0;
     uint64_t totalCycles= 0;
 
-    bool debugMode = true;
+    bool debugMode = false;
 
 };
