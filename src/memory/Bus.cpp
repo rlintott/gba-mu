@@ -325,6 +325,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         }      
         case 0x04: {
             if(address > 0x040003FE) {
+                // TODO: handle strange io mem accesses
                 break;
             }
             if(0x4000100 <= address && address <= 0x400010E) {
@@ -577,13 +578,15 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             break;        
         }
         case 0x04: {
-            if(0x04000000 <= address && address < 0x04000056) {
+            if(address > 0x040003FE) {
+                // TODO handle strange io memory access
+                break;
             }
-
             if(0x4000100 <= address && address <= 0x400010F) {
                 // timer addresses
                 timer->updateTimerUponWrite(address, value, width);
             }
+
 
             // TODO: there's a more efficient way to do this I think,
             // send the changed register to DMA AFTER the write happens

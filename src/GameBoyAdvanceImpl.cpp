@@ -45,7 +45,8 @@ GameBoyAdvanceImpl::GameBoyAdvanceImpl() {
     this->debugger =  std::make_shared<Debugger>();
 }
 
-void GameBoyAdvanceImpl::printCpuState() {
+void GameBoyAdvanceImpl::printCpuState() {\
+    debugger->stepMode = true;
     debugger->step(arm7tdmi.get(), bus.get());
     debugger->printState();
 }
