@@ -13,7 +13,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSwiHandler(uint32_t instruction, ARM7
         cpu->cpsr.T = 0;
         cpu->cpsr.I = 1; 
         cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER));
-        cpu->setRegister(PC_REGISTER, 0x18);
+        cpu->setRegister(PC_REGISTER, 0x8);
     } else if constexpr(opcode == 0x100) {
         // 0001b: BKPT      nn   ;breakpoint (ARMv5 and up)
         DEBUGWARN("BKPT instruction not implemented!\n");
