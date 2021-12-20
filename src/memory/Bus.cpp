@@ -254,6 +254,17 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     uint32_t shift = (address & 0xFF000000) >> 24;
     //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
+    /*
+        TODO: The BIOS memory is protected against reading, 
+        the GBA allows to read opcodes or data only if the program counter 
+        is located inside of the BIOS area. If the program counter is not 
+        in the BIOS area, reading will return the most recent successfully 
+        fetched BIOS opcode (eg. the opcode at [00DCh+8] after startup and SoftReset, 
+        the opcode at [0134h+8] during IRQ execution, and opcode at [013Ch+8] after 
+        IRQ execution, and opcode at [0188h+8] after SWI execution).
+        (see mgba tests)
+    */
+
     switch(shift) {
         case 0x0:
         case 0x01: {

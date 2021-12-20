@@ -43,10 +43,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStPushPopHandler(uint16_t ins
         for(int i = 0; i < 8; i++) {
             if(rList & 0x01) {
                 if(firstAccess) {
-                    cpu->setRegister(i, cpu->bus->read32(spValue, Bus::CycleType::NONSEQUENTIAL));
+                    cpu->setRegister(i, aluShiftRor(cpu->bus->read32(spValue, Bus::CycleType::NONSEQUENTIAL), 
+                                                    (spValue & 3) * 8));
                     firstAccess = false;
                 } else {
-                    cpu->setRegister(i, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL));
+                    cpu->setRegister(i, aluShiftRor(cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL), 
+                                                    (spValue & 3) * 8));
                 }
                 spValue += 4;
             }
@@ -55,7 +57,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStPushPopHandler(uint16_t ins
 
         if constexpr(pcLrBit) {
             // TODO, whether it's sequentiual or not might depend on whether rlist is empty
-            cpu->setRegister(PC_REGISTER, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL));
+            cpu->setRegister(PC_REGISTER, aluShiftRor(cpu->bus->read32(spValue, Bus::CycleType::NONSEQUENTIAL), 
+                                                    (spValue & 3) * 8));
             spValue += 4;
         } 
         cpu->setRegister(SP_REGISTER, spValue);
