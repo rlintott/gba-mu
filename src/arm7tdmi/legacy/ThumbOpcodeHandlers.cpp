@@ -535,7 +535,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadPcRelativeHandler(uint16_t instructi
     uint8_t rd = (instruction & 0x0700) >> 8;
     uint32_t address =
         ((getRegister(PC_REGISTER) + 2) & 0xFFFFFFFD) + offset;
-    uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, 
+    uint32_t value = aluShiftRor(bus->read32(address, 
                                  Bus::CycleType::NONSEQUENTIAL), 
                                  (address & 3) * 8);
     setRegister(rd, value);
@@ -556,7 +556,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreRegOffsetHandler(uint16_t instr
     switch (opcode) {
         case 0: {
             // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd
-            bus->write32(address & 0xFFFFFFFC, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+            bus->write32(address, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
@@ -566,7 +566,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreRegOffsetHandler(uint16_t instr
         }
         case 2: {
             // 2: LDR  Rd,[Rb,Ro]   ;load  32bit data  Rd = WORD[Rb+Ro]
-            uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(bus->read32(address, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             setRegister(rd, value);
             bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -614,7 +614,7 @@ ARM7TDMI::loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction) {
         case 2: {
             // 2: LDRH Rd,[Rb,Ro]  ;load zero-extended 16bit  Rd =
             // HALFWORD[Rb+Ro]
-            uint32_t value = aluShiftRor(bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(bus->read16(address, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 1) * 8);
             setRegister(rd, value);
             bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -653,14 +653,14 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreImmediateOffsetHandler(uint16_t
             // 0: STR  Rd,[Rb,#nn]  ;store 32bit data   WORD[Rb+nn] = Rd
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = getRegister(rb) + offset;
-            bus->write32(address & 0xFFFFFFFC, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+            bus->write32(address, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: LDR  Rd,[Rb,#nn]  ;load  32bit data   Rd = WORD[Rb+nn]
             uint32_t offset = (instruction & 0x07C0) >> 4;
             uint32_t address = getRegister(rb) + offset;
-            uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(bus->read32(address, Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             // if(rd == PC_REGISTER) {
             //     // For THUMB code, the low bit of the target address may/should/must be set,
@@ -737,12 +737,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::loadStoreSpRelativeHandler(uint16_t inst
     switch (opcode) {
         case 0: {
             // 0: STR  Rd,[SP,#nn]  ;store 32bit data   WORD[SP+nn] = Rd
-            bus->write32(address & 0xFFFFFFFC, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+            bus->write32(address, getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
             break;
         }
         case 1: {
             // 1: LDR  Rd,[SP,#nn]  ;load  32bit data   Rd = WORD[SP+nn]
-            uint32_t value = aluShiftRor(bus->read32(address & 0xFFFFFFFC, 
+            uint32_t value = aluShiftRor(bus->read32(address, 
                                          Bus::CycleType::NONSEQUENTIAL),
                                          (address & 3) * 8);
             setRegister(rd, value);

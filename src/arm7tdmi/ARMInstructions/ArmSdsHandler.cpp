@@ -32,9 +32,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdsHandler(uint32_t instruction, ARM7
         uint32_t rnVal = cpu->getRegister(rn);
         uint32_t rmVal = cpu->getRegister(rm);
         
-        uint32_t data = aluShiftRor(cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL), (rnVal & 3) * 8);
+        uint32_t data = aluShiftRor(cpu->bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL), (rnVal & 3) * 8);
         cpu->setRegister(rd, data);
-        cpu->bus->write32(rnVal & 0xFFFFFFFC, rmVal, Bus::CycleType::NONSEQUENTIAL);
+        cpu->bus->write32(rnVal, rmVal, Bus::CycleType::NONSEQUENTIAL);
     }
     cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return NONSEQUENTIAL;

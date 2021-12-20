@@ -17,13 +17,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStRegOffHandler(uint16_t instruct
 
     if constexpr(opcode == 0) {
         // 0: STR  Rd,[Rb,Ro]   ;store 32bit data  WORD[Rb+Ro] = Rd
-        cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+        cpu->bus->write32(address, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
     } else if constexpr(opcode == 1) {
         // 1: STRB Rd,[Rb,Ro]   ;store  8bit data  BYTE[Rb+Ro] = Rd
         cpu->bus->write8(address, (uint8_t)(cpu->getRegister(rd)), Bus::CycleType::NONSEQUENTIAL);
     } else if constexpr(opcode == 2) {
         // 2: LDR  Rd,[Rb,Ro]   ;load  32bit data  Rd = WORD[Rb+Ro]
-        uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL),
+        uint32_t value = aluShiftRor(cpu->bus->read32(address, Bus::CycleType::NONSEQUENTIAL),
                                         (address & 3) * 8);
         cpu->setRegister(rd, value);
         cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);        

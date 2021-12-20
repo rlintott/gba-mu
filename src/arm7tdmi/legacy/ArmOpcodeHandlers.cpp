@@ -478,8 +478,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::singleDataTransHandler(uint32_t instruct
         } else {  // transfer 32 bits
             if ((address & 0x00000003) == 2) {
                 // aligned to half-word but not word
-                uint32_t low = (uint32_t)(bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
-                uint32_t hi = (uint32_t)(bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
+                uint32_t low = (uint32_t)(bus->read16(address, Bus::CycleType::NONSEQUENTIAL));
+                uint32_t hi = (uint32_t)(bus->read16((address - 2), Bus::CycleType::NONSEQUENTIAL));
                 uint32_t full = ((hi << 16) | low);
                 setRegister(rd, full);
             } else {
@@ -488,7 +488,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::singleDataTransHandler(uint32_t instruct
                 // and does then rotate the data as "ROR (addr AND 3)*8". T
                 // TODO: move the masking and shifting into the read/write functions
                 setRegister(rd, 
-                                 aluShiftRor(bus->read32(address & 0xFFFFFFFC,
+                                 aluShiftRor(bus->read32(address,
                                  Bus::CycleType::NONSEQUENTIAL),
                                  (address & 3) * 8));
             }
@@ -505,7 +505,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::singleDataTransHandler(uint32_t instruct
             bus->write8(address, (uint8_t)(rdVal), 
                              Bus::CycleType::NONSEQUENTIAL);
         } else {  // transfer 32 bits
-            bus->write32(address & 0xFFFFFFFC, (rdVal), 
+            bus->write32(address, (rdVal), 
                               Bus::CycleType::NONSEQUENTIAL);
         }
         
@@ -569,11 +569,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::halfWordDataTransHandler(uint32_t instru
                       // (zero-extended)         
                 setRegister(
                     rd, aluShiftRor(
-                            (uint32_t)(bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL)),
+                            (uint32_t)(bus->read16(address, Bus::CycleType::NONSEQUENTIAL)),
                             (address & 1) * 8));
                 bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
             } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
-                bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal, Bus::CycleType::NONSEQUENTIAL);
+                bus->write16(address, (uint16_t)rdVal, Bus::CycleType::NONSEQUENTIAL);
             }
             break;
         }
@@ -606,7 +606,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::halfWordDataTransHandler(uint32_t instru
             }
 
             assert(l);
-            uint32_t val = (uint32_t)(bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
+            uint32_t val = (uint32_t)(bus->read16(address, Bus::CycleType::NONSEQUENTIAL));
             if (val & 0x00008000) {
                 setRegister(rd, 0xFFFF0000 | val);
             } else {
@@ -653,11 +653,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::singleDataSwapHandler(uint32_t instructi
         // it does read-rotated, but does write-unrotated.
         uint32_t rnVal = getRegister(rn);
         uint32_t rmVal = getRegister(rm);
-        // uint32_t data = bus->read32(aluShiftRor(rnVal & 0xFFFFFFFC, (rnVal & 3) * 8));
+        // uint32_t data = bus->read32(aluShiftRor(rnVal, (rnVal & 3) * 8));
         
-        uint32_t data = aluShiftRor(bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL), (rnVal & 3) * 8);
+        uint32_t data = aluShiftRor(bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL), (rnVal & 3) * 8);
         setRegister(rd, data);
-        bus->write32(rnVal & 0xFFFFFFFC, rmVal, Bus::CycleType::NONSEQUENTIAL);
+        bus->write32(rnVal, rmVal, Bus::CycleType::NONSEQUENTIAL);
     }
     bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
     return NONSEQUENTIAL;
@@ -705,10 +705,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data;
                     if(firstAccess) {
-                        data = bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
+                        data = bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        data = bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::SEQUENTIAL);
+                        data = bus->read32(rnVal, Bus::CycleType::SEQUENTIAL);
                     }
                     (!s) ? setRegister(reg, data)
                          : setUserRegister(reg, data);
@@ -727,10 +727,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
                     // TODO: take this out when implemeinting pipelining
                     if (reg == 15) data += 8;
                     if(firstAccess) {
-                        bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::NONSEQUENTIAL);
+                        bus->write32(rnVal, data, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::SEQUENTIAL);
+                        bus->write32(rnVal, data, Bus::CycleType::SEQUENTIAL);
                     }
                 }
                 rnVal += 4;
@@ -754,10 +754,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data;
                     if(firstAccess) {
-                        data = bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
+                        data = bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        data = bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::SEQUENTIAL);            
+                        data = bus->read32(rnVal, Bus::CycleType::SEQUENTIAL);            
                     }
                     (!s) ? setRegister(reg, data)
                          : setUserRegister(reg, data);
@@ -776,10 +776,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
                                          : getUserRegister(reg);
                     if (reg == 15) data += 8;
                     if(firstAccess) {
-                        bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::NONSEQUENTIAL);
+                        bus->write32(rnVal, data, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::SEQUENTIAL);
+                        bus->write32(rnVal, data, Bus::CycleType::SEQUENTIAL);
                     }
                 }
                 rnVal -= 4;
@@ -802,7 +802,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::blockDataTransHandler(uint32_t instructi
             // or later in the transfer order, will store the modified value.
             assert(addressRnStoredAt != 0);
             // TODO: how to tell of sequential or nonsequential
-            bus->write32(addressRnStoredAt & 0xFFFFFFFC, rnVal, Bus::CycleType::SEQUENTIAL);
+            bus->write32(addressRnStoredAt, rnVal, Bus::CycleType::SEQUENTIAL);
         }
         setRegister(rn, rnVal);
     }

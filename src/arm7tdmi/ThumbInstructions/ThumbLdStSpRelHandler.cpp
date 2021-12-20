@@ -16,10 +16,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStSpRelHandler(uint16_t instructi
 
     if constexpr(!opcode) {
         // 0: STR  Rd,[SP,#nn]  ;store 32bit data   WORD[SP+nn] = Rd
-        cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL); 
+        cpu->bus->write32(address, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL); 
     } else {
         // 1: LDR  Rd,[SP,#nn]  ;load  32bit data   Rd = WORD[SP+nn]
-        uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, 
+        uint32_t value = aluShiftRor(cpu->bus->read32(address, 
                                         Bus::CycleType::NONSEQUENTIAL),
                                         (address & 3) * 8);
         cpu->setRegister(rd, value);

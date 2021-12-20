@@ -55,7 +55,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStPushPopHandler(uint16_t ins
 
         if constexpr(pcLrBit) {
             // TODO, whether it's sequentiual or not might depend on whether rlist is empty
-            cpu->setRegister(PC_REGISTER, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL) & 0xFFFFFFFE);
+            cpu->setRegister(PC_REGISTER, cpu->bus->read32(spValue, Bus::CycleType::SEQUENTIAL));
             spValue += 4;
         } 
         cpu->setRegister(SP_REGISTER, spValue);

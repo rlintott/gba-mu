@@ -16,12 +16,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdStImmOffHandler(uint16_t instruct
         // 0: STR  Rd,[Rb,#nn]  ;store 32bit data   WORD[Rb+nn] = Rd
         uint32_t offset = (instruction & 0x07C0) >> 4;
         uint32_t address = cpu->getRegister(rb) + offset;
-        cpu->bus->write32(address & 0xFFFFFFFC, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+        cpu->bus->write32(address, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
     } else if constexpr(opcode == 1) {
         // 1: LDR  Rd,[Rb,#nn]  ;load  32bit data   Rd = WORD[Rb+nn]
         uint32_t offset = (instruction & 0x07C0) >> 4;
         uint32_t address = cpu->getRegister(rb) + offset;
-        uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, 
+        uint32_t value = aluShiftRor(cpu->bus->read32(address, 
                                                       Bus::CycleType::NONSEQUENTIAL),
                                      (address & 3) * 8);
         // if(rd == PC_REGISTER) {

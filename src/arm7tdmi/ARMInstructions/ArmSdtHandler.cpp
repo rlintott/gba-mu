@@ -90,22 +90,13 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdtHandler(uint32_t instruction, ARM7
         if constexpr(b) {  // transfer 8 bits
             cpu->setRegister(rd, (uint32_t)(cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL)));
         } else {  // transfer 32 bits
-            if ((address & 0x00000003) == 2) {
-                // aligned to half-word but not word
-                uint32_t low = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
-                uint32_t hi = (uint32_t)(cpu->bus->read16((address - 2) & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
-                uint32_t full = ((hi << 16) | low);
-                cpu->setRegister(rd, full);
-            } else {
-
-                // aligned to word
-                // Reads from forcibly aligned address "addr AND (NOT 3)",
-                // and does then rotate the data as "ROR (addr AND 3)*8". T
-                // TODO: move the masking and shifting into the read/write functions
-                cpu->setRegister(rd, aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC,
-                                 Bus::CycleType::NONSEQUENTIAL),
-                                 (address & 3) * 8));
-            }
+            // aligned to word
+            // Reads from forcibly aligned address "addr AND (NOT 3)",
+            // and does then rotate the data as "ROR (addr AND 3)*8". T
+            // TODO: move the masking and shifting into the read/write functions
+            cpu->setRegister(rd, aluShiftRor(cpu->bus->read32(address,
+                                Bus::CycleType::NONSEQUENTIAL),
+                                (address & 3) * 8));
         }
         cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
         if(rd == PC_REGISTER) {
@@ -119,7 +110,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSdtHandler(uint32_t instruction, ARM7
             cpu->bus->write8(address, (uint8_t)(rdVal), 
                              Bus::CycleType::NONSEQUENTIAL);
         } else {  // transfer 32 bits
-            cpu->bus->write32(address & 0xFFFFFFFC, (rdVal), 
+            cpu->bus->write32(address, (rdVal), 
                               Bus::CycleType::NONSEQUENTIAL);
         }
         
