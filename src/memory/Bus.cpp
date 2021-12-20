@@ -582,7 +582,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 // TODO handle strange io memory access
                 break;
             }
-            if(0x4000100 <= address && address <= 0x400010F) {
+            uint32_t upperLimit = address + (width / 8);
+            if(0x4000102 <= upperLimit && address <= 0x400010F) {
                 // timer addresses
                 timer->updateTimerUponWrite(address, value, width);
             }
@@ -590,7 +591,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             // TODO: there's a more efficient way to do this I think,
             // send the changed register to DMA AFTER the write happens
-            if(0x40000BA <= address && address <= 0x40000DF) {
+            if(0x40000BA <= upperLimit && address <= 0x40000DF) {
                 // dma addresses
                 dma->updateDmaUponWrite(address, value, width);
             }
@@ -617,7 +618,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // SPECIAL CASE when writing to interrupt request register
             // setting a bit (acknowledging an interrupt) changes that bit to zero
             // so do val &= ~val
-            if(0x4000200 <= address && address <= 0x4000203) {
+            if(0x4000202 <= upperLimit && address <= 0x4000203) {
 
                 uint8_t tempWidth = width;
                 uint32_t tempAddress = address;
