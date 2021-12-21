@@ -435,18 +435,19 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
                     memAccessCycles += 7;
-                    return readFromArray32(&gamePakRom, align32(address), 0x08000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
                     memAccessCycles += 4;
-                    return readFromArray16(&gamePakRom, align16(address), 0x08000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
                 }
                 case 8: {  
                     memAccessCycles += 4; 
-                    return readFromArray8(&gamePakRom, address, 0x08000000);           
+                    return readFromArray8(&gamePakRom, address, 0x00000000);           
                 }
                 default: {
                     assert(false);
@@ -459,15 +460,16 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0B: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, align32(address), 0x0A000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, align16(address), 0x0A000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
                 }
                 case 8: {
-                    return readFromArray8(&gamePakRom, address, 0x0A000000);            
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
                 }
                 default: {
                     assert(false);
@@ -480,15 +482,16 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0D:  {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, align32(address), 0x0C000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, align16(address), 0x0C000000);           
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);           
                 }
                 case 8: {
-                    return readFromArray8(&gamePakRom, address, 0x0C000000);            
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
                 }
                 default: {
                     assert(false);

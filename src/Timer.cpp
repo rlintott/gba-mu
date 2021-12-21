@@ -216,7 +216,6 @@ void Timer::timerXOverflowEvent(uint8_t x) {
     }
 
     if(timerIrqEnable[x]) {
-        DEBUGWARN("timer irq!\n");
         queueTimerInterrupt(x);
     }
 
