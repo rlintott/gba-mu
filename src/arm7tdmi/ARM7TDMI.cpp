@@ -86,7 +86,7 @@ uint32_t ARM7TDMI::step() {
     getNextInstruction(currentPcAccessType);
 
     // TODO: just return one cycle per instr for now
-    return 2;
+    return 1;
 }
 
 inline

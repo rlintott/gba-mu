@@ -254,18 +254,30 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
     uint32_t shift = (address & 0xFF000000) >> 24;
     //addCycleToExecutionTimeline(cycleType, address & 0x0F000000, width);
 
+    /*
+        TODO: The BIOS memory is protected against reading, 
+        the GBA allows to read opcodes or data only if the program counter 
+        is located inside of the BIOS area. If the program counter is not 
+        in the BIOS area, reading will return the most recent successfully 
+        fetched BIOS opcode (eg. the opcode at [00DCh+8] after startup and SoftReset, 
+        the opcode at [0134h+8] during IRQ execution, and opcode at [013Ch+8] after 
+        IRQ execution, and opcode at [0188h+8] after SWI execution).
+        (see mgba tests)
+    */
+
     switch(shift) {
         case 0x0:
         case 0x01: {
+            
             if(0x00004000 <= address && address <= 0x01FFFFFF)  {
                 break;
             }
             switch(width) {
                 case 32: {
-                    return readFromArray32(&bios, address, 0);
+                    return readFromArray32(&bios, align32(address), 0);
                 }
                 case 16: {
-                    return readFromArray16(&bios, address, 0);
+                    return readFromArray16(&bios, align16(address), 0);
                 }
                 case 8: {
                     return readFromArray8(&bios, address, 0);
@@ -283,11 +295,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             switch(width) {
                 case 32: {
                     memAccessCycles += 5;
-                    return readFromArray32(&wRamBoard, address, 0x02000000);
+                    return readFromArray32(&wRamBoard, align32(address), 0x02000000);
                 }
                 case 16: {
                     memAccessCycles += 2;
-                    return readFromArray16(&wRamBoard, address, 0x02000000);            
+                    return readFromArray16(&wRamBoard, align16(address), 0x02000000);            
                 }
                 case 8: {
                     memAccessCycles += 2;
@@ -308,10 +320,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             switch(width) {
                 case 32: {
-                    return readFromArray32(&wRamChip, address, 0x03000000);
+                    return readFromArray32(&wRamChip, align32(address), 0x03000000);
                 }
                 case 16: {
-                    return readFromArray16(&wRamChip, address, 0x03000000);            
+                    return readFromArray16(&wRamChip, align16(address), 0x03000000);            
                 }
                 case 8: {
                     return readFromArray8(&wRamChip, address, 0x03000000);            
@@ -328,19 +340,22 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
                 // TODO: handle strange io mem accesses
                 break;
             }
-            if(0x4000100 <= address && address <= 0x400010E) {
+            uint32_t upperLimit = address + (width / 8);
+            if(0x4000102 <= upperLimit && address <= 0x400010F) {
                 // timer addresses
                 timer->updateBusToPrepareForTimerRead(address, width);
             }
 
             switch(width) {
                 case 32: {
-                    return readFromArray32(&iORegisters, address, 0x04000000);
+                    return readFromArray32(&iORegisters, align32(address), 0x04000000);
                 }
                 case 16: {
-                    return readFromArray16(&iORegisters, address, 0x04000000);            }
+                    return readFromArray16(&iORegisters, align16(address), 0x04000000);            
+                }
                 case 8: {
-                    return readFromArray8(&iORegisters, address, 0x04000000);            }
+                    return readFromArray8(&iORegisters, address, 0x04000000);            
+                }
                 default: {
                     assert(false);
                     break;
@@ -355,10 +370,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             address &= 0x050003FF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&paletteRam, address, 0x05000000);
+                    return readFromArray32(&paletteRam, align32(address), 0x05000000);
                 }
                 case 16: {
-                    return readFromArray16(&paletteRam, address, 0x05000000);            
+                    return readFromArray16(&paletteRam, align16(address), 0x05000000);            
                 }
                 case 8: {
                     return readFromArray8(&paletteRam, address, 0x05000000);            
@@ -382,10 +397,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             }
             switch(width) {
                 case 32: {
-                    return readFromArray32(&vRam, address, 0x06000000);
+                    return readFromArray32(&vRam, align32(address), 0x06000000);
                 }
                 case 16: {
-                    return readFromArray16(&vRam, address, 0x06000000);            
+                    return readFromArray16(&vRam, align16(address), 0x06000000);            
                 }
                 case 8: {
                     return readFromArray8(&vRam, address, 0x06000000);            
@@ -401,10 +416,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             address &= 0x070003FF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&objAttributes, address, 0x07000000);
+                    return readFromArray32(&objAttributes, align32(address), 0x07000000);
                 }
                 case 16: {
-                    return readFromArray16(&objAttributes, address, 0x07000000);            
+                    return readFromArray16(&objAttributes, align16(address), 0x07000000);            
                 }
                 case 8: {
                     return readFromArray8(&objAttributes, address, 0x07000000);           
@@ -423,11 +438,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             switch(width) {
                 case 32: {
                     memAccessCycles += 7;
-                    return readFromArray32(&gamePakRom, address, 0x08000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x08000000);
                 }
                 case 16: {
                     memAccessCycles += 4;
-                    return readFromArray16(&gamePakRom, address, 0x08000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x08000000);            
                 }
                 case 8: {  
                     memAccessCycles += 4; 
@@ -446,10 +461,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 1
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, address, 0x0A000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x0A000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, address, 0x0A000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x0A000000);            
                 }
                 case 8: {
                     return readFromArray8(&gamePakRom, address, 0x0A000000);            
@@ -467,10 +482,10 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 2
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, address, 0x0C000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x0C000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, address, 0x0C000000);           
+                    return readFromArray16(&gamePakRom, align16(address), 0x0C000000);           
                 }
                 case 8: {
                     return readFromArray8(&gamePakRom, address, 0x0C000000);            
@@ -486,17 +501,17 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
-            address &= 0x0E00FFFF;
+            address &= 0x00007FFF;
 
             switch(width) {
                 case 32: {
-                    return ((uint32_t)readFromArray8(&gamePakSram, address, 0x0E000000)) * 0x01010101;      
+                    return (((uint32_t)readFromArray8(&gamePakSram, address, 0x00000000)) * 0x01010101);      
                 }
                 case 16: {
-                    return ((uint16_t)readFromArray8(&gamePakSram, address, 0x0E000000)) * (uint16_t)0x0101;    
+                    return ((uint32_t)readFromArray8(&gamePakSram, address, 0x00000000)) * 0x0101;    
                 }
                 case 8: {
-                    return readFromArray8(&gamePakSram, address, 0x0E000000);           
+                    return readFromArray8(&gamePakSram, address, 0x00000000);           
                 }
                 default: {
                     assert(false);
@@ -520,6 +535,7 @@ inline
 void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType) {
     // TODO: use same switch statement pattern as in fn addCycleToExecutionTimeline
     //addCycleToExecutionTimeline(accessType, address & 0x0F000000, width);
+    // TODO: templates for specifying width
     memAccessCycles += 1;
     uint32_t shift = (address & 0xFF000000) >> 24;
 
@@ -534,12 +550,12 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             switch(width) {
                 case 32: {
                     memAccessCycles += 5;
-                    writeToArray32(&wRamBoard, address, 0x02000000, value);
+                    writeToArray32(&wRamBoard, align32(address), 0x02000000, value);
                     break;
                 }
                 case 16: {
                     memAccessCycles += 2;
-                    writeToArray16(&wRamBoard, address, 0x02000000, value);    
+                    writeToArray16(&wRamBoard, align16(address), 0x02000000, value);    
                     break;        
                 }
                 case 8: {
@@ -559,11 +575,11 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             address &= 0x03007FFF;
             switch(width) {
                 case 32: {
-                    writeToArray32(&wRamChip, address, 0x03000000, value); 
+                    writeToArray32(&wRamChip, align32(address), 0x03000000, value); 
                     break;
                 }
                 case 16: {
-                    writeToArray16(&wRamChip, address, 0x03000000, value);       
+                    writeToArray16(&wRamChip, align16(address), 0x03000000, value);       
                     break;     
                 }
                 case 8: {
@@ -582,7 +598,8 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                 // TODO handle strange io memory access
                 break;
             }
-            if(0x4000100 <= address && address <= 0x400010F) {
+            uint32_t upperLimit = address + (width / 8);
+            if(0x4000102 <= upperLimit && address <= 0x400010F) {
                 // timer addresses
                 timer->updateTimerUponWrite(address, value, width);
             }
@@ -590,18 +607,18 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
 
             // TODO: there's a more efficient way to do this I think,
             // send the changed register to DMA AFTER the write happens
-            if(0x40000BA <= address && address <= 0x40000DF) {
+            if(0x40000BA <= upperLimit && address <= 0x40000DF) {
                 // dma addresses
                 dma->updateDmaUponWrite(address, value, width);
             }
 
             switch(width) {
                 case 32: {
-                    writeToArray32(&iORegisters, address, 0x04000000, value); 
+                    writeToArray32(&iORegisters, align32(address), 0x04000000, value); 
                     break;
                 }
                 case 16: {
-                    writeToArray16(&iORegisters, address, 0x04000000, value);      
+                    writeToArray16(&iORegisters, align16(address), 0x04000000, value);      
                     break;      
                 }
                 case 8: {
@@ -617,7 +634,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // SPECIAL CASE when writing to interrupt request register
             // setting a bit (acknowledging an interrupt) changes that bit to zero
             // so do val &= ~val
-            if(0x4000200 <= address && address <= 0x4000203) {
+            if(0x4000202 <= upperLimit && address <= 0x4000203) {
 
                 uint8_t tempWidth = width;
                 uint32_t tempAddress = address;
@@ -646,11 +663,11 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             address &= 0x050003FF;
             switch(width) {
                 case 32: {
-                    writeToArray32(&paletteRam, address, 0x05000000, value); 
+                    writeToArray32(&paletteRam, align32(address), 0x05000000, value); 
                     break;
                 }
                 case 16: {
-                    writeToArray16(&paletteRam, address, 0x05000000, value);         
+                    writeToArray16(&paletteRam, align16(address), 0x05000000, value);         
                     break;    
                 }
                 case 8: {
@@ -659,7 +676,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
                     and to Palette (5000000h-50003FFh) are writing the new 8bit value to
                     BOTH upper and lower 8bits of the addressed halfword, ie. "[addr AND NOT 1]=data*101h".
                     */
-                    writeToArray16(&paletteRam, address & 0xFFFFFFFE, 0x05000000, value * 0x101); 
+                    writeToArray16(&paletteRam, align16(address), 0x05000000, value * 0x101); 
                     break;            
                 }
                 default: {
@@ -682,11 +699,11 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //address = (address & 0x0607FFF);
             switch(width) {
                 case 32: {
-                    writeToArray32(&vRam, address, 0x06000000, value);
+                    writeToArray32(&vRam, align32(address), 0x06000000, value);
                     break;
                 }
                 case 16: {
-                    writeToArray16(&vRam, address, 0x06000000, value);    
+                    writeToArray16(&vRam, align16(address), 0x06000000, value);    
                     break;        
                 }
                 case 8: {
@@ -706,11 +723,11 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             address &= 0x070003FF;
             switch(width) {
                 case 32: {
-                    writeToArray32(&objAttributes, address, 0x07000000, value);
+                    writeToArray32(&objAttributes, align32(address), 0x07000000, value);
                     break;
                 }
                 case 16: {
-                    writeToArray16(&objAttributes, address, 0x07000000, value);          
+                    writeToArray16(&objAttributes, align16(address), 0x07000000, value);          
                     break;  
                 }
                 case 8: {
@@ -806,21 +823,21 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
-            address &= 0x0E00FFFF;
+            address &= 0x00007FFF;
 
             switch(width) {
                 case 32: {
-                    value = ARM7TDMI::aluShiftRor(value, address * 8);
-                    writeToArray8(&gamePakSram, address, 0x0E000000, value); 
+                    value = ARM7TDMI::aluShiftRor(value, (address) * 8);
+                    writeToArray8(&gamePakSram, address, 0x00000000, value); 
                     break;
                 }
                 case 16: {
-                    value = ARM7TDMI::aluShiftRor(value, address * 8);
-                    writeToArray8(&gamePakSram, address, 0x0E000000, value); 
+                    value = ARM7TDMI::aluShiftRor(value, (address) * 8);
+                    writeToArray8(&gamePakSram, address, 0x00000000, value); 
                     break;
                 }
                 case 8: {
-                    writeToArray8(&gamePakSram, address, 0x0E000000, value); 
+                    writeToArray8(&gamePakSram, address, 0x00000000, value); 
                     break;           
                 }
                 default: {

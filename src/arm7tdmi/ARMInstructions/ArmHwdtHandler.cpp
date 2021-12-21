@@ -66,11 +66,11 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
         if constexpr(l) {  // LDR{cond}H  Rd,<Address>  ;Load Unsigned halfword
                     // (zero-extended)         
             cpu->setRegister(rd, aluShiftRor(
-                                        (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL)),
+                                        (uint32_t)(cpu->bus->read16(address, Bus::CycleType::NONSEQUENTIAL)),
                                         (address & 1) * 8));
             cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
         } else {  // STR{cond}H  Rd,<Address>  ;Store halfword   [a]=Rd
-            cpu->bus->write16(address & 0xFFFFFFFE, (uint16_t)rdVal, Bus::CycleType::NONSEQUENTIAL);
+            cpu->bus->write16(address, (uint16_t)rdVal, Bus::CycleType::NONSEQUENTIAL);
         }
 
     } else if constexpr(opcode == 2) {// LDR{cond}SB Rd,<Address>  ;Load Signed byte (sign extended)
@@ -98,7 +98,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armHwdtHandler(uint32_t instruction, ARM
             }
         } else {
             assert(l);
-            uint32_t val = (uint32_t)(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL));
+            uint32_t val = (uint32_t)(cpu->bus->read16(address, Bus::CycleType::NONSEQUENTIAL));
             if (val & 0x00008000) {
                 cpu->setRegister(rd, 0xFFFF0000 | val);
             } else {

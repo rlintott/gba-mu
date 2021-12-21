@@ -10,7 +10,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbLdPcRelHandler(uint16_t instruction
     constexpr uint8_t rd = (op & 0x01C) >> 2;
 
     uint32_t address = ((cpu->getRegister(PC_REGISTER) + 2) & 0xFFFFFFFD) + offset;
-    uint32_t value = aluShiftRor(cpu->bus->read32(address & 0xFFFFFFFC, 
+    uint32_t value = aluShiftRor(cpu->bus->read32(address, 
                                  Bus::CycleType::NONSEQUENTIAL), 
                                  (address & 3) * 8);
                                  

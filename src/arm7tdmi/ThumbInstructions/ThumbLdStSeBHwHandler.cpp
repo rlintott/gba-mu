@@ -22,7 +22,7 @@ ARM7TDMI::thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
     if constexpr(opcode == 0) {
         // 0: STRH Rd,[Rb,Ro]  ;store 16bit data          HALFWORD[Rb+Ro] =
         // Rd
-        cpu->bus->write16(address & 0xFFFFFFFE, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
+        cpu->bus->write16(address, cpu->getRegister(rd), Bus::CycleType::NONSEQUENTIAL);
     } else if constexpr(opcode == 1) {
         // 1: LDSB Rd,[Rb,Ro]  ;load sign-extended 8bit   Rd = BYTE[Rb+Ro]
         uint32_t value = cpu->bus->read8(address, Bus::CycleType::NONSEQUENTIAL);
@@ -32,7 +32,7 @@ ARM7TDMI::thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
     } else if constexpr(opcode == 2) {
         // 2: LDRH Rd,[Rb,Ro]  ;load zero-extended 16bit  Rd =
         // HALFWORD[Rb+Ro]
-        uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
+        uint32_t value = aluShiftRor(cpu->bus->read16(address, Bus::CycleType::NONSEQUENTIAL),
                                         (address & 1) * 8);
         cpu->setRegister(rd, value);
         cpu->bus->addCycleToExecutionTimeline(Bus::CycleType::INTERNAL, 0, 0);
@@ -45,7 +45,7 @@ ARM7TDMI::thumbLdStSeBHwHandler(uint16_t instruction, ARM7TDMI* cpu) {
             value = (value & 0x80) ? (0xFFFFFF00 | value) : value;
             cpu->setRegister(rd, value);
         } else {
-            uint32_t value = aluShiftRor(cpu->bus->read16(address & 0xFFFFFFFE, Bus::CycleType::NONSEQUENTIAL),
+            uint32_t value = aluShiftRor(cpu->bus->read16(address, Bus::CycleType::NONSEQUENTIAL),
                                             (address & 1) * 8);
             value = (value & 0x8000) ? (0xFFFF0000 | value) : value;
             cpu->setRegister(rd, value);

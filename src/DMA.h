@@ -27,6 +27,9 @@ class DMA {
         static const uint32_t anyMemMask      = 0x0FFFFFFF;
         static const uint32_t dma3MaxWordCount = 0x10000;
         static const uint32_t dma012MaxWordCount = 0x4000;
+        static const uint32_t dma3WordMask = 0xFFFF;
+        static const uint32_t dma012WordMask = 0x3FFF;
+
 
         bool dmaXEnabled[4] = {false, false, false, false};
 

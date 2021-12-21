@@ -106,6 +106,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
+                } else {
+                    dmaXWordCount[x] &= dma012WordMask;
                 }
                 break;
             }
@@ -115,6 +117,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
+                } else {
+                    dmaXWordCount[x] &= dma012WordMask;
                 }
                 break;
             }
@@ -124,6 +128,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma012MaxWordCount;
+                } else {
+                    dmaXWordCount[x] &= dma012WordMask;
                 }
                 break;
             }
@@ -133,6 +139,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
                 if(dmaXWordCount[x] == 0) {
                     dmaXWordCount[x] = dma3MaxWordCount;
+                } else {
+                    dmaXWordCount[x] &= dma3WordMask;
                 }
                 break;
             }
@@ -154,6 +162,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     uint32_t offset = thirtyTwoBit ? 4 : 2;
 
     // writing / reading from memeory
+    // TODO: implement DMA open bus (some games are dependent on it and wil help pass mgba test suite)
 
     for(uint32_t i = 0; i < dmaXWordCount[x]; i++) {
         if(thirtyTwoBit) {

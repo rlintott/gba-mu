@@ -32,7 +32,9 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
         }
     }
 
-    if constexpr (s) assert(cpu->cpsr.Mode != USER);
+    if constexpr (s) {
+        assert(cpu->cpsr.Mode != USER);
+    }
     uint16_t regList = (uint16_t)instruction;
     uint32_t addressRnStoredAt = 0;  // see below
     bool firstAccess = true;
@@ -49,10 +51,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data;
                     if(firstAccess) {
-                        data = cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
+                        data = aluShiftRor(cpu->bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL), 
+                                           (rnVal & 3) * 8);
                         firstAccess = false;
                     } else {
-                        data = cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::SEQUENTIAL);
+                        data = aluShiftRor(cpu->bus->read32(rnVal, Bus::CycleType::SEQUENTIAL), 
+                                           (rnVal & 3) * 8);
                     }
                     if constexpr(!s) {
                         cpu->setRegister(reg, data);
@@ -76,13 +80,15 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                         data = cpu->getUserRegister(reg);
                     }  
                     // TODO: take this out when implemeinting pipelining
-                    if (reg == 15) data += 8;
+                    if (reg == 15) {
+                        data += 8;
+                    }
 
                     if(firstAccess) {
-                        cpu->bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::NONSEQUENTIAL);
+                        cpu->bus->write32(rnVal, data, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        cpu->bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::SEQUENTIAL);
+                        cpu->bus->write32(rnVal, data, Bus::CycleType::SEQUENTIAL);
                     }
                 }
                 rnVal += 4;
@@ -106,10 +112,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                     // LDM{cond}{amod} Rn{!},<Rlist>{^}  ;Load  (Pop)
                     uint32_t data;
                     if(firstAccess) {
-                        data = cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::NONSEQUENTIAL);
+                        data = aluShiftRor(cpu->bus->read32(rnVal, Bus::CycleType::NONSEQUENTIAL), 
+                                           (rnVal & 3) * 8);
                         firstAccess = false;
                     } else {
-                        data = cpu->bus->read32(rnVal & 0xFFFFFFFC, Bus::CycleType::SEQUENTIAL);            
+                        data = aluShiftRor(cpu->bus->read32(rnVal, Bus::CycleType::SEQUENTIAL), 
+                                           (rnVal & 3) * 8);           
                     }
                     if constexpr(!s) {
                         cpu->setRegister(reg, data);
@@ -135,10 +143,10 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                     } 
                     if (reg == 15) data += 8;
                     if(firstAccess) {
-                        cpu->bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::NONSEQUENTIAL);
+                        cpu->bus->write32(rnVal, data, Bus::CycleType::NONSEQUENTIAL);
                         firstAccess = false;
                     } else {
-                        cpu->bus->write32(rnVal & 0xFFFFFFFC, data, Bus::CycleType::SEQUENTIAL);
+                        cpu->bus->write32(rnVal, data, Bus::CycleType::SEQUENTIAL);
                     }
                 }
                 rnVal -= 4;
@@ -161,7 +169,7 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7
                 // or later in the transfer order, will store the modified value.
                 assert(addressRnStoredAt != 0);
                 // TODO: how to tell of sequential or nonsequential
-                cpu->bus->write32(addressRnStoredAt & 0xFFFFFFFC, rnVal, Bus::CycleType::SEQUENTIAL);
+                cpu->bus->write32(addressRnStoredAt, rnVal, Bus::CycleType::SEQUENTIAL);
             }
         }
         cpu->setRegister(rn, rnVal);

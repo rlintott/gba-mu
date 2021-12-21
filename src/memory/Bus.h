@@ -206,5 +206,18 @@ class Bus {
     std::shared_ptr<PPU> ppu;
     std::shared_ptr<Timer> timer; 
     std::shared_ptr<DMA> dma;
+    
+    static uint32_t align32(uint32_t address);
+    static uint32_t align16(uint32_t address);
 
-};
+ };
+
+ inline
+ uint32_t Bus::align32(uint32_t address) {
+     return address & 0xFFFFFFFC;
+ }
+
+ inline
+ uint32_t Bus::align16(uint32_t address) {
+     return address & 0xFFFFFFFE;
+ } 

@@ -54,10 +54,12 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStHandler(uint16_t instructio
         for(int i = 0; i < 8; i++) {
             if(rList & 0x01) {
                 if(firstAccess) {
-                    cpu->setRegister(i, cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL));
+                    cpu->setRegister(i, aluShiftRor(cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL), 
+                                                    (rbValue & 3) * 8));
                     firstAccess = false;
                 } else {
-                    cpu->setRegister(i, cpu->bus->read32(rbValue, Bus::CycleType::SEQUENTIAL));
+                    cpu->setRegister(i, aluShiftRor(cpu->bus->read32(rbValue, Bus::CycleType::SEQUENTIAL), 
+                                                    (rbValue & 3) * 8));
                 }
                 rbValue += 4;
             }
@@ -66,7 +68,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbMultLdStHandler(uint16_t instructio
         if(!(instruction & 0x00FF)) {
             // empty rList
             // R15 loaded/stored (ARMv4 only), and Rb=Rb+40h (ARMv4-v5).
-            cpu->setRegister(PC_REGISTER, cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL));
+            cpu->setRegister(PC_REGISTER, aluShiftRor(cpu->bus->read32(rbValue, Bus::CycleType::NONSEQUENTIAL), 
+                                                     (rbValue & 3) * 8));
             rbValue += 0x40;
         }
         if(((uint32_t)rList >> rb) & 0x1) {
