@@ -51,7 +51,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
     }
     if(startTiming == 2) {
-        //DEBUGWARN(hBlank << " here!!!!! :o\n");
         if(!hBlank) {
             DEBUGWARN("error! hblank dma outside of hblank, this shouldn't be happening\n");
         }

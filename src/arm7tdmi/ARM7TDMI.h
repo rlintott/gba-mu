@@ -913,7 +913,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
     switch (mode) {
         case SYSTEM:
         case USER: {
-            currentSpsr = &cpsr;
+            //currentSpsr = &cpsr;
             registers[8] = &r8;
             registers[9] = &r9;
             registers[10] = &r10;
@@ -925,6 +925,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
         }
         case FIQ: {
             currentSpsr = &SPSR_fiq;
+            //*(getCurrentModeSpsr()) = cpsr;
             registers[8] = &r8_fiq;
             registers[9] = &r9_fiq;
             registers[10] = &r10_fiq;
@@ -936,32 +937,35 @@ void ARM7TDMI::switchToMode(Mode mode) {
         }
         case IRQ: {
             currentSpsr = &SPSR_irq;
+            //*(getCurrentModeSpsr()) = cpsr;
             registers[13] = &r13_irq;
             registers[14] = &r14_irq;
             break;
         }
         case SUPERVISOR: {
             currentSpsr = &SPSR_svc;
+            //*(getCurrentModeSpsr()) = cpsr;
             registers[13] = &r13_svc;
             registers[14] = &r14_svc;
             break;
         }
         case ABORT: {
             currentSpsr = &SPSR_abt;
+            //*(getCurrentModeSpsr()) = cpsr;
             registers[13] = &r13_abt;
             registers[14] = &r14_abt;
             break;
         }
         case UNDEFINED: {
             currentSpsr = &SPSR_und;
+            //*(getCurrentModeSpsr()) = cpsr;
             registers[13] = &r13_abt;
             registers[14] = &r14_abt;
             break;
         }
     }
     // SPSR_svc=CPSR   ;save CPSR flags
-    *(getCurrentModeSpsr()) = cpsr;
-    cpsr.Mode = mode;
+    
 }
 
 inline
@@ -998,7 +1002,10 @@ void ARM7TDMI::transferToPsr(uint32_t value, uint8_t field,
             
             // TODO: implemnt less hacky way to transfer psr
             if(psr == &cpsr) {
+                // TODO" are we actually supposed to change cpu mode here? Or are just the bits being changed
                 switchToMode(ARM7TDMI::Mode(mode));
+                *currentSpsr = cpsr;
+                cpsr.Mode = ARM7TDMI::Mode(mode);
             }   
         }
     }

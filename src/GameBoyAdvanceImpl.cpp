@@ -46,7 +46,7 @@ GameBoyAdvanceImpl::GameBoyAdvanceImpl() {
 }
 
 void GameBoyAdvanceImpl::printCpuState() {\
-    debugger->stepMode = true;
+    Debugger::stepMode = true;
     debugger->step(arm7tdmi.get(), bus.get());
     debugger->printState();
 }
@@ -103,15 +103,15 @@ void GameBoyAdvanceImpl::enterMainLoop() {
     while(true) {
         if(debugMode) {
             debugger->step(arm7tdmi.get(), bus.get());
-            if(debugger->stepMode) {
-                while(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && debugger->stepMode) {
+            if(Debugger::stepMode) {
+                while(sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && Debugger::stepMode) {
 
                 };
-                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && debugger->stepMode) {
+                while(!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && debugMode && Debugger::stepMode) {
                     if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
                         std::cout << "Leaving DEBUG mode!\n";
                         debugMode = false;
-                        debugger->stepMode = false;
+                        Debugger::stepMode = false;
                         break;
                     }
                 };
@@ -241,7 +241,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Z)) {
                         std::cout << "Entering DEBUG mode! Press LSHIFT to step through CPU instructions\n";
                         debugMode = true;
-                        debugger->stepMode = true;
+                        Debugger::stepMode = true;
                     }
                     // add next vblank event
                     scheduler->addEvent(Scheduler::EventType::VBLANK, 
