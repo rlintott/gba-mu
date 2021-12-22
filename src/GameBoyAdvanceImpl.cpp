@@ -275,12 +275,14 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     break;
                 }
                 case Scheduler::EventType::HBLANK_END: {
-                    ppu->renderScanline(nextScanline);
+                    ppu->renderScanline(currentScanline);
                     // setting hblank flag to 0
                     currentScanline += (cyclesSinceStart - cyclesSinceLastScanline) / PPU::H_TOTAL;    
                     cyclesSinceLastScanline = cyclesSinceStart - (cyclesSinceStart % PPU::H_TOTAL);
                     currentScanline %= 228;
                     nextScanline = (currentScanline + 1) % 228;
+
+                    
                     
                     bus->iORegisters[Bus::IORegister::DISPSTAT] &= (~0x2);
                     if(currentScanline == ((uint16_t)(bus->iORegisters[Bus::IORegister::DISPSTAT + 1]))) {
