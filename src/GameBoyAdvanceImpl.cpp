@@ -17,7 +17,6 @@
 #include "DMA.h"
 #include "Timer.h"
 #include "Debugger.h"
-#include "Scheduler.h"
 
 using milliseconds = std::chrono::milliseconds;
 
@@ -139,59 +138,19 @@ void GameBoyAdvanceImpl::enterMainLoop() {
             uint64_t eventCycles = 0;
             switch(nextEvent->eventType) {
                 case Scheduler::EventType::DMA0: {
-                    // TODO: put this repetive code into inline fn
-                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
-                        eventCycles += dma->dmaX(0, false, false, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
-                        eventCycles += dma->dmaX(0, false, true, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
-                        eventCycles += dma->dmaX(0, true, false, currentScanline);
-                    } else {
-                        // EventCondition == DMA3Videomode;
-                        eventCycles += dma->dmaX(0, false, true, currentScanline);
-                    }
+                    dmaXEvent(0, nextEvent, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::DMA1: {
-
-                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
-                        eventCycles += dma->dmaX(1, false, false, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
-                        eventCycles += dma->dmaX(1, false, true, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
-                        eventCycles += dma->dmaX(1, true, false, currentScanline);
-                    } else {
-                        // EventCondition == DMA3Videomode;
-                        eventCycles += dma->dmaX(1, false, true, currentScanline);
-                    }                   
+                    dmaXEvent(1, nextEvent, currentScanline);             
                     break;
                 }
                 case Scheduler::EventType::DMA2: {
-
-                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
-                        eventCycles += dma->dmaX(2, false, false, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
-                        eventCycles += dma->dmaX(2, false, true, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
-                        eventCycles += dma->dmaX(2, true, false, currentScanline);
-                    } else {
-                        // EventCondition == DMA3Videomode;
-                        eventCycles += dma->dmaX(2, false, true, currentScanline);
-                    }                    
+                    dmaXEvent(2, nextEvent, currentScanline);                 
                     break;
                 }
                 case Scheduler::EventType::DMA3: {
-
-                    if(nextEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
-                        eventCycles += dma->dmaX(3, false, false, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
-                        eventCycles += dma->dmaX(3, false, true, currentScanline);
-                    } else if(nextEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
-                        eventCycles += dma->dmaX(3, true, false, currentScanline);
-                    } else {
-                        // EventCondition == DMA3Videomode;
-                        eventCycles += dma->dmaX(3, false, true, currentScanline);
-                    }                  
+                    dmaXEvent(3, nextEvent, currentScanline);
                     break;
                 }
                 case Scheduler::EventType::TIMER0: {
@@ -324,6 +283,20 @@ ARM7TDMI* GameBoyAdvanceImpl::getCpu() {
     return arm7tdmi.get();
 }
 
+
+inline 
+void GameBoyAdvanceImpl::dmaXEvent(uint8_t x, Scheduler::Event* dmaEvent, uint16_t currentScanline) {
+    if(dmaEvent->eventCondition == Scheduler::EventCondition::NULL_CONDITION) {
+        dma->dmaX(x, false, false, currentScanline);
+    } else if(dmaEvent->eventCondition == Scheduler::EventCondition::HBLANK_START) {
+        dma->dmaX(x, false, true, currentScanline);
+    } else if(dmaEvent->eventCondition == Scheduler::EventCondition::VBLANK_START) {
+        dma->dmaX(x, true, false, currentScanline);
+    } else {
+        // EventCondition == DMA3Videomode;
+        dma->dmaX(x, false, true, currentScanline);
+    }       
+}
 
 
 
