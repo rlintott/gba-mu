@@ -9,7 +9,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::thumbSwiHandler(uint16_t instruction, AR
 
     // cpu->cpsr=<changed>  ;Enter svc/abt
     cpu->switchToMode(Mode::SUPERVISOR);
-
+    *(cpu->currentSpsr) = cpu->cpsr;
+    cpu->cpsr.Mode = Mode::SUPERVISOR;
     // ARM state, IRQs disabled
     cpu->cpsr.T = 0;
     cpu->cpsr.I = 1;

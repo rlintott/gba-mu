@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include "Scheduler.h"
 
 class ARM7TDMI;
 class Bus;
@@ -10,7 +11,7 @@ class PPU;
 class DMA;
 class Timer;
 class Debugger;
-class Scheduler;
+
 
 class GameBoyAdvanceImpl {
    public:
@@ -38,6 +39,8 @@ class GameBoyAdvanceImpl {
     uint64_t getTotalCyclesElapsed();
     void testDisplay();
 
+    void dmaXEvent(uint8_t x, Scheduler::Event* dmaEvent, uint16_t currentScanline);
+
     bool hBlank = false;
     bool scanlineRendered = false;
     bool vBlank = false;
@@ -51,3 +54,4 @@ class GameBoyAdvanceImpl {
     bool debugMode = false;
 
 };
+

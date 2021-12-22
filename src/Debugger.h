@@ -16,20 +16,20 @@ class Debugger {
         void updateState(ARM7TDMI* cpu, Bus* bus);
         void printState();
         void step(ARM7TDMI* cpu, Bus* bus);
-        bool stepMode = false;
+        static bool stepMode;
         std::string disassembleArm(uint32_t instruction);
 
     private:
 
         csh sCapstone;
         
-        uint32_t watchAddr1 = 0x00000000;
-        uint8_t watchAddr1Width = 8;
+        uint32_t watchAddr1 = 0x04000208;
+        uint8_t watchAddr1Width = 32;
 
-        uint32_t watchAddr2 = 0x00000000;
+        uint32_t watchAddr2 = 0x04000200;
         uint8_t watchAddr2Width = 8;
 
-        uint32_t watchAddr3 = 0x00000000;
+        uint32_t watchAddr3 = 0x04000202;
         uint8_t watchAddr3Width = 8;
 
         uint32_t watchAddr4 = 0x00000000;

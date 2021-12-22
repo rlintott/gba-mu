@@ -435,18 +435,19 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x09: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
                     memAccessCycles += 7;
-                    return readFromArray32(&gamePakRom, align32(address), 0x08000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
                     memAccessCycles += 4;
-                    return readFromArray16(&gamePakRom, align16(address), 0x08000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
                 }
                 case 8: {  
                     memAccessCycles += 4; 
-                    return readFromArray8(&gamePakRom, address, 0x08000000);           
+                    return readFromArray8(&gamePakRom, address, 0x00000000);           
                 }
                 default: {
                     assert(false);
@@ -459,15 +460,16 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0B: {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, align32(address), 0x0A000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, align16(address), 0x0A000000);            
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
                 }
                 case 8: {
-                    return readFromArray8(&gamePakRom, address, 0x0A000000);            
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
                 }
                 default: {
                     assert(false);
@@ -480,15 +482,16 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0D:  {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
+            address &= 0x00FFFFFF;
             switch(width) {
                 case 32: {
-                    return readFromArray32(&gamePakRom, align32(address), 0x0C000000);
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
                 }
                 case 16: {
-                    return readFromArray16(&gamePakRom, align16(address), 0x0C000000);           
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);           
                 }
                 case 8: {
-                    return readFromArray8(&gamePakRom, address, 0x0C000000);            
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
                 }
                 default: {
                     assert(false);
@@ -855,6 +858,282 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
     }
 }
 
+uint32_t Bus::view32(uint32_t address) {
+    return view(address, 32);
+}
+
+uint32_t Bus::view(uint32_t address, uint8_t width) {
+    // TODO avoid the code copying for this method
+
+    /*
+        TODO: The BIOS memory is protected against reading, 
+        the GBA allows to read opcodes or data only if the program counter 
+        is located inside of the BIOS area. If the program counter is not 
+        in the BIOS area, reading will return the most recent successfully 
+        fetched BIOS opcode (eg. the opcode at [00DCh+8] after startup and SoftReset, 
+        the opcode at [0134h+8] during IRQ execution, and opcode at [013Ch+8] after 
+        IRQ execution, and opcode at [0188h+8] after SWI execution).
+        (see mgba tests)
+    */
+
+   uint32_t shift = (address & 0xFF000000) >> 24;
+
+    switch(shift) {
+        case 0x0:
+        case 0x01: {
+            
+            if(0x00004000 <= address && address <= 0x01FFFFFF)  {
+                break;
+            }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&bios, align32(address), 0);
+                }
+                case 16: {
+                    return readFromArray16(&bios, align16(address), 0);
+                }
+                case 8: {
+                    return readFromArray8(&bios, address, 0);
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+                break;
+            }
+            break;
+        }
+        case 0x02: { // board RAM 
+            address &= 0x0203FFFF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&wRamBoard, align32(address), 0x02000000);
+                }
+                case 16: {
+                    return readFromArray16(&wRamBoard, align16(address), 0x02000000);            
+                }
+                case 8: {
+                    return readFromArray8(&wRamBoard, address, 0x02000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }
+            break;
+        }   
+        case 0x03: {   
+            // mirrored every 8000 bytes
+            address &= 0x03007FFF;
+            if(address > 0x03007FFF) {
+                break;
+            }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&wRamChip, align32(address), 0x03000000);
+                }
+                case 16: {
+                    return readFromArray16(&wRamChip, align16(address), 0x03000000);            
+                }
+                case 8: {
+                    return readFromArray8(&wRamChip, address, 0x03000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }     
+            break;
+        }      
+        case 0x04: {
+            if(address > 0x040003FE) {
+                // TODO: handle strange io mem accesses
+                break;
+            }
+
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&iORegisters, align32(address), 0x04000000);
+                }
+                case 16: {
+                    return readFromArray16(&iORegisters, align16(address), 0x04000000);            
+                }
+                case 8: {
+                    return readFromArray8(&iORegisters, address, 0x04000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }    
+            break;       
+        }     
+        case 0x05: {  
+            // if(address > 0x050003FF) {
+            //     break;
+            // }  
+            address &= 0x050003FF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&paletteRam, align32(address), 0x05000000);
+                }
+                case 16: {
+                    return readFromArray16(&paletteRam, align16(address), 0x05000000);            
+                }
+                case 8: {
+                    return readFromArray8(&paletteRam, address, 0x05000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;
+        }    
+        case 0x06: {    
+            // Even though VRAM is sized 96K (64K+32K), it is repeated in steps of 128K 
+            // (64K+32K+32K, the two 32K blocks itself being mirrors of each other).
+            //address &= 0x06017FFF;
+            if(address & 0x00010000) {
+                address &= 0x06007FFF;
+                address += 0x10000;
+            } else {
+                address &= 0x0600FFFF;
+            }
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&vRam, align32(address), 0x06000000);
+                }
+                case 16: {
+                    return readFromArray16(&vRam, align16(address), 0x06000000);            
+                }
+                case 8: {
+                    return readFromArray8(&vRam, address, 0x06000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }    
+            break;
+        }        
+        case 0x07: {   
+            address &= 0x070003FF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&objAttributes, align32(address), 0x07000000);
+                }
+                case 16: {
+                    return readFromArray16(&objAttributes, align16(address), 0x07000000);            
+                }
+                case 8: {
+                    return readFromArray8(&objAttributes, address, 0x07000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }
+            break;
+        }      
+        case 0x08:
+        case 0x09: {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 0 
+            address &= 0x00FFFFFF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
+                }
+                case 8: {  
+                    return readFromArray8(&gamePakRom, address, 0x00000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;  
+        } 
+        case 0x0A:
+        case 0x0B: {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 1
+            address &= 0x00FFFFFF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);            
+                }
+                case 8: {
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }   
+            break;
+        } 
+        case 0x0C:
+        case 0x0D:  {
+            //  TODO: *** Separate timings for sequential, and non-sequential accesses.
+            // waitstate 2
+            address &= 0x00FFFFFF;
+            switch(width) {
+                case 32: {
+                    return readFromArray32(&gamePakRom, align32(address), 0x00000000);
+                }
+                case 16: {
+                    return readFromArray16(&gamePakRom, align16(address), 0x00000000);           
+                }
+                case 8: {
+                    return readFromArray8(&gamePakRom, address, 0x00000000);            
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+            break;  
+        }
+        case 0x0E:
+        case 0x0F:  {
+            // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
+            // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
+            address &= 0x00007FFF;
+
+            switch(width) {
+                case 32: {
+                    return (((uint32_t)readFromArray8(&gamePakSram, address, 0x00000000)) * 0x01010101);      
+                }
+                case 16: {
+                    return ((uint32_t)readFromArray8(&gamePakSram, address, 0x00000000)) * 0x0101;    
+                }
+                case 8: {
+                    return readFromArray8(&gamePakSram, address, 0x00000000);           
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            } 
+
+            break;
+        }
+        default: {  
+            // TODO: implement unused memory access behaviour (and check for unused memory writes)
+            break;
+        }
+
+    }
+    return 436207618U;
+}
 
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB

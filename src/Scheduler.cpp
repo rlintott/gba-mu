@@ -75,7 +75,9 @@ void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCond
                     // putting the event condition event *after* the event that activates the condition
                     prev = curr;
                     curr = curr->next;
-                    while((curr->event.eventType < eventType) && curr->event.eventCondition == eventCondition) {
+                    while(curr != nullptr && 
+                          curr->event.eventType < eventType && 
+                          curr->event.eventCondition == eventCondition) {
                         // make sure DMA priority is maintained
                         curr = curr->next;
                     }

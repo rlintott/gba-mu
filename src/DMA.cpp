@@ -29,9 +29,14 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         } else if(x == 3) {
             // video capture mode
-            if(!hBlank || (scanline != 2)) {
+            if(!hBlank) {
+                DEBUGWARN("error! videoMode dma outside of hblank, this shouldn't be happening\n");
+                return 0;
+            }
+            if((scanline != 2)) {
                 // Capture works similar like HBlank DMA, however, the transfer is started when VCOUNT=2,
                 // it is then repeated each scanline, and it gets stopped when VCOUNT=162
+                scheduleDmaX(x, (control >> 8), false);
                 return 0;
             }
         } else {
@@ -41,13 +46,18 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     if(startTiming == 1) {
         if(!vBlank) {
+            DEBUGWARN("error! vblank dma outside of vblank, this shouldn't be happening\n");
             return 0;
         }
     }
     if(startTiming == 2) {
-        if(!hBlank || scanline > PPU::SCREEN_HEIGHT - 1) {
-            return 0;
+        if(!hBlank) {
+            DEBUGWARN("error! hblank dma outside of hblank, this shouldn't be happening\n");
         }
+        if(scanline > PPU::SCREEN_HEIGHT - 1) {
+            scheduleDmaX(x, (control >> 8), false);
+            return 0;
+        }   
     }
 
     // TODO: Game Pak DRQ  - DMA3 only -  (0=Normal, 1=DRQ <from> Game Pak, DMA3)    
@@ -231,7 +241,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             // another event occurred during this dma! exit to handle that event
             // while scheduling this one immediately to resume after the event
             if((scheduler->peekNextEvent()->eventType) < Scheduler::convertDmaValToDmaEvent(x)) {
-                scheduleDmaX(x, control, true);
+                scheduleDmaX(x, (control >> 8), true);
                 dmaXWordCount[x] -= (i + 1);;
                 return tempCycles;
             }
@@ -266,7 +276,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         uint16_t control = (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset]) |
                     (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
         
-        scheduleDmaX(x, control, false);
+        scheduleDmaX(x, (control >> 8), false);
 
     }
     if(control & 0x4000) {
@@ -337,7 +347,6 @@ void DMA::updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width) {
                 break;
             }
         }
-        
         width -= 8;
         address += 1;
         value = value >> 8;
@@ -372,11 +381,7 @@ void DMA::scheduleDmaX(uint32_t x, uint8_t upperControlByte, bool immediately) {
         // enabling dma
         uint32_t ioRegOffset =  0xC * x;
 
-        // 40000BAh - DMA0CNT_H - DMA 0 Control (R/W)
-        uint16_t control = (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + ioRegOffset]) |
-                           (uint16_t)(bus->iORegisters[Bus::IORegister::DMA0CNT_H + 1 + ioRegOffset] << 8);
-
-        uint8_t startTiming = (control & 0x3000) >> 12;
+        uint8_t startTiming = (upperControlByte & 0x30) >> 4;
 
         uint32_t cyclesInFuture = 2;
         if(immediately) {

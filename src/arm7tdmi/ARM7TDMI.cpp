@@ -9,6 +9,7 @@
 
 #include "../memory/Bus.h"
 #include "../Timer.h"
+#include "../Debugger.h"
 
 #include "legacy/ArmOpcodeHandlers.cpp"
 #include "legacy/ThumbOpcodeHandlers.cpp"
@@ -17,6 +18,7 @@
 
 void ARM7TDMI::initializeWithRom() {
     switchToMode(SYSTEM);
+    cpsr.Mode = SYSTEM;
     cpsr.T = 0; // set CPU to ARM state
     cpsr.Z = 1; // why? TODO: find out
     cpsr.C = 1;
@@ -52,6 +54,7 @@ uint32_t ARM7TDMI::step() {
        (!cpsr.I) &&
        ((bus->iORegisters[Bus::IORegister::IE] & bus->iORegisters[Bus::IORegister::IF]) || 
        ((bus->iORegisters[Bus::IORegister::IE + 1] & 0x3F) & (bus->iORegisters[Bus::IORegister::IF + 1] & 0x3F)))) {
+        //Debugger::stepMode = true;
         // interrupts is enabled
         irq();
     }
@@ -103,11 +106,12 @@ void ARM7TDMI::getNextInstruction(FetchPCMemoryAccess currentPcAccessType) {
 inline
 void ARM7TDMI::irq() {
     uint32_t returnAddr = getRegister(PC_REGISTER) + 4;
-    
     switchToMode(Mode::IRQ);
     // switch to ARM mode
+    *currentSpsr = cpsr;
     cpsr.T = 0;
     cpsr.I = 1; 
+    cpsr.Mode = Mode::IRQ;
     setRegister(PC_REGISTER, 0x18);
     setRegister(LINK_REGISTER, returnAddr);
     getNextInstruction(FetchPCMemoryAccess::BRANCH);

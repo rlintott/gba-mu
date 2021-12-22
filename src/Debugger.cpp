@@ -39,6 +39,7 @@
   (word & 0x00000001 ? '1' : '0')
 
 Debugger::Debugger() {
+    stepMode = false;
     if (cs_open(CS_ARCH_ARM, CS_MODE_ARM, &sCapstone) != CS_ERR_OK) {
         puts("cs_open failed");
         exit(1);
@@ -73,12 +74,12 @@ r13svc: 0x%08X      r14svc: 0x%08X\n\
 r13und: 0x%08X      r14und: 0x%08X\n\
 \n\
                                                   WATCH MEMORY:\n\
-flags:      NZCV------------------EAIFTMODE       [0xFFE34185](32):   0x%08XA\n\
-cpsr:       " WORD_TO_BINARY_PATTERN "      [0xFFE34185](8):    0x%08X\n\
-spsr_svc:   " WORD_TO_BINARY_PATTERN "      [0xFFE34185](8):    0x%08X\n\
-spsr_fiq:   " WORD_TO_BINARY_PATTERN "      [0xFFE34185](16):   0x%08X\n\
-spsr_abt:   " WORD_TO_BINARY_PATTERN "      [0xFFE34185](8):    0x%08X\n\
-spsr_irq:   " WORD_TO_BINARY_PATTERN "      [0xFFE34185](8):    0x%08X\n\
+flags:      NZCV------------------EAIFTMODE       [0x%08X](32):   0x%08X\n\
+cpsr:       " WORD_TO_BINARY_PATTERN "      [0x%08X](32):   0x%08X\n\
+spsr_svc:   " WORD_TO_BINARY_PATTERN "      [0x%08X](32):   0x%08X\n\
+spsr_fiq:   " WORD_TO_BINARY_PATTERN "      [0x%08X](32):   0x%08X\n\
+spsr_abt:   " WORD_TO_BINARY_PATTERN "      [0x%08X](32):   0x%08X\n\
+spsr_irq:   " WORD_TO_BINARY_PATTERN "      [0x%08X](32):   0x%08X\n\
 spsr_und:   " WORD_TO_BINARY_PATTERN "\n\
 \n\
 [0x%08X]: %s    (0x%08X)\n\
@@ -90,17 +91,17 @@ spsr_und:   " WORD_TO_BINARY_PATTERN "\n\
       r13irq,r14irq,
       r13svc,r14svc,
       r13und,r14und,
-      watchMem1, 
+      watchAddr1,watchMem1, 
       WORD_TO_BINARY(cpsr),
-      watchMem2,
+      watchAddr2,watchMem2,
       WORD_TO_BINARY(spsr_svc), 
-      watchMem3,
+      watchAddr3,watchMem3,
       WORD_TO_BINARY(spsr_fiq),
-      watchMem4,
+      watchAddr4,watchMem4,
       WORD_TO_BINARY(spsr_abt),
-      watchMem5,
+      watchAddr5,watchMem5,
       WORD_TO_BINARY(spsr_irq),
-      watchMem6,
+      watchAddr6,watchMem6,
       WORD_TO_BINARY(spsr_und), 
       instrAddress, instr.c_str(), instrWord);
 }
@@ -136,6 +137,13 @@ void Debugger::updateState(ARM7TDMI* cpu, Bus* bus) {
     spsr_irq = ARM7TDMI::psrToInt(cpu->SPSR_irq);
     spsr_fiq = ARM7TDMI::psrToInt(cpu->SPSR_fiq);
     spsr_und = ARM7TDMI::psrToInt(cpu->SPSR_und);
+
+    watchMem1 = bus->view32(watchAddr1);
+    watchMem2 = bus->view32(watchAddr2);
+    watchMem3 = bus->view32(watchAddr3);
+    watchMem4 = bus->view32(watchAddr4);
+    watchMem5 = bus->view32(watchAddr5);
+    watchMem6 = bus->view32(watchAddr6);
 
     instrAddress = cpu->currInstrAddress;
     instr = disassembleArm(cpu->currInstruction);
@@ -184,3 +192,5 @@ std::string Debugger::disassembleArm(uint32_t instruction) {
 
     return buffer;
 }
+
+bool Debugger::stepMode;
