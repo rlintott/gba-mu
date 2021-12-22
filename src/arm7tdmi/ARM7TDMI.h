@@ -913,7 +913,7 @@ void ARM7TDMI::switchToMode(Mode mode) {
     switch (mode) {
         case SYSTEM:
         case USER: {
-            //currentSpsr = &cpsr;
+            currentSpsr = &cpsr;
             registers[8] = &r8;
             registers[9] = &r9;
             registers[10] = &r10;
