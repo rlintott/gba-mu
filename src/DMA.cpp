@@ -347,7 +347,6 @@ void DMA::updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width) {
                 break;
             }
         }
-        
         width -= 8;
         address += 1;
         value = value >> 8;
