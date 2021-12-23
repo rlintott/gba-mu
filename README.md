@@ -20,6 +20,15 @@ gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-o
 ## Running
 * **To run tests:** `cd build` `./build.sh` `ctest`
 * **To run a ROM:** `cd build` `./gba <path_to_gba_rom>`
+## Controls
+* d-pad = WASD
+* A = k
+* B = m
+* start = spacebar
+* select = rshift
+* debug mode = z
+* exit debug mode = x
+
 ## Resources
 Here are some resources I have been using to aid in developing this emulator
 * [GBATek Documentation](https://problemkaputt.de/gbatek.htm#armcpureference) is an authoritative reference for GBA's hardware
