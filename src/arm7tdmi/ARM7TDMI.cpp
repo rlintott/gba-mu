@@ -18,13 +18,8 @@ void ARM7TDMI::initializeWithRom() {
     switchToMode(SYSTEM);
     cpsr.Mode = SYSTEM;
     cpsr.T = 0; // set CPU to ARM state
-    cpsr.Z = 1; // why? TODO: find out
-    cpsr.C = 1;
     setRegister(PC_REGISTER, BOOT_LOCATION); 
     currentPcAccessType = BRANCH;
-    // TODO: find out why setting register 0 and 1
-    setRegister(0, 0x08000000);
-    setRegister(1, 0x000000EA); 
     setRegister(SP_REGISTER, 0x03007F00); // stack pointer
     r13_svc = 0x03007FE0; // SP_svc=03007FE0h
     r13_irq = 0x03007FA0; // SP_irq=03007FA0h
