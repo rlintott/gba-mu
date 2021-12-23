@@ -1,10 +1,10 @@
-# RyBoyAdvance
+# gba-mu
 
-The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
+gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
 
 ## Upcoming Features and TODOs:
 - [ ] Code refactoring 
-- [ ] Optimization (RyBoyAdvance currently runs around 300FPS on my M1 Macbook Air laptop)
+- [ ] Optimization (gba-mu currently runs around 300FPS on my M1 Macbook Air laptop)
 - [ ] Debugging mode
 - [ ] Performant and accurate cycle counting / Gamepak prefetch emulation
 - [ ] All PPU modes and features
@@ -12,9 +12,8 @@ The RyBoyAdvance is a WIP Game Boy Advance emulator. It is written in C++ with a
 - [ ] Miscellaneous bugs 
 - [ ] Sound controller
 
-![Alt text](media/kirby.png?raw=true)
-![Alt text](media/street.png?raw=true)
-
+![Alt text](media/celeste.png?raw=true)
+\
 ## Building 
 * **Dependencies:** cmake, c++17, sfml
 * `cd build` `./build.sh`

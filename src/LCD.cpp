@@ -43,7 +43,7 @@ void changeResolution(sf::VertexArray& pixels, float xRes, float yRes) {
 void LCD::initWindow() {
     gbaWindow = std::make_shared<sf::RenderWindow>(sf::VideoMode(PPU::SCREEN_WIDTH * defaultScreenSize, 
                                                    PPU::SCREEN_HEIGHT * defaultScreenSize), 
-                                                   "GBAEMU");
+                                                   "gba-mu");
     pixels.resize(PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT * 4);
     pixels.setPrimitiveType(sf::Quads);
 
