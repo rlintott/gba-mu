@@ -1,16 +1,15 @@
 # gba-mu
 
-gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a couple games are playable. 
+gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it, and currently only a small set of games are playable
 
 ## Upcoming Features and TODOs:
-- [ ] Code refactoring 
-- [ ] Optimization (gba-mu currently runs around 300FPS on my M1 Macbook Air laptop)
-- [ ] Debugging mode
-- [ ] Performant and accurate cycle counting / Gamepak prefetch emulation
-- [ ] All PPU modes and features
-- [ ] Getting more games running
 - [ ] Miscellaneous bugs 
+- [ ] EEPROM and Flash save type support (will allow many more games to run)
 - [ ] Sound controller
+- [ ] Optimizations
+- [ ] All PPU modes and features
+- [ ] Instruction cycle counting / Gamepak prefetch emulation
+
 
 ![Alt text](media/celeste.png?raw=true)
 \
