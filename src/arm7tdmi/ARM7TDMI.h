@@ -12,7 +12,6 @@
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
 
-#define COMPILE_TIME_LUT 1
 
 #include "assert.h"
 
@@ -157,38 +156,6 @@ class ARM7TDMI {
 
     void getNextInstruction(FetchPCMemoryAccess currentPcAccessType);
 
-    FetchPCMemoryAccess multiplyHandler(uint32_t instruction);
-    FetchPCMemoryAccess dataProcHandler(uint32_t instruction);
-    FetchPCMemoryAccess psrHandler(uint32_t instruction);
-    FetchPCMemoryAccess undefinedOpHandler(uint32_t instruction);
-    FetchPCMemoryAccess singleDataTransHandler(uint32_t instruction);
-    FetchPCMemoryAccess halfWordDataTransHandler(uint32_t instruction);
-    FetchPCMemoryAccess singleDataSwapHandler(uint32_t instruction);
-    FetchPCMemoryAccess blockDataTransHandler(uint32_t instruction);
-    FetchPCMemoryAccess branchHandler(uint32_t instruction);
-    FetchPCMemoryAccess branchAndExchangeHandler(uint32_t instruction);
-    FetchPCMemoryAccess swiHandler(uint32_t instruction);
-
-    FetchPCMemoryAccess shiftHandler(uint16_t instruction);
-    FetchPCMemoryAccess addSubHandler(uint16_t instruction);
-    FetchPCMemoryAccess undefinedOpHandler(uint16_t instruction);
-    FetchPCMemoryAccess immHandler(uint16_t instruction);
-    FetchPCMemoryAccess aluHandler(uint16_t instruction);
-    FetchPCMemoryAccess bxHandler(uint16_t instruction);
-    FetchPCMemoryAccess loadPcRelativeHandler(uint16_t instruction);
-    FetchPCMemoryAccess loadStoreRegOffsetHandler(uint16_t instruction);
-    FetchPCMemoryAccess loadStoreSignExtendedByteHalfwordHandler(uint16_t instruction);
-    FetchPCMemoryAccess loadStoreImmediateOffsetHandler(uint16_t instruction); 
-    FetchPCMemoryAccess loadStoreHalfwordHandler(uint16_t instruction);
-    FetchPCMemoryAccess loadStoreSpRelativeHandler(uint16_t instruction);      
-    FetchPCMemoryAccess getRelativeAddressHandler(uint16_t instruction); 
-    FetchPCMemoryAccess addOffsetToSpHandler(uint16_t instruction); 
-    FetchPCMemoryAccess multipleLoadStorePushPopHandler(uint16_t instruction);  
-    FetchPCMemoryAccess multipleLoadStoreHandler(uint16_t instruction);
-    FetchPCMemoryAccess conditionalBranchHandler(uint16_t instruction);     
-    FetchPCMemoryAccess unconditionalBranchHandler(uint16_t instruction);         
-    FetchPCMemoryAccess longBranchHandler(uint16_t instruction); 
-    FetchPCMemoryAccess softwareInterruptHandler(uint16_t instruction);
 
     uint32_t thumbLongbranchShift = 0;
 
@@ -388,15 +355,7 @@ class ARM7TDMI {
     // operand and the carry bit
     AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
 
-    typedef FetchPCMemoryAccess (*ArmOpcodeHandler)(uint32_t, ARM7TDMI *);
-    typedef FetchPCMemoryAccess (*ThumbOpcodeHandler)(uint16_t, ARM7TDMI *);
-
-    FetchPCMemoryAccess executeArmInstruction(uint32_t instruction);
-    FetchPCMemoryAccess executeThumbInstruction(uint16_t instruction);
-
     bool conditionalHolds(uint8_t cond);
-
-    Cycles executeInstruction(uint32_t rawInstruction);
 
     void switchToMode(Mode mode);
 
@@ -441,7 +400,6 @@ class ARM7TDMI {
     template<uint16_t op> static FetchPCMemoryAccess thumbUndefHandler(uint16_t instruction, ARM7TDMI* cpu);
 
 
-    #ifdef COMPILE_TIME_LUT
     static constexpr std::array<ArmHandler, 4096> armLut = [] {
         std::array<ArmHandler, 4096> lut = {};
 
@@ -748,13 +706,10 @@ class ARM7TDMI {
         });
         return lut2;
     }();
-    #endif
 };
 
-#ifdef COMPILE_TIME_LUT
 constexpr std::array<ARM7TDMI::ArmHandler, 4096> ARM7TDMI::armLut;
 constexpr std::array<ARM7TDMI::ThumbHandler, 1024> ARM7TDMI::thumbLut;
-#endif
 
 inline
 uint32_t ARM7TDMI::aluShiftLsl(uint32_t value, uint8_t shift) {
