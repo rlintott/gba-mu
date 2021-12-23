@@ -145,6 +145,8 @@ class Bus {
     uint16_t read16(uint32_t address, CycleType accessType);
     uint8_t read8(uint32_t address, CycleType accessType);
 
+    uint32_t view32(uint32_t address);
+
     void write32(uint32_t address, uint32_t word, CycleType accessType);
     void write16(uint32_t address, uint16_t halfWord, CycleType accessType);
     void write8(uint32_t address, uint8_t byte, CycleType accessType);
@@ -174,6 +176,8 @@ class Bus {
    private:
     uint8_t currentNWaitstate;
     uint8_t currentSWaitstate;
+
+    uint32_t view(uint32_t address, uint8_t width);
 
     uint32_t read(uint32_t address, uint8_t width, CycleType accessType);
     void write(uint32_t address, uint32_t value, uint8_t width, CycleType accessType);

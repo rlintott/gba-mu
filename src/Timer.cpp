@@ -45,7 +45,6 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
     update Timer state upon write
 */
 void Timer::updateTimerUponWrite(uint32_t address, uint32_t value, uint8_t width) {
-    
     while(width != 0) {
         uint8_t byte = value & 0xFF;
 
@@ -216,7 +215,6 @@ void Timer::timerXOverflowEvent(uint8_t x) {
     }
 
     if(timerIrqEnable[x]) {
-        DEBUGWARN("timer irq!\n");
         queueTimerInterrupt(x);
     }
 

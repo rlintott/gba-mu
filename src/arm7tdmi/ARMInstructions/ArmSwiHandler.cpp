@@ -10,6 +10,8 @@ ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armSwiHandler(uint32_t instruction, ARM7
         // 1111b: SWI{cond} nn   ;software interrupt
         cpu->switchToMode(Mode::SUPERVISOR);
         // switch to ARM mode, interrupts disabled
+        *(cpu->currentSpsr) = cpu->cpsr;
+        cpu->cpsr.Mode = Mode::SUPERVISOR;
         cpu->cpsr.T = 0;
         cpu->cpsr.I = 1; 
         cpu->setRegister(LINK_REGISTER, cpu->getRegister(PC_REGISTER));
