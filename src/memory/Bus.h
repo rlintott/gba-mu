@@ -30,6 +30,9 @@
     } while (0)
 #endif
 
+
+#define LARGE_CARTRIDGE 1;
+
 class PPU;
 class Timer;
 class ARM7TDMI;
@@ -172,6 +175,8 @@ class Bus {
     bool ppuMemDirty = false;
 
     uint32_t getMemoryAccessCycles();
+
+    bool isAddressInEeprom(uint32_t address);
 
    private:
     uint8_t currentNWaitstate;

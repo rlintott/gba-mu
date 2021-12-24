@@ -1229,3 +1229,21 @@ void Bus::connectDma(std::shared_ptr<DMA> _dma) {
 void Bus::connectPpu(std::shared_ptr<PPU> _ppu) {
     this->ppu = _ppu;
 }
+
+bool isAddressInEeprom(uint32_t address, bool isLarge) {
+    if((address & 0xFF000000) < 0x08000000 || (address & 0xFF000000) < 0x0D000000) {
+        return false;
+    }
+
+    if(isLarge) {
+        uint32_t mask = address & 0x00FFFFFF;
+        if(0x00FFFF00 <= mask && mask <= 0x00FFFFFF) {
+            return true;
+        } 
+    } else {
+        if((0x00FFFF00 <= mask && mask <= 0x00FFFFFF) || address >= 0x0D000000) {
+            return true;
+        }   
+    }
+    return false;
+}
