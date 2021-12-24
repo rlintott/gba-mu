@@ -63,6 +63,7 @@ add_library(core
 
     arm7tdmi/ARM7TDMI.h
     memory/Bus.cpp memory/Bus.h
+    memory/EEPROM.cpp memory/EEPROM.h
     GameBoyAdvanceImpl.cpp GameBoyAdvanceImpl.h
     Scheduler.cpp Scheduler.h
     LCD.cpp LCD.h

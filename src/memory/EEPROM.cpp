@@ -4,113 +4,93 @@
 #include "assert.h"
 
 
+// thanks to https://densinh.github.io/DenSinH/emulation/2021/02/01/gba-eeprom.html
+// for the explanation of EEPROM 
+
 void EEPROM::transferBitToEeprom(bool bit) {
-    if(!isReading && !isWriting) {
-        DEBUGWARN("eeprom error, neither reading or writing\n");
-        assert(false);
-    }
-    if(ithBit < 2) {
-        ithBit += 1;
-        return;
-    } 
-    if(ithBit == transferSize) {
-        if(isReading) {
-            valueToRead = eeprom[address];
+    if(totalTransfers == 0) {
+
+        readyToRead = false;
+        writeComplete = false;
+        firstBit = bit;
+    } else if(totalTransfers == 1) {
+
+        currAddressBit = busWidth - 1;
+        address = 0;
+        op = (uint8_t)firstBit | ((uint8_t)bit << 1);
+        if(op == READ_OP) {
+            // read
+            currTransferSize = FOURTEEN_BIT_READ_SIZE;
+        } else if(op == WRITE_OP) {    
+            // write
+            currWriteValueBit = 63;
+            valueToWrite = 0;
+            currTransferSize = FOURTEEN_BIT_WRITE_SIZE;
+        } else {
+            DEBUGWARN((uint32_t)op << " :invalid eeprom op\n");
+        }
+    } else if(totalTransfers < (currTransferSize - 1)) {
+
+        if(op == READ_OP) {
+            // read 
+            address |= (((uint32_t)bit) << currAddressBit);
+            currAddressBit -= 1;
+        } else {
+            // write
+            if(currAddressBit >= 0) {
+                address |= (((uint32_t)bit) << currAddressBit);
+                currAddressBit -= 1;
+            } else if(currWriteValueBit >= 0){
+                valueToWrite |= (((uint32_t)bit) << currWriteValueBit);
+                currWriteValueBit -= 1;
+            }
+        }
+    } else {
+
+        // transfer over
+        totalTransfers = -1;
+        if(op == READ_OP) {
+            // read
+            valueToRead = eeprom[address & 0x3FF];
             readyToRead = true;
-        } else if(isWriting) {
-            eeprom[address] = valueToWrite;
+        } else {
+            // write
+            eeprom[address & 0x3FF] = valueToWrite;
             writeComplete = true;
         }
-        // done with the transfer
-        isReading = false;
-        isWriting = false;
-        return;
+        op = 0;
     }
-    if(isReading) {
-
-        address |= ((uint32_t)bit << (currAddressBit));
-        currAddressBit -= 1;
-        ithBit += 1;
-    } else {
-        // is writing
-
-        if(currAddressBit >= 0) {
-            address |= ((uint32_t)bit << (currAddressBit));
-            currAddressBit -= 1;
-        } else if(currValueBit >= 0) {
-            value |= ((uint32_t)bit << (currValueBit));
-            currValueBit -= 1;   
-        } else {
-        }
-
-        ithBit += 1;
-    }
+    totalTransfers++;
 }
 
 uint32_t EEPROM::receiveBitFromEeprom() {
+    uint32_t returnBit = 0;
     if(writeComplete) {
-        return 1;
-    } 
 
-    if(!readyToRead) {
-        return 0;
+        // TODO: it'll take ca. 108368 clock cycles (ca. 6.5ms) 
+        // until the old data is erased and new data is programmed.
+        totalReceives = 0;
+        returnBit = 1;
+    } else if(!readyToRead) {
+
+        totalReceives = 0;
+        returnBit = 1;
+    } else {
+
+        // ready to read
+        if(totalReceives < 4) {
+            // do nothing
+            totalReceives++;
+            returnBit = 0;
+        } else if(totalReceives < 68) {
+            totalReceives++;
+            returnBit = (valueToRead >> currReadValueBit) & 0x1;;
+            currReadValueBit -= 1;
+        } else {
+            currReadValueBit = 63;
+            totalReceives = 1;
+        }
     }
-
-    if(ithBit < 4) {
-        ithBit += 1;
-        return 0;
-    }
-
-    if(ithBit == transferSize) {
-        // read over
-        return 0;
-    }
-
-    uint32_t toReturn = (valueToRead >> (64 + 4 - ithBit - 1)) & 0x1;
-    ithBit += 1;
-    return toReturn;
+    return returnBit;
 }
 
-void EEPROM::startEeprom6BitRead() {
-    reset();
-    isReading = true;    
-    currAddressBit = 5;
-    transferSize = SIX_BIT_READ_SIZE;
-}
-
-void EEPROM::startEeprom14BitRead() {
-    reset();
-    isReading = true;    
-    currAddressBit = 13;
-    transferSize = FOURTEEN_BIT_READ_SIZE;
-}
-
-void EEPROM::startEeprom6BitWrite() {
-    reset();
-    isWriting = true;
-    currAddressBit = 5;
-    currValueBit = 63;
-    transferSize = SIX_BIT_WRITE_SIZE;
-}
-
-void EEPROM::startEeprom14BitWrite() {
-    reset();
-    isWriting = true;
-    currAddressBit = 13;
-    currValueBit = 63;
-    transferSize = FOURTEEN_BIT_WRITE_SIZE;
-}
-
-void EEPROM::reset() {
-    ithBit = 0;
-    isReading = false;
-    isWriting = false;
-    readyToRead = false;
-    writeComplete = false;
-    address = 0;
-    currAddressBit = 0;
-    transferSize = 0;
-    currValueBit = 0;
-    valueToRead = 0;
-    valueToWrite = 0;
-}

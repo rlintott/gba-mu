@@ -162,42 +162,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
         }
     }
 
-    // thanks to https://densinh.github.io/DenSinH/emulation/2021/02/01/gba-eeprom.html
-    // for the explanation of EEPROM 
-    if(x == 3 && startTiming != 3) {
-        uint32_t transferSize = dmaXWordCount[x];
-        uint32_t eepromAddr = dmaXDestAddr[x];
-        switch(transferSize) {
-            case SIX_BIT_WRITE_SIZE: {
-                if(bus->isAddressInEeprom(eepromAddr, false;)) {
-                    
-                }
-                break;
-            }
-            case FOURTEEN_BIT_WRITE_SIZE: {
-                if(bus->isAddressInEeprom(eepromAddr, true)) {
-                    
-                }
-                break;
-            }
-            case SIX_BIT_READ_SIZE: {
-                if(bus->isAddressInEeprom(eepromAddr, false)) {
-                    
-                }
-                break;
-            }
-            case FOURTEEN_BIT_WRITE_SIZE: {
-                if(bus->isAddressInEeprom(eepromAddr, true)) {
-                    
-                }
-                break;
-            }
-            default {
-                DEBUGWARN("warning! invalid eeprom dma size\n");
-                break;
-            }
-        }
-    }
 
     bool thirtyTwoBit = control & 0x0400; //  (0=16bit, 1=32bit)
     bool firstAccess = true;
@@ -339,6 +303,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         }
     }
+
 
     return tempCycles;
 }
