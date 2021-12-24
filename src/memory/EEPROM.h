@@ -21,8 +21,8 @@ class EEPROM {
     private:
         
         static constexpr uint32_t busWidth = 14;
-        long totalTransfers = 0;
-        long totalReceives = 0;
+        long currTransferBit = 0;
+        long currReceivingBit = 0;
         uint32_t address;
         int currAddressBit;
         uint32_t currTransferSize;

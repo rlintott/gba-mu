@@ -8,12 +8,12 @@
 // for the explanation of EEPROM 
 
 void EEPROM::transferBitToEeprom(bool bit) {
-    if(totalTransfers == 0) {
+    if(currTransferBit == 0) {
 
         readyToRead = false;
         writeComplete = false;
         firstBit = bit;
-    } else if(totalTransfers == 1) {
+    } else if(currTransferBit == 1) {
 
         currAddressBit = busWidth - 1;
         address = 0;
@@ -29,7 +29,7 @@ void EEPROM::transferBitToEeprom(bool bit) {
         } else {
             DEBUGWARN((uint32_t)op << " :invalid eeprom op\n");
         }
-    } else if(totalTransfers < (currTransferSize - 1)) {
+    } else if(currTransferBit < (currTransferSize - 1)) {
 
         if(op == READ_OP) {
             // read 
@@ -48,7 +48,7 @@ void EEPROM::transferBitToEeprom(bool bit) {
     } else {
 
         // transfer over
-        totalTransfers = -1;
+        currTransferBit = -1;
         if(op == READ_OP) {
             // read
             valueToRead = eeprom[address & 0x3FF];
@@ -60,7 +60,7 @@ void EEPROM::transferBitToEeprom(bool bit) {
         }
         op = 0;
     }
-    totalTransfers++;
+    currTransferBit++;
 }
 
 uint32_t EEPROM::receiveBitFromEeprom() {
@@ -69,26 +69,26 @@ uint32_t EEPROM::receiveBitFromEeprom() {
 
         // TODO: it'll take ca. 108368 clock cycles (ca. 6.5ms) 
         // until the old data is erased and new data is programmed.
-        totalReceives = 0;
+        currReceivingBit = 0;
         returnBit = 1;
     } else if(!readyToRead) {
 
-        totalReceives = 0;
+        currReceivingBit = 0;
         returnBit = 1;
     } else {
 
         // ready to read
-        if(totalReceives < 4) {
+        if(currReceivingBit < 4) {
             // do nothing
-            totalReceives++;
+            currReceivingBit++;
             returnBit = 0;
-        } else if(totalReceives < 68) {
-            totalReceives++;
+        } else if(currReceivingBit < 68) {
+            currReceivingBit++;
             returnBit = (valueToRead >> currReadValueBit) & 0x1;;
             currReadValueBit -= 1;
         } else {
             currReadValueBit = 63;
-            totalReceives = 1;
+            currReceivingBit = 1;
         }
     }
     return returnBit;
