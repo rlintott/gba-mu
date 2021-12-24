@@ -436,6 +436,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0 
             address &= 0x00FFFFFF;
+
+            if(address >= 0x00FFFF00) {
+                return eeprom.receiveBitFromEeprom();
+            }
+
             switch(width) {
                 case 32: {
                     memAccessCycles += 7;
@@ -461,6 +466,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
             address &= 0x00FFFFFF;
+
+            if(address >= 0x00FFFF00) {
+                return eeprom.receiveBitFromEeprom();
+            }
+
             switch(width) {
                 case 32: {
                     return readFromArray32(&gamePakRom, align32(address), 0x00000000);
@@ -483,6 +493,17 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
             address &= 0x00FFFFFF;
+
+            #ifndef LARGE_CARTRIDGE
+            if(shift == 0x0D) {
+                return eeprom.receiveBitFromEeprom();
+            }
+            #endif
+
+            if(address >= 0x00FFFF00) {
+                return eeprom.receiveBitFromEeprom();
+            }
+
             switch(width) {
                 case 32: {
                     return readFromArray32(&gamePakRom, align32(address), 0x00000000);
@@ -752,6 +773,10 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0
 
+            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+                eeprom.transferBitToEeprom(value & 0x1);
+            }
+
             switch(width) {
                 case 32: {
                     //writeToArray32(&gamePakRom, address, 0x08000000, value);
@@ -778,6 +803,11 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 1
             //assert(false);
+
+            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+                eeprom.transferBitToEeprom(value & 0x1);
+            }
+
             switch(width) {
                 case 32: {
                     //writeToArray32(&gamePakRom, address, 0x0A000000, value);
@@ -803,6 +833,18 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
             //assert(false);
+
+            #ifndef LARGE_CARTRIDGE
+            if(shift == 0x0D) {
+                //DEBUGWARN("here\n");
+                eeprom.transferBitToEeprom(value & 0x1);
+            }
+            #endif
+
+            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+                eeprom.transferBitToEeprom(value & 0x1);
+            }
+
             switch(width) {
                 case 32: {
                     //writeToArray32(&gamePakRom, address, 0x0C000000, value);
@@ -1229,3 +1271,22 @@ void Bus::connectDma(std::shared_ptr<DMA> _dma) {
 void Bus::connectPpu(std::shared_ptr<PPU> _ppu) {
     this->ppu = _ppu;
 }
+
+bool Bus::isAddressInEeprom(uint32_t address) {
+    if((address & 0xFF000000) < 0x08000000 || (address & 0xFF000000) > 0x0D000000) {
+        return false;
+    }
+    #ifdef LARGE_CARTRIDGE
+    uint32_t mask = address & 0x00FFFFFF;
+    if(0x00FFFF00 <= mask && mask <= 0x00FFFFFF) {
+        return true;
+    } 
+    #else
+    uint32_t mask = address & 0x00FFFFFF;
+    if((0x00FFFF00 <= mask && mask <= 0x00FFFFFF) || (address >= 0x0D000000)) {
+        return true;
+    } 
+    #endif  
+    return false;
+}
+

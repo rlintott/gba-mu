@@ -6,6 +6,7 @@
 #include "PPU.h"
 #include "Scheduler.h"
 #include "assert.h"
+#include "memory/EEPROM.h"
 
 
 // TODO: DMA specs not fully implemented yet
@@ -159,8 +160,8 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
                 break;
             }
         }
-
     }
+
 
     bool thirtyTwoBit = control & 0x0400; //  (0=16bit, 1=32bit)
     bool firstAccess = true;
@@ -173,7 +174,6 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
 
     // writing / reading from memeory
     // TODO: implement DMA open bus (some games are dependent on it and wil help pass mgba test suite)
-
     for(uint32_t i = 0; i < dmaXWordCount[x]; i++) {
         if(thirtyTwoBit) {
             if(firstAccess) { 
@@ -303,6 +303,7 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
             }
         }
     }
+
 
     return tempCycles;
 }
