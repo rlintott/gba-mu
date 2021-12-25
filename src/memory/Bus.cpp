@@ -11,6 +11,11 @@
 #include <iostream>
 #include <iterator>
 
+#define likely(x)       __builtin_expect((x),1)
+#define unlikely(x)     __builtin_expect((x),0)
+
+
+
 Bus::Bus() {
     // TODO: make bios configurable
     for(int i = 0; i < 98688; i++) {
@@ -437,7 +442,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 0 
             address &= 0x00FFFFFF;
 
-            if(address >= 0x00FFFF00) {
+            if(unlikely(address >= 0x00FFFF00)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -467,7 +472,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 1
             address &= 0x00FFFFFF;
 
-            if(address >= 0x00FFFF00) {
+            if(unlikely(address >= 0x00FFFF00)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -495,12 +500,12 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             address &= 0x00FFFFFF;
 
             #ifndef LARGE_CARTRIDGE
-            if(shift == 0x0D) {
+            if(unlikely(shift == 0x0D)) {
                 return eeprom.receiveBitFromEeprom();
             }
             #endif
 
-            if(address >= 0x00FFFF00) {
+            if(unlikely(address >= 0x00FFFF00)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -525,6 +530,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
         case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
+
+            #ifdef FLASH_CART
+            return flash.read(address);
+            #endif
+
             address &= 0x00007FFF;
 
             switch(width) {
@@ -869,6 +879,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
             address &= 0x00007FFF;
+
 
             switch(width) {
                 case 32: {

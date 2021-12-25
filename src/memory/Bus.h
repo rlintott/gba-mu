@@ -8,6 +8,7 @@
 #include <string>
 #include <memory>
 #include "EEPROM.h"
+#include "Flash.h"
 
 #define NDEBUG 1;
 //#define NDEBUGWARN 1;
@@ -33,6 +34,7 @@
 
 
 //#define LARGE_CARTRIDGE 1;
+#define FLASH_CART 1;
 
 class PPU;
 class Timer;
@@ -217,6 +219,7 @@ class Bus {
     std::shared_ptr<Timer> timer; 
     std::shared_ptr<DMA> dma;
     EEPROM eeprom;
+    Flash flash;
     
     static uint32_t align32(uint32_t address);
     static uint32_t align16(uint32_t address);
