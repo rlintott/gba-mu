@@ -328,10 +328,6 @@ class ARM7TDMI {
         NV = 0xF  // F:   NV     -             never (ARMv1,v2 only) (Reserved ARMv3 and up)
     };
 
-    // shifts the second operand according to ALU logic. returns the shifted
-    // operand and the carry bit
-    AluShiftResult aluShift(uint32_t instruction, bool i, bool r);
-
     bool conditionalHolds(uint8_t cond);
 
     void switchToMode(Mode mode);
