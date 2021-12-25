@@ -21,8 +21,8 @@ class Flash {
         int currStage = 0;
         std::array<uint8_t, 0x20000> flash;
         // different ids for 64k and 128k
-        uint8_t manufacturerId;
-        uint8_t deviceId;
+        uint8_t manufacturerId = 0x62;
+        uint8_t deviceId = 0x13;
         uint8_t temp0x0 = 0xFF;
         uint8_t temp0x1 = 0xFF;
         uint32_t bank = 0x0;

@@ -1,7 +1,5 @@
 #pragma once
 
-// define ndebug to suppress debug logs
-// #define NDEBUG 0;
 
 #include <array>
 #include <vector>
@@ -9,29 +7,6 @@
 #include <memory>
 #include "EEPROM.h"
 #include "Flash.h"
-
-#define NDEBUG 1;
-//#define NDEBUGWARN 1;
-
-#ifdef NDEBUG
-#define DEBUG(x)
-#else
-#define DEBUG(x)        \
-    do {                \
-        std::cout << "INFO: " << x; \
-    } while (0)
-#endif
-
-
-#ifdef NDEBUGWARN
-#define DEBUGWARN(x)
-#else
-#define DEBUGWARN(x)        \
-    do {                \
-        std::cout << "WARN: " << x; \
-    } while (0)
-#endif
-
 
 //#define LARGE_CARTRIDGE 1;
 #define FLASH_CART 1;
@@ -220,7 +195,7 @@ class Bus {
     std::shared_ptr<DMA> dma;
     EEPROM eeprom;
     Flash flash;
-    
+
     static uint32_t align32(uint32_t address);
     static uint32_t align16(uint32_t address);
 

@@ -4,15 +4,14 @@
 #include "../Timer.h"
 #include "../DMA.h"
 #include "../arm7tdmi/ARM7TDMI.h"
+#include "../util/macros.h"
+
 
 #include "assert.h"
 
 #include <fstream>
 #include <iostream>
 #include <iterator>
-
-#define likely(x)       __builtin_expect((x),1)
-#define unlikely(x)     __builtin_expect((x),0)
 
 
 
@@ -532,8 +531,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
 
             #ifdef FLASH_CART
-            return flash.read(address);
+            if(0x0E000000 <= address && address <= 0x0E00FFFF) {
+                return flash.read(address);
+            }
             #endif
+            
 
             address &= 0x00007FFF;
 
@@ -878,8 +880,14 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         case 0x0F:  {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
-            address &= 0x00007FFF;
 
+            #ifdef FLASH_CART
+            if(0x0E000000 <= address && address <= 0x0E00FFFF) {
+                flash.write(address, value);
+            }
+            #endif
+
+            address &= 0x00007FFF;
 
             switch(width) {
                 case 32: {

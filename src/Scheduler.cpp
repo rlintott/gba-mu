@@ -1,29 +1,9 @@
 #include "Scheduler.h"
 #include "GameBoyAdvanceImpl.h"
 #include <iostream>
+#include "util/macros.h"
+
 #include "assert.h"
-
-#define NDEBUG 1;
-//#define NDEBUGWARN 1;
-
-#ifdef NDEBUG
-#define DEBUG(x)
-#else
-#define DEBUG(x)        \
-    do {                \
-        std::cout << "INFO: " << x; \
-    } while (0)
-#endif
-
-
-#ifdef NDEBUGWARN
-#define DEBUGWARN(x)
-#else
-#define DEBUGWARN(x)        \
-    do {                \
-        std::cout << "WARN: " << x; \
-    } while (0)
-#endif
 
 
 void Scheduler::addEvent(EventType eventType, uint64_t cyclesInFuture, EventCondition eventCondition, bool ignoreCondition) {

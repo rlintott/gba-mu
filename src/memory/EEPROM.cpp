@@ -1,5 +1,5 @@
 #include "EEPROM.h"
-#include "../arm7tdmi/ARM7TDMI.h"
+#include "../util/macros.h"
 
 #include "assert.h"
 

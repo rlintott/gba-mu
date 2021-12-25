@@ -1,8 +1,10 @@
 #include "Flash.h"
+#include "../util/macros.h"
 
 #include <algorithm> 
 
 void Flash::write(uint32_t address, uint8_t value) {
+    DEBUGWARN("hi!\n");
     if(currMode == WRITE) {
 
         if(!(address == 0x0E005555 && value == 0xF0)) {
@@ -14,7 +16,7 @@ void Flash::write(uint32_t address, uint8_t value) {
         if(address == 0x0E000000 && (value == 0 || value == 1)) {
             bank = value * 0x10000;
         } else {
-            //DEBUGWARN("currMOde error in mem bank mode\n");
+            DEBUGWARN("currMode error in mem bank command\n");
         }
         currMode = READY;
     } else if(address == 0xE005555 && value == 0xAA) {
@@ -54,7 +56,7 @@ void Flash::write(uint32_t address, uint8_t value) {
                     // TODO: cycle accuracy? (this normally takes some time)
                     flash.fill(0xFF);
                 } else {
-                    //DEBUGWARN("currMode not erase, something wrong in flash!\n");
+                    DEBUGWARN("currMode not erase, something wrong in flash!\n");
                 }
                 break;
             }
@@ -64,7 +66,7 @@ void Flash::write(uint32_t address, uint8_t value) {
                     uint32_t page = (address & 0x0000F000);
                     std::fill_n(flash.begin() + page + bank, 0xFFF, 0xFF);
                 } else {    
-                    //DEBUGWARN("currMode not erase, something wrong in flash!\n");
+                    DEBUGWARN("currMode not erase, something wrong in flash!\n");
                 }
                 break;
             }
