@@ -4,7 +4,6 @@
 #include <algorithm> 
 
 void Flash::write(uint32_t address, uint8_t value) {
-    DEBUGWARN("hi!\n");
     if(currMode == WRITE) {
 
         if(!(address == 0x0E005555 && value == 0xF0)) {
