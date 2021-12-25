@@ -27,6 +27,7 @@ target_include_directories(gba_lib INTERFACE ${INCLUDE_DIR})
 add_library(core
     arm7tdmi/ARM7TDMI.cpp 
     util/static_for.h
+    util/macros.h
 
     arm7tdmi/ArmInstructions/ArmDataProcHandler.cpp 
     arm7tdmi/ArmInstructions/ArmPsrHandler.cpp 
@@ -62,8 +63,11 @@ add_library(core
     arm7tdmi/ThumbInstructions/ThumbUndefHandler.cpp
 
     arm7tdmi/ARM7TDMI.h
+
     memory/Bus.cpp memory/Bus.h
     memory/EEPROM.cpp memory/EEPROM.h
+    memory/Flash.cpp memory/Flash.h
+
     GameBoyAdvanceImpl.cpp GameBoyAdvanceImpl.h
     Scheduler.cpp Scheduler.h
     LCD.cpp LCD.h

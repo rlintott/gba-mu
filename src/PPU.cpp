@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include "util/macros.h"
 #include "assert.h"
 
 

@@ -1,7 +1,6 @@
 #include "DMA.h"
 #include "arm7tdmi/ARM7TDMI.h"
 #include "memory/Bus.h"
-#include "assert.h"
 #include "GameBoyAdvanceImpl.h"
 #include "PPU.h"
 #include "Scheduler.h"

@@ -7,7 +7,6 @@
 #include <assert.h>
 
 
-
 #define ASSERT_EQUAL(message, expected, actual) \
     if (expected != actual) { \
         DEBUG("ASSERTION FAILED: " << message <<  \
