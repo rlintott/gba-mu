@@ -11,7 +11,8 @@ gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-o
 
 
 ![Alt text](media/celeste.png?raw=true)
-\
+
+
 ## Building 
 * **Dependencies:** cmake, c++17, sfml
 * `cd build` `./build.sh`
