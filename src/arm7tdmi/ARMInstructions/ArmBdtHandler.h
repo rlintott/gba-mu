@@ -1,6 +1,9 @@
-#include "../../memory/Bus.h"
-
+#pragma once
+#include "ARM7TDMI.h"
+#include "../memory/Bus.h"
 #include "assert.h"
+
+
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armBdtHandler(uint32_t instruction, ARM7TDMI* cpu) {

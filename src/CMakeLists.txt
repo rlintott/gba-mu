@@ -29,17 +29,17 @@ add_library(core
     util/static_for.h
     util/macros.h
 
-    arm7tdmi/ARMInstructions/ArmDataProcHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmPsrHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmMultHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmHwdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSdsHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBranchHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBranchXHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSwiHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmUndefHandler.cpp
+    arm7tdmi/ARMInstructions/ArmDataProcHandler.h 
+    arm7tdmi/ARMInstructions/ArmPsrHandler.h 
+    arm7tdmi/ARMInstructions/ArmSdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmMultHandler.h 
+    arm7tdmi/ARMInstructions/ArmHwdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmSdsHandler.h 
+    arm7tdmi/ARMInstructions/ArmBdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmBranchHandler.h 
+    arm7tdmi/ARMInstructions/ArmBranchXHandler.h 
+    arm7tdmi/ARMInstructions/ArmSwiHandler.h 
+    arm7tdmi/ARMInstructions/ArmUndefHandler.h
 
     arm7tdmi/ThumbInstructions/ThumbAddOffSpHandler.cpp        
     arm7tdmi/ThumbInstructions/ThumbCondBHandler.cpp           
