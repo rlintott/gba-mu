@@ -17,16 +17,13 @@
 
 Bus::Bus() {
     // TODO: make bios configurable
-    std::cout << "yo1\n";
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
     }
-    std::cout << "yo2\n";
     BIOS biosData;
     for(int i = 0; i < biosData.size; i++) {
         bios.push_back(biosData.data[i]);
     }
-    std::cout << "yo3\n";
     for(int i = 0; i < 263168; i++) {
         wRamBoard.push_back(0);
     }
@@ -54,10 +51,8 @@ Bus::Bus() {
     for(int i = 0; i < 69000; i++) {
         gamePakSram.push_back(0);
     }
-    std::cout << "yo2\n";
     // TODO, does gamepak have to be initialized with 32MB of memory?
     gamePakRom.resize(32000000);
-    std::cout << "yo3\n";
 }
 
 Bus::~Bus() {

@@ -21,45 +21,25 @@ using milliseconds = std::chrono::milliseconds;
 uint64_t GameBoyAdvanceImpl::cyclesSinceStart = 0;
 
 GameBoyAdvanceImpl::GameBoyAdvanceImpl() {
-    std::cout << "1\n";
     this->arm7tdmi = std::make_shared<ARM7TDMI>();
-    std::cout << "2\n";
     this->bus =  std::make_shared<Bus>();
-    std::cout << "3\n";
     this->screen =  std::make_shared<LCD>();
-    std::cout << "4\n";
     arm7tdmi->connectBus(bus);
-    std::cout << "5\n";
     this->ppu =  std::make_shared<PPU>();
-    std::cout << "6\n";
     ppu->connectBus(bus);
-    std::cout << "7\n";
     this->bus->connectPpu(ppu);
-    std::cout << "8\n";
     this->dma =  std::make_shared<DMA>();
-    std::cout << "9\n";
     bus->connectDma(dma);
-    std::cout << "10\n";
     dma->connectBus(bus);
-    std::cout << "11\n";
     dma->connectCpu(arm7tdmi);
-    std::cout << "12\n";
     this->timer = std::make_shared<Timer>();
-    std::cout << "13\n";
     this->timer->connectBus(bus);
-    std::cout << "14\n";
     bus->connectTimer(timer);
-    std::cout << "15\n";
     this->timer->connectCpu(arm7tdmi);
-    std::cout << "16\n";
     this->scheduler =  std::make_shared<Scheduler>();
-    std::cout << "17\n";
     dma->connectScheduler(scheduler);
-    std::cout << "18\n";
     timer->connectScheduler(scheduler);
-    std::cout << "19\n";
     this->debugger =  std::make_shared<Debugger>();
-    std::cout << "20\n";
 }
 
 void GameBoyAdvanceImpl::printCpuState() {\
