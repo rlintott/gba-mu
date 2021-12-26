@@ -102,33 +102,33 @@ class Bus {
     /* General Internal Memory */
 
     // 00000000-00003FFF   BIOS - System ROM (16 KBytes) 16448
-    std::vector<uint8_t> bios{};
+    std::vector<uint8_t> bios;
     // work ram! 02000000-0203FFFF (256kB) 263168
-    std::vector<uint8_t> wRamBoard{};
+    std::vector<uint8_t> wRamBoard;
     // 03000000-03007FFF (32 kB) 32896
-    std::vector<uint8_t> wRamChip{};
+    std::vector<uint8_t> wRamChip;
     // 04000000-040003FE   I/O Registers 1028
-    std::vector<uint8_t> iORegisters{};
+    std::vector<uint8_t> iORegisters;
 
     /* Internal Display Memory */
 
     // 05000000-050003FF   BG/OBJ Palette RAM        (1 Kbyte) 1028
-    std::vector<uint8_t> paletteRam{};
+    std::vector<uint8_t> paletteRam;
     // 06000000-06017FFF   VRAM - Video RAM          (96 KBytes) 98688
-    std::vector<uint8_t> vRam{};
+    std::vector<uint8_t> vRam;
     // 07000000-070003FF   OAM - OBJ Attributes      (1 Kbyte) 1028
     // TODO: VRAM and Palette RAM may be accessed during H-Blanking. 
     // OAM can accessed only if "H-Blank Interval Free" bit in DISPCNT register is set.
-    std::vector<uint8_t> objAttributes{};
+    std::vector<uint8_t> objAttributes;
 
     /* External Memory (Game Pak) */
 
     // 08000000-09FFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 0
     // 0A000000-0BFFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 1
     // 0C000000-0DFFFFFF   Game Pak ROM/FlashROM (max 32MB) - Wait State 2
-    std::vector<uint8_t> gamePakRom{};
+    std::vector<uint8_t> gamePakRom;
     // 0E000000-0E00FFFF   Game Pak SRAM    (max 64 KBytes) - 8bit Bus width (65792)
-    std::vector<uint8_t> gamePakSram{};
+    std::vector<uint8_t> gamePakSram;
 
 
     uint32_t read32(uint32_t address, CycleType accessType);

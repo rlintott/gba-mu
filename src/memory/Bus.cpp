@@ -22,8 +22,9 @@ Bus::Bus() {
         vRam.push_back(0);
     }
     std::cout << "yo2\n";
-    for(int i = 0; i < BIOS::size; i++) {
-        bios.push_back(BIOS::data[i]);
+    BIOS biosData;
+    for(int i = 0; i < biosData.size; i++) {
+        bios.push_back(biosData.data[i]);
     }
     std::cout << "yo3\n";
     for(int i = 0; i < 263168; i++) {
