@@ -88,6 +88,15 @@ class Bus {
 
     };
 
+    enum CartSaveType {
+        FLASH512_TYPE,
+        FLASH1024_TYPE,
+        SRAM_TYPE,
+        EEPROM_TYPE
+    };
+
+    CartSaveType cartSaveType;
+
     bool haltMode = false;
 
     /* General Internal Memory */
@@ -156,6 +165,8 @@ class Bus {
 
     bool isAddressInEeprom(uint32_t address);
 
+    void setEepromBusWidth(uint32_t width);
+
    private:
     uint8_t currentNWaitstate;
     uint8_t currentSWaitstate;
@@ -198,6 +209,8 @@ class Bus {
 
     static uint32_t align32(uint32_t address);
     static uint32_t align16(uint32_t address);
+
+    bool largeCart = false;
 
  };
 

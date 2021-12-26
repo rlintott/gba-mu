@@ -6,8 +6,6 @@
 #include <iterator>
 #include <chrono>
 #include <algorithm> 
-#include <future>
-#include <thread>
 
 #include "arm7tdmi/ARM7TDMI.h"
 #include "memory/Bus.h"
@@ -58,7 +56,7 @@ bool GameBoyAdvanceImpl::loadRom(std::string path) {
         return false;
     }
     std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(binFile), {});
-
+    
     bus->loadRom(buffer); 
     arm7tdmi->initializeWithRom();
     return true;
