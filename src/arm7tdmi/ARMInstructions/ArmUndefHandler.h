@@ -1,6 +1,6 @@
 
 #pragma once
-#include "ARM7TDMI.h"
+#include "../ARM7TDMI.h"
 #include "../memory/Bus.h"
 #include <bitset>
 

@@ -1,7 +1,7 @@
 
 
 #pragma once
-#include "ARM7TDMI.h"
+#include "../ARM7TDMI.h"
 #include "../memory/Bus.h"
 
 template<uint16_t op>
