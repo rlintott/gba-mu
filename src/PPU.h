@@ -2,6 +2,7 @@
 #include <vector>
 #include <array>
 #include <queue>
+#include <memory>
 
 class Bus; 
 class Scheduler;

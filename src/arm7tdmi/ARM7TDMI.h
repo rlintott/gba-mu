@@ -1042,3 +1042,38 @@ inline
 uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
     return (instruction & 0x0038) >> 3;
 }
+
+
+#include "ARMInstructions/ArmBdtHandler.h"       
+#include "ARMInstructions/ArmBranchXHandler.h"   
+#include "ARMInstructions/ArmHwdtHandler.h"      
+#include "ARMInstructions/ArmMultHandler.h"      
+#include "ARMInstructions/ArmSdsHandler.h"      
+#include "ARMInstructions/ArmSwiHandler.h"
+#include "ARMInstructions/ArmBranchHandler.h"    
+#include "ARMInstructions/ArmDataProcHandler.h"  
+#include "ARMInstructions/ArmPsrHandler.h"       
+#include "ARMInstructions/ArmSdtHandler.h"       
+#include "ARMInstructions/ArmUndefHandler.h"
+
+
+#include "ThumbInstructions/ThumbAddOffSpHandler.h"          
+#include "ThumbInstructions/ThumbCondBHandler.h"             
+#include "ThumbInstructions/ThumbLdStRegOffHandler.h"        
+#include "ThumbInstructions/ThumbMultLdStPushPopHandler.h"
+#include "ThumbInstructions/ThumbAddSubHandler.h"            
+#include "ThumbInstructions/ThumbImmHandler.h"               
+#include "ThumbInstructions/ThumbLdStSeBHwHandler.h"         
+#include "ThumbInstructions/ThumbRelAddrHandler.h"
+#include "ThumbInstructions/ThumbAluHandler.h"               
+#include "ThumbInstructions/ThumbLdPcRelHandler.h"           
+#include "ThumbInstructions/ThumbLdStSpRelHandler.h"         
+#include "ThumbInstructions/ThumbShiftHandler.h"
+#include "ThumbInstructions/ThumbBHandler.h"                 
+#include "ThumbInstructions/ThumbLdStHwHandler.h"            
+#include "ThumbInstructions/ThumbLongBHandler.h"             
+#include "ThumbInstructions/ThumbSwiHandler.h"
+#include "ThumbInstructions/ThumbBxHandler.h"                
+#include "ThumbInstructions/ThumbLdStImmOffHandler.h"        
+#include "ThumbInstructions/ThumbMultLdStHandler.h"          
+#include "ThumbInstructions/ThumbUndefHandler.h"

@@ -1,7 +1,8 @@
+
+#pragma once
 #include "../ARM7TDMI.h"
 #include "../../memory/Bus.h"
-
-
+#include <bitset>
 
 template<uint16_t op>
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armUndefHandler(uint32_t instruction, ARM7TDMI* cpu) {
