@@ -1,7 +1,7 @@
 
 #pragma once
 #include "../ARM7TDMI.h"
-#include "../memory/Bus.h"
+#include "../../memory/Bus.h"
 
 template<uint16_t op> 
 ARM7TDMI::FetchPCMemoryAccess ARM7TDMI::armMultHandler(uint32_t instruction, ARM7TDMI* cpu) {
