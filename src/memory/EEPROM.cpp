@@ -20,12 +20,12 @@ void EEPROM::transferBitToEeprom(bool bit) {
         op = (uint8_t)firstBit | ((uint8_t)bit << 1);
         if(op == READ_OP) {
             // read
-            currTransferSize = FOURTEEN_BIT_READ_SIZE;
+            currTransferSize = readSize;
         } else if(op == WRITE_OP) {    
             // write
             currWriteValueBit = 63;
             valueToWrite = 0;
-            currTransferSize = FOURTEEN_BIT_WRITE_SIZE;
+            currTransferSize = writeSize;
         } else {
             DEBUGWARN((uint32_t)op << " :invalid eeprom op\n");
         }
@@ -94,3 +94,17 @@ uint32_t EEPROM::receiveBitFromEeprom() {
     return returnBit;
 }
 
+void EEPROM::setBusWidth(uint32_t width) {
+    assert(width == 6 || width == 14);
+
+    if(width == 6) {
+        busWidth = 6;
+        writeSize = SIX_BIT_WRITE_SIZE;
+        readSize = SIX_BIT_READ_SIZE;
+    } else {    
+        // wdith == 14
+        busWidth = 14;
+        writeSize = FOURTEEN_BIT_WRITE_SIZE;
+        readSize = FOURTEEN_BIT_READ_SIZE;
+    }
+}

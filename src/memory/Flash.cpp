@@ -3,6 +3,8 @@
 
 #include <algorithm> 
 
+#include "assert.h"
+
 void Flash::write(uint32_t address, uint8_t value) {
     if(currMode == WRITE) {
 
@@ -92,4 +94,17 @@ inline
 bool Flash::is4KbEraseCommand(uint32_t address, uint8_t value) {
     // TODO: correct?
     return (value == 0x30) && !((address & 0xFFFF0FFF) ^ 0x0E000000);
+}
+
+void Flash::setSize(uint32_t size) {
+    assert(size == 512 || size == 1024);
+
+    if(size == 1024) {
+        manufacturerId = 0x62;
+        deviceId = 0x13;
+    } else {
+        // size == 512
+        manufacturerId = 0x32;
+        deviceId = 0x1B;
+    }
 }

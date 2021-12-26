@@ -18,9 +18,13 @@ class EEPROM {
             WRITE_OP = 1
         };
 
+        void setBusWidth(uint32_t width);
+
     private:
         
-        static constexpr uint32_t busWidth = 14;
+        uint32_t busWidth = 0;
+        uint32_t writeSize = 0;
+        uint32_t readSize = 0;
         long currTransferBit = 0;
         long currReceivingBit = 0;
         uint32_t address;

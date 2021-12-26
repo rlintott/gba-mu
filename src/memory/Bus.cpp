@@ -6,12 +6,12 @@
 #include "../arm7tdmi/ARM7TDMI.h"
 #include "../util/macros.h"
 
-
 #include "assert.h"
 
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <regex>
 
 
 
@@ -441,7 +441,8 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 0 
             address &= 0x00FFFFFF;
 
-            if(unlikely(address >= 0x00FFFF00)) {
+            
+            if(unlikely(address >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -471,7 +472,7 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 1
             address &= 0x00FFFFFF;
 
-            if(unlikely(address >= 0x00FFFF00)) {
+            if(unlikely(address >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -498,13 +499,13 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // waitstate 2
             address &= 0x00FFFFFF;
 
-            #ifndef LARGE_CARTRIDGE
-            if(unlikely(shift == 0x0D)) {
-                return eeprom.receiveBitFromEeprom();
+            if(!largeCart) {
+                if(unlikely(shift == 0x0D && cartSaveType == EEPROM_TYPE)) {
+                    return eeprom.receiveBitFromEeprom();
+                }
             }
-            #endif
 
-            if(unlikely(address >= 0x00FFFF00)) {
+            if(unlikely(address >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE)) {
                 return eeprom.receiveBitFromEeprom();
             }
 
@@ -530,12 +531,11 @@ uint32_t Bus::read(uint32_t address, uint8_t width, CycleType cycleType) {
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
 
-            #ifdef FLASH_CART
-            if(0x0E000000 <= address && address <= 0x0E00FFFF) {
-                return flash.read(address);
-            }
-            #endif
-            
+            if(cartSaveType == FLASH512_TYPE || cartSaveType == FLASH1024_TYPE) {
+                if(0x0E000000 <= address && address <= 0x0E00FFFF) {
+                    return flash.read(address);
+                } 
+            }    
 
             address &= 0x00007FFF;
 
@@ -785,7 +785,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 0
 
-            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+            if((address & 0x00FFFFFF) >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE) {
                 eeprom.transferBitToEeprom(value & 0x1);
             }
 
@@ -816,7 +816,7 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // waitstate 1
             //assert(false);
 
-            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+            if((address & 0x00FFFFFF) >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE) {
                 eeprom.transferBitToEeprom(value & 0x1);
             }
 
@@ -844,16 +844,14 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
         case 0x0D:  {
             //  TODO: *** Separate timings for sequential, and non-sequential accesses.
             // waitstate 2
-            //assert(false);
 
-            #ifndef LARGE_CARTRIDGE
-            if(shift == 0x0D) {
-                //DEBUGWARN("here\n");
-                eeprom.transferBitToEeprom(value & 0x1);
+            if(!largeCart) {
+                if(shift == 0x0D && cartSaveType == EEPROM_TYPE) {
+                    eeprom.transferBitToEeprom(value & 0x1);
+                }
             }
-            #endif
 
-            if((address & 0x00FFFFFF) >= 0x00FFFF00) {
+            if((address & 0x00FFFFFF) >= 0x00FFFF00 && cartSaveType == EEPROM_TYPE) {
                 eeprom.transferBitToEeprom(value & 0x1);
             }
 
@@ -881,11 +879,13 @@ void Bus::write(uint32_t address, uint32_t value, uint8_t width, CycleType acces
             // The 64K SRAM area is mirrored across the whole 32MB area at E000000h-FFFFFFFh, 
             // also, inside of the 64K SRAM field, 32K SRAM chips are repeated twice.
 
-            #ifdef FLASH_CART
-            if(0x0E000000 <= address && address <= 0x0E00FFFF) {
-                flash.write(address, value);
+            if(cartSaveType == FLASH512_TYPE || cartSaveType == FLASH1024_TYPE) {
+                if(0x0E000000 <= address && address <= 0x0E00FFFF) {
+                    flash.write(address, value);
+                    break;
+                }
+                
             }
-            #endif
 
             address &= 0x00007FFF;
 
@@ -1198,6 +1198,49 @@ uint32_t Bus::view(uint32_t address, uint8_t width) {
 
 void Bus::loadRom(std::vector<uint8_t> &buffer) {
     // TODO: assert that roms are smaller than 32MB
+
+    std::string s{buffer.begin(), buffer.end()};
+    std::regex eepromRegex = std::regex{"EEPROM_V\\d\\d\\d"};
+    std::regex sramRegex = std::regex{"SRAM_V\\d\\d\\d"};
+    std::regex flashRegex = std::regex{"FLASH_V\\d\\d\\d"};
+    std::regex flash512Regex = std::regex{"FLASH512_V\\d\\d\\d"};
+    std::regex flash1MbRegex = std::regex{"FLASH1M_V\\d\\d\\d"};
+
+    if(std::regex_search(s, eepromRegex)) {
+
+        cartSaveType = Bus::CartSaveType::EEPROM_TYPE;
+        std::cout << "eeprom save type\n";
+        dma->eepromTypeDetected = false;
+    } else if(std::regex_search(s, sramRegex)) {
+
+        cartSaveType = Bus::CartSaveType::SRAM_TYPE;
+        std::cout << "sram save type\n";
+    } else if(std::regex_search(s, flashRegex)) {
+
+        flash.setSize(512);
+        cartSaveType = Bus::CartSaveType::FLASH512_TYPE;
+        std::cout << "flash512 save type\n";
+    } else if(std::regex_search(s, flash512Regex)) {
+
+        flash.setSize(512);
+        cartSaveType = Bus::CartSaveType::FLASH512_TYPE;
+        std::cout << "flash512 save type\n";
+    } else if(std::regex_search(s, flash1MbRegex)) {
+
+        flash.setSize(1024);
+        cartSaveType = Bus::CartSaveType::FLASH1024_TYPE;
+        std::cout << "flash1024 save type\n";
+    } else {
+
+        DEBUGWARN("cartridge save type could not be detected\n");
+        cartSaveType = Bus::CartSaveType::SRAM_TYPE;
+    }
+
+    largeCart = (buffer.size() > 0x1000000);
+    if(largeCart) {
+        std::cout << "large cartridge\n";
+    }
+
     for (int i = 0; i < buffer.size(); i++) {
         gamePakRom[i] = buffer[i];
     }
@@ -1291,21 +1334,34 @@ void Bus::connectPpu(std::shared_ptr<PPU> _ppu) {
     this->ppu = _ppu;
 }
 
+// TODO: can make static ?
 bool Bus::isAddressInEeprom(uint32_t address) {
     if((address & 0xFF000000) < 0x08000000 || (address & 0xFF000000) > 0x0D000000) {
         return false;
     }
-    #ifdef LARGE_CARTRIDGE
-    uint32_t mask = address & 0x00FFFFFF;
-    if(0x00FFFF00 <= mask && mask <= 0x00FFFFFF) {
-        return true;
+    if(largeCart) {
+        uint32_t mask = address & 0x00FFFFFF;
+        if(0x00FFFF00 <= mask && mask <= 0x00FFFFFF) {
+            return true;
+        } 
+    } else {
+        uint32_t mask = address & 0x00FFFFFF;
+        if((0x00FFFF00 <= mask && mask <= 0x00FFFFFF) || (address >= 0x0D000000)) {
+            return true;
+        } 
     } 
-    #else
-    uint32_t mask = address & 0x00FFFFFF;
-    if((0x00FFFF00 <= mask && mask <= 0x00FFFFFF) || (address >= 0x0D000000)) {
-        return true;
-    } 
-    #endif  
     return false;
+}
+
+
+void Bus::setEepromBusWidth(uint32_t width) {
+    assert(width == 6 || width == 14);
+
+    if(width == 6) {
+        eeprom.setBusWidth(6);
+    } else {    
+        // width = 14
+        eeprom.setBusWidth(14);
+    }
 }
 

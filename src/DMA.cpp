@@ -162,6 +162,21 @@ uint32_t DMA::dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline) {
     }
 
 
+    if(!eepromTypeDetected) {
+        uint32_t dest = dmaXDestAddr[x];
+        if(x == 3) {
+            if(dmaXWordCount[x] == 17) {
+                // 14 bit width eeprom 
+                eepromTypeDetected = true;
+                bus->setEepromBusWidth(14);
+            } else if(dmaXWordCount[x] == 9) {
+                // 6 but width eeprom
+                eepromTypeDetected = true;
+                bus->setEepromBusWidth(6);
+            }
+        }
+    }
+
     bool thirtyTwoBit = control & 0x0400; //  (0=16bit, 1=32bit)
     bool firstAccess = true;
  
