@@ -78,7 +78,7 @@ add_library(core
     Debugger.cpp Debugger.h
     )
 
-set_property(SOURCE ARM7TDMI.h APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR})
+set_property(SOURCE arm7tdmi/ARM7TDMI.h APPEND PROPERTY OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR})
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/${CAPSTONE_DIR}/include)
 
