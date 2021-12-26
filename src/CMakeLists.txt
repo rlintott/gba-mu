@@ -29,38 +29,38 @@ add_library(core
     util/static_for.h
     util/macros.h
 
-    arm7tdmi/ARMInstructions/ArmDataProcHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmPsrHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmMultHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmHwdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSdsHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBdtHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBranchHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmBranchXHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmSwiHandler.cpp 
-    arm7tdmi/ARMInstructions/ArmUndefHandler.cpp
+    arm7tdmi/ARMInstructions/ArmDataProcHandler.h 
+    arm7tdmi/ARMInstructions/ArmPsrHandler.h 
+    arm7tdmi/ARMInstructions/ArmSdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmMultHandler.h 
+    arm7tdmi/ARMInstructions/ArmHwdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmSdsHandler.h 
+    arm7tdmi/ARMInstructions/ArmBdtHandler.h 
+    arm7tdmi/ARMInstructions/ArmBranchHandler.h 
+    arm7tdmi/ARMInstructions/ArmBranchXHandler.h 
+    arm7tdmi/ARMInstructions/ArmSwiHandler.h 
+    arm7tdmi/ARMInstructions/ArmUndefHandler.h
 
-    arm7tdmi/ThumbInstructions/ThumbAddOffSpHandler.cpp        
-    arm7tdmi/ThumbInstructions/ThumbCondBHandler.cpp           
-    arm7tdmi/ThumbInstructions/ThumbLdStRegOffHandler.cpp      
-    arm7tdmi/ThumbInstructions/ThumbMultLdStPushPopHandler.cpp
-    arm7tdmi/ThumbInstructions/ThumbAddSubHandler.cpp          
-    arm7tdmi/ThumbInstructions/ThumbImmHandler.cpp             
-    arm7tdmi/ThumbInstructions/ThumbLdStSeBHwHandler.cpp       
-    arm7tdmi/ThumbInstructions/ThumbRelAddrHandler.cpp
-    arm7tdmi/ThumbInstructions/ThumbAluHandler.cpp             
-    arm7tdmi/ThumbInstructions/ThumbLdPcRelHandler.cpp         
-    arm7tdmi/ThumbInstructions/ThumbLdStSpRelHandler.cpp       
-    arm7tdmi/ThumbInstructions/ThumbShiftHandler.cpp
-    arm7tdmi/ThumbInstructions/ThumbBHandler.cpp               
-    arm7tdmi/ThumbInstructions/ThumbLdStHwHandler.cpp          
-    arm7tdmi/ThumbInstructions/ThumbLongBHandler.cpp           
-    arm7tdmi/ThumbInstructions/ThumbSwiHandler.cpp
-    arm7tdmi/ThumbInstructions/ThumbBxHandler.cpp              
-    arm7tdmi/ThumbInstructions/ThumbLdStImmOffHandler.cpp      
-    arm7tdmi/ThumbInstructions/ThumbMultLdStHandler.cpp        
-    arm7tdmi/ThumbInstructions/ThumbUndefHandler.cpp
+    arm7tdmi/ThumbInstructions/ThumbAddOffSpHandler.h        
+    arm7tdmi/ThumbInstructions/ThumbCondBHandler.h           
+    arm7tdmi/ThumbInstructions/ThumbLdStRegOffHandler.h      
+    arm7tdmi/ThumbInstructions/ThumbMultLdStPushPopHandler.h
+    arm7tdmi/ThumbInstructions/ThumbAddSubHandler.h          
+    arm7tdmi/ThumbInstructions/ThumbImmHandler.h             
+    arm7tdmi/ThumbInstructions/ThumbLdStSeBHwHandler.h       
+    arm7tdmi/ThumbInstructions/ThumbRelAddrHandler.h
+    arm7tdmi/ThumbInstructions/ThumbAluHandler.h             
+    arm7tdmi/ThumbInstructions/ThumbLdPcRelHandler.h         
+    arm7tdmi/ThumbInstructions/ThumbLdStSpRelHandler.h       
+    arm7tdmi/ThumbInstructions/ThumbShiftHandler.h
+    arm7tdmi/ThumbInstructions/ThumbBHandler.h               
+    arm7tdmi/ThumbInstructions/ThumbLdStHwHandler.h          
+    arm7tdmi/ThumbInstructions/ThumbLongBHandler.h          
+    arm7tdmi/ThumbInstructions/ThumbSwiHandler.h
+    arm7tdmi/ThumbInstructions/ThumbBxHandler.h              
+    arm7tdmi/ThumbInstructions/ThumbLdStImmOffHandler.h      
+    arm7tdmi/ThumbInstructions/ThumbMultLdStHandler.h        
+    arm7tdmi/ThumbInstructions/ThumbUndefHandler.h
 
     arm7tdmi/ARM7TDMI.h
 
