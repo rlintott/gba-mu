@@ -15,7 +15,7 @@ class DMA {
         uint32_t dmaX(uint8_t x, bool vBlank, bool hBlank, uint16_t scanline);
 
         void updateDmaUponWrite(uint32_t address, uint32_t value, uint8_t width);
-        bool eepromTypeDetected = true;
+        bool eepromBusWidthDetected = true;
 
     private:
         std::shared_ptr<Bus> bus;

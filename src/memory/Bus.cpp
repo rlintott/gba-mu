@@ -1210,7 +1210,7 @@ void Bus::loadRom(std::vector<uint8_t> &buffer) {
 
         cartSaveType = Bus::CartSaveType::EEPROM_TYPE;
         std::cout << "eeprom save type\n";
-        dma->eepromTypeDetected = false;
+        dma->eepromBusWidthDetected = false;
     } else if(std::regex_search(s, sramRegex)) {
 
         cartSaveType = Bus::CartSaveType::SRAM_TYPE;
