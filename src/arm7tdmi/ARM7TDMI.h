@@ -1042,3 +1042,16 @@ inline
 uint8_t ARM7TDMI::thumbGetRb(uint16_t instruction) {
     return (instruction & 0x0038) >> 3;
 }
+
+
+#include "ARMInstructions/ArmBdtHandler.cpp"       
+#include "ARMInstructions/ArmBranchXHandler.cpp"   
+#include "ARMInstructions/ArmHwdtHandler.cpp"      
+#include "ARMInstructions/ArmMultHandler.cpp"      
+#include "ARMInstructions/ArmSdsHandler.cpp"      
+#include "ARMInstructions/ArmSwiHandler.cpp"
+#include "ARMInstructions/ArmBranchHandler.cpp"    
+#include "ARMInstructions/ArmDataProcHandler.cpp"  
+#include "ARMInstructions/ArmPsrHandler.cpp"       
+#include "ARMInstructions/ArmSdtHandler.cpp"       
+#include "ARMInstructions/ArmUndefHandler.cpp"
