@@ -20,8 +20,9 @@ Bus::Bus() {
     for(int i = 0; i < 98688; i++) {
         vRam.push_back(0);
     }
-    for(int i = 0; i < BIOS::size; i++) {
-        bios.push_back(BIOS::data[i]);
+    BIOS biosData;
+    for(int i = 0; i < biosData.size; i++) {
+        bios.push_back(biosData.data[i]);
     }
     for(int i = 0; i < 263168; i++) {
         wRamBoard.push_back(0);
