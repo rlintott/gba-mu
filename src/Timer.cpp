@@ -39,6 +39,7 @@ uint8_t Timer::updateBusToPrepareForTimerRead(uint32_t address, uint8_t width) {
             break;
         }
     }
+    return 0;
 }
 
 /*
