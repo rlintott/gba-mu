@@ -192,8 +192,13 @@ void PPU::renderSprites(uint16_t scanline) {
         // to be included in spriteBuffer pixel bits 16-17 for render calclation at frame draw time
         uint32_t drawMode = (uint32_t)(objAttr0 & 0x0C00) << 6;
 
-        // TODO: sign extend (objAttr2 & 0x03FF) in case offset is negaqtive
-        uint32_t offset = 0x10000 + ((objAttr2 & 0x03FF)/* charName */ * 0x20); 
+        uint32_t base = (objAttr2 & 0x03FF);
+        // TODO: put sign extension into util fn
+        if(base & 0x200) {
+            base |= 0xFFFFFC00;
+        }
+        uint32_t offset = 0x10000 + (base/* charName */ * 0x20); 
+
 
         uint8_t paletteBank = (objAttr2 & 0xF000) >> 8;
         bool colorMode = objAttr0 & 0x2000; // 16 colors (4bpp) if cleared; 256 colors (8bpp) if set.
