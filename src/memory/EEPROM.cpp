@@ -41,7 +41,7 @@ void EEPROM::transferBitToEeprom(bool bit) {
                 address |= (((uint32_t)bit) << currAddressBit);
                 currAddressBit -= 1;
             } else if(currWriteValueBit >= 0){
-                valueToWrite |= (((uint32_t)bit) << currWriteValueBit);
+                valueToWrite |= (((uint64_t)bit) << currWriteValueBit);
                 currWriteValueBit -= 1;
             }
         }
