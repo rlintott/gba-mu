@@ -175,13 +175,16 @@ void PPU::renderSprites(uint16_t scanline) {
     }
 
     //spriteBuffer.fill(transparentColour);
-    bool mappingMode = bus->iORegisters[Bus::IORegister::DISPCNT] & 0x40;
+    // mapping mode 1 =  1d mapping, 0 = 2d mapping
+    bool oneDimMapping = bus->iORegisters[Bus::IORegister::DISPCNT] & 0x40;
     // interate through all OAM attributes (object), from lowest priority to highest
     // TODO: get rid of the magic numbers
     for(int32_t address = 0x3F8; address >= 0x0; address -= 0x8) {
         uint16_t objAttr0 = bus->objAttributes[address] | (bus->objAttributes[address + 1] << 8);
         uint16_t objAttr1 = bus->objAttributes[address + 2] | (bus->objAttributes[address + 2 + 1] << 8);
         uint16_t objAttr2 = bus->objAttributes[address + 4] | (bus->objAttributes[address + 4 + 1] << 8);
+
+        bool colorMode = objAttr0 & 0x2000; // 16 colors (4bpp) if cleared; 256 colors (8bpp) if set.
 
         uint8_t objMode = (objAttr0 & 0x0300) >> 8;
         if(objMode == 2) {
@@ -193,15 +196,8 @@ void PPU::renderSprites(uint16_t scanline) {
         uint32_t drawMode = (uint32_t)(objAttr0 & 0x0C00) << 6;
 
         uint32_t base = (objAttr2 & 0x03FF);
-        // TODO: put sign extension into util fn
-        if(base & 0x200) {
-            base |= 0xFFFFFC00;
-        }
-        uint32_t offset = 0x10000 + (base/* charName */ * 0x20); 
-
 
         uint8_t paletteBank = (objAttr2 & 0xF000) >> 8;
-        bool colorMode = objAttr0 & 0x2000; // 16 colors (4bpp) if cleared; 256 colors (8bpp) if set.
         uint8_t priority = (objAttr2 & 0x0C00) >> 10;
 
         // [shape][size]
@@ -235,9 +231,22 @@ void PPU::renderSprites(uint16_t scanline) {
 
         for(uint32_t x = 0; x < width; x++) {
             for(uint32_t y = 0; y < height; y++) {
-                // 4 bpp
-                uint32_t tile = mappingMode ? (y * width + x) * 32 + offset :
-                                              (y * 32 + x) * 32 + offset;
+                uint32_t tileAddress = 0;
+                if(colorMode) {
+                    // 8 bpp
+                    uint32_t tileNum = oneDimMapping ? base + (y * width + x) * 2 :
+                                base + (y * 32 + x) * 2;
+
+                    tileNum &= 0x3FF;
+                    tileAddress = 0x10000 + tileNum * 0x20; 
+                } else {
+                    // 4 bpp
+                    uint32_t tileNum = oneDimMapping ? base + (y * width + x):
+                                base + (y * 32 + x);
+
+                    tileNum &= 0x3FF;
+                    tileAddress = 0x10000 + tileNum * 0x20; 
+                }                          
                                               
                 for(uint8_t tileY = 0; tileY < 8; tileY++) {
                     screenY = vFlipOffset + vFlipMultiplier * (y * 8 + tileY) + screenYOffset & 0xFF;
@@ -253,12 +262,12 @@ void PPU::renderSprites(uint16_t scanline) {
                         }
                         uint32_t colour;
                         if(colorMode) {
-                            colour = indexObjPalette8Bpp(bus->vRam[tile + tileY * 8 + tileX]);
+                            colour = indexObjPalette8Bpp(bus->vRam[tileAddress + tileY * 8 + tileX]);
                         } else {
                             if((tileX) % 2) {
-                                colour = indexObjPalette4Bpp(((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF0) >> 4) | paletteBank); 
+                                colour = indexObjPalette4Bpp(((bus->vRam[tileAddress + ((tileY * 8 + tileX) >> 1)] & 0xF0) >> 4) | paletteBank); 
                             } else {
-                                colour = indexObjPalette4Bpp((bus->vRam[tile + ((tileY * 8 + tileX) >> 1)] & 0xF) | paletteBank);
+                                colour = indexObjPalette4Bpp((bus->vRam[tileAddress + ((tileY * 8 + tileX) >> 1)] & 0xF) | paletteBank);
                             }
                         }
                         if(colour != transparentColour) {
