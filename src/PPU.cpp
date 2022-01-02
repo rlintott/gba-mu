@@ -64,6 +64,7 @@ void PPU::renderScanline(uint16_t scanline) {
         }
         case 4: {
             // page flipping mode
+            renderSprites((scanline + 2) % 228);
             if(!(bus->iORegisters[Bus::IORegister::DISPCNT] & 0x10)) {
                 // page 0
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
@@ -247,7 +248,8 @@ void PPU::renderSprites(uint16_t scanline) {
                     tileNum &= 0x3FF;
                     tileAddress = 0x10000 + tileNum * 0x20; 
                 }                          
-                                              
+
+                   
                 for(uint8_t tileY = 0; tileY < 8; tileY++) {
                     screenY = vFlipOffset + vFlipMultiplier * (y * 8 + tileY) + screenYOffset & 0xFF;
                     if(screenY != scanline) {
@@ -503,12 +505,10 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
         for(int x = 0; x < SCREEN_WIDTH; x++) {
             pixelBuffer[y * SCREEN_WIDTH + x] = scanlineBackDropColours[y];
 
-            for(int priority = 3; priority >= 0; priority-- ) {
-                uint32_t spriteOffset = (bgPriorities[priority].first) * SCREEN_HEIGHT * SCREEN_WIDTH;
+            for(int priority = 3; priority >= 0; priority--) {
                 uint32_t bgOffset = (bgPriorities[priority].second) * SCREEN_HEIGHT * SCREEN_WIDTH;
-
-                uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
                 uint32_t bgPixel = bgBuffer[bgOffset + y * SCREEN_WIDTH + x];
+                int spriteRelativePrio = bgPriorities[priority].first;
 
                 if(windowed) {
                     if(window0 && 
@@ -531,22 +531,32 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                     } 
                     if(windowBgMask & 0x10) {
                         // obj enable
-                        if(!isTransparent(spritePixel)) {
-                            pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
-                        } 
+                        for(int priority = spriteRelativePrio; priority >= 0; priority--) {
+                            uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
+                            uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                            if(!isTransparent(spritePixel)) {
+                                pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
+                        
+                            }
+                        }
                     }
                     // TODO: sprite window
 
                 } else {
-                   if(!isTransparent(bgPixel)) {
+                    if(!isTransparent(bgPixel)) {
                         pixelBuffer[y * SCREEN_WIDTH + x] = bgPixel & 0xFFFF;
                     } 
-                    if(!isTransparent(spritePixel)) {
-                        pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
-                    } 
+                    for(int priority = spriteRelativePrio; priority >= 0; priority--) {
+                        uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
+                        uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                        if(!isTransparent(spritePixel)) {
+                            pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;        
+                        }
+                    }
                 }
 
             }
+
         }
     }
     bgBuffer.fill(transparentColour);
