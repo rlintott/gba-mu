@@ -89,6 +89,11 @@ class PPU {
             uint8_t metaData;
         };
 
+        struct Coords {
+            int32_t x;
+            int32_t y;
+        };
+
         // to find window y data at scanline x: [x * SCREEN_HEIGHT + y]
         std::array<BgWindowData, SCREEN_HEIGHT * 2> scanlineBgWindowData;
         /*
@@ -121,5 +126,8 @@ class PPU {
             {32, 64},
             {64, 64}
         };
+
+        Coords convertScreenCoordsToSpriteCoords(uint32_t x, uint32_t y, int16_t pa, int16_t pb, int16_t pc, int16_t pd, uint32_t xRotCentre, uint32_t yRotCentre);
+
 
 };
