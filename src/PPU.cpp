@@ -561,12 +561,9 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
             pixelBuffer[y * SCREEN_WIDTH + x] = scanlineBackDropColours[y];
 
             for(int priority = 3; priority >= 0; priority--) {
-                int spriteRelativePrio = bgPriorities[priority].first;
-                uint32_t spriteOffset = (bgPriorities[priority].first) * SCREEN_HEIGHT * SCREEN_WIDTH;
                 uint32_t bgOffset = (bgPriorities[priority].second) * SCREEN_HEIGHT * SCREEN_WIDTH;
-
-                uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
                 uint32_t bgPixel = bgBuffer[bgOffset + y * SCREEN_WIDTH + x];
+                int spriteRelativePrio = bgPriorities[priority].first;
 
                 if(windowed) {
                     if(window0 && 
@@ -589,31 +586,32 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                     } 
                     if(windowBgMask & 0x10) {
                         // obj enable
-                        for(int priority = spriteRelativePrio; priority >= 0; priority--) {
-                             uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
-                             uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
-                             if(!isTransparent(spritePixel)) {
-                                 pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
-
-                             }
-                         }
+                        for(int spritePrio = spriteRelativePrio; spritePrio >= 0; spritePrio--) {
+                            uint32_t spriteOffset = spritePrio * SCREEN_HEIGHT * SCREEN_WIDTH;
+                            uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                            if(!isTransparent(spritePixel)) {
+                                pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
+                        
+                            }
+                        }
                     }
                     // TODO: sprite window
 
                 } else {
-                   if(!isTransparent(bgPixel)) {
+                    if(!isTransparent(bgPixel)) {
                         pixelBuffer[y * SCREEN_WIDTH + x] = bgPixel & 0xFFFF;
                     } 
-                    for(int priority = spriteRelativePrio; priority >= 0; priority--) {
-                         uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
-                         uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
-                         if(!isTransparent(spritePixel)) {
-                             pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;        
-                         }
-                     }
+                    for(int spritePrio = spriteRelativePrio; spritePrio >= 0; spritePrio--) {
+                        uint32_t spriteOffset = spritePrio * SCREEN_HEIGHT * SCREEN_WIDTH;
+                        uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                        if(!isTransparent(spritePixel)) {
+                            pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;        
+                        }
+                    }
                 }
 
             }
+
         }
     }
     bgBuffer.fill(transparentColour | lowestPrio);
