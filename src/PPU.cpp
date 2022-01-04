@@ -209,8 +209,8 @@ void PPU::renderSprites(uint16_t scanline) {
 
         // implementation detail
         uint32_t priorityOffset = SCREEN_WIDTH * SCREEN_HEIGHT * priority;
-        uint16_t screenXOffset = objAttr1 & 0x01FF;
-        uint16_t screenYOffset = objAttr0 & 0x00FF;
+        int32_t screenXOffset = objAttr1 & 0x01FF;
+        int32_t screenYOffset = objAttr0 & 0x00FF;
 
         int16_t pa = 0x100;
         int16_t pb = 0;
@@ -218,6 +218,8 @@ void PPU::renderSprites(uint16_t scanline) {
         int16_t pd = 0x100;
         int32_t boundingWidth = width;
         int32_t boundingHeight = height;
+        bool hFlip = false;
+        bool vFlip = false;
 
         if(objAttr0 & 0x100) {
             // rotation / scaling flag (affine sprites enabled)
@@ -240,20 +242,25 @@ void PPU::renderSprites(uint16_t scanline) {
 
             if(objAttr1 & 0x1000) {
                 // horizontal flip
-                pa = -0x100;
+                hFlip = true;
             }
             if(objAttr1 & 0x2000) {
                 // vertical flip
-                pd = -0x100;
+                vFlip = true;
             }
         }
 
         int32_t halfWidth = boundingWidth / 2;
         int32_t halfHeight = boundingHeight / 2;
 
-        int32_t y = (int32_t)scanline - (int32_t)screenYOffset - halfHeight;
+        if(screenYOffset >= SCREEN_HEIGHT) {
+            screenYOffset = screenYOffset - 255;
+        }
+
+        int32_t y = (int32_t)scanline - screenYOffset - halfHeight;
+
         int32_t screenY = scanline;
-        
+    
         if((y + halfHeight) < 0 || boundingHeight < (y + halfHeight)) {
             // sprite outside scanline, doesnt need to be rendered
             continue;
@@ -262,6 +269,8 @@ void PPU::renderSprites(uint16_t scanline) {
         for(int32_t x = -halfWidth; x < halfWidth; x++) {
             
             int32_t screenX = x + screenXOffset + halfWidth;
+
+            screenX &= 0x1FF;
 
             if(screenX >= SCREEN_WIDTH) {
                 continue;
@@ -272,6 +281,13 @@ void PPU::renderSprites(uint16_t scanline) {
 
             int32_t textureX = ((pa * x + pb * y) >> 8) + (width / 2);
             int32_t textureY = ((pc * x + pd * y) >> 8) + (height / 2);
+
+            if(hFlip) {
+                textureX = width - textureX - 1;
+            }
+            if(vFlip) {
+                textureY = height - textureY - 1;
+            }
 
             if(textureX < 0 || width <= textureX ||  
                textureY < 0 || height <= textureY) {
