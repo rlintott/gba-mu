@@ -65,6 +65,7 @@ void PPU::renderScanline(uint16_t scanline) {
         }
         case 4: {
             // page flipping mode
+            renderSprites((scanline + 2) % 228);
             if(!(bus->iORegisters[Bus::IORegister::DISPCNT] & 0x10)) {
                 // page 0
                 for(int x = 0; x < SCREEN_WIDTH; x++) {
@@ -203,35 +204,26 @@ void PPU::renderSprites(uint16_t scanline) {
 
         // [shape][size]
         Dimension dim = spriteDimensions[(objAttr0 & 0xC000) >> 14][(objAttr1 & 0xC000) >> 14];
-        uint8_t width = dim.width;
-        uint8_t height = dim.height;
+        int32_t width = dim.width * 8;
+        int32_t height = dim.height * 8;
 
         // implementation detail
         uint32_t priorityOffset = SCREEN_WIDTH * SCREEN_HEIGHT * priority;
-        //uint32_t screenX = 0;
-        //uint32_t screenY = 0;
-        Coords spriteCoords = {0,0};
         uint16_t screenXOffset = objAttr1 & 0x01FF;
         uint16_t screenYOffset = objAttr0 & 0x00FF;
 
-        uint32_t vFlipOffset = 0;
-        uint32_t hFlipOffset = 0;
-
-        uint32_t vFlipMultiplier = 1;
-        uint32_t hFlipMultiplier = 1;
-        uint32_t xRotCentre = 0;
-        uint32_t yRotCentre = 0;
-
-        int16_t pa = 1;
+        int16_t pa = 0x100;
         int16_t pb = 0;
         int16_t pc = 0;
-        int16_t pd = 1;
+        int16_t pd = 0x100;
+        int32_t boundingWidth = width;
+        int32_t boundingHeight = height;
 
         if(objAttr0 & 0x100) {
             // rotation / scaling flag (affine sprites enabled)
             if(objAttr0 & 0x200) {
-                // TODO: obj double sized. double size of bounding box
-
+                boundingWidth *= 2;
+                boundingHeight *= 2;
             } 
             uint32_t paramSelection = (objAttr1 & 0x3E00) >> 9;
             uint32_t paramBaseAddr = 0x6 + paramSelection * 32;
@@ -239,12 +231,7 @@ void PPU::renderSprites(uint16_t scanline) {
             pb = bus->objAttributes[paramBaseAddr + 1 * 8] | (bus->objAttributes[paramBaseAddr + 1 * 8 + 1] << 8);
             pc = bus->objAttributes[paramBaseAddr + 2 * 8] | (bus->objAttributes[paramBaseAddr + 2 * 8 + 1] << 8);
             pd = bus->objAttributes[paramBaseAddr + 3 * 8] | (bus->objAttributes[paramBaseAddr + 3 * 8 + 1] << 8);
-            DEBUGWARN(pa << " pa\n");
-            DEBUGWARN(pb << " pb\n");
-            DEBUGWARN(pc << " pc\n");
-            DEBUGWARN(pd << " pd\n");
-            xRotCentre = ((width / 2) * 8 - 1);
-            yRotCentre = ((height / 2) * 8 - 1);
+
         } else {
             if(objAttr0 & 0x200) {
                 // obj disabled
@@ -253,73 +240,77 @@ void PPU::renderSprites(uint16_t scanline) {
 
             if(objAttr1 & 0x1000) {
                 // horizontal flip
-                pa = -1;
-                xRotCentre = screenXOffset + (width * 4 - 1);
+                pa = -0x100;
             }
             if(objAttr1 & 0x2000) {
                 // vertical flip
-                //screenYOffset += (height * 8 - 1);
-                yRotCentre = screenYOffset + (height * 4 - 1);
-                pd = -1;
+                pd = -0x100;
             }
         }
 
+        int32_t halfWidth = boundingWidth / 2;
+        int32_t halfHeight = boundingHeight / 2;
 
-        for(uint32_t x = 0; x < width; x++) {
-            for(uint32_t y = 0; y < height; y++) {
-                                                 
-                for(uint8_t tileY = 0; tileY < 8; tileY++) {
-                    //screenY = vFlipOffset + vFlipMultiplier * (y * 8 + tileY) + screenYOffset & 0xFF;
-                    uint32_t screenY = (y * 8 + tileY);
-                    if((screenY + (screenYOffset & 0xFF)) != scanline) {
-                        continue;
-                    }
-                    uint32_t screenX = x * 8;
-                    spriteCoords = convertScreenCoordsToSpriteCoords(screenX, screenY, pa, pb, pc, pd, (width / 2) * 8, (height / 2) * 8);
+        int32_t y = (int32_t)scanline - (int32_t)screenYOffset - halfHeight;
+        int32_t screenY = scanline;
+        
+        if((y + halfHeight) < 0 || boundingHeight < (y + halfHeight)) {
+            // sprite outside scanline, doesnt need to be rendered
+            continue;
+        }
 
-                    for(uint8_t tileX = 0; tileX < 8; tileX++) {
-                        //screenX = hFlipOffset + hFlipMultiplier * (x * 8 + tileX) + screenXOffset & 0x1FF;
-                        screenX =  (x * 8 + tileX);
-                        spriteCoords = convertScreenCoordsToSpriteCoords(screenX, screenY, pa, pb, pc, pd, ((int)width / 2) * 8, ((int)height / 2) * 8);
-                        if((screenX + (screenXOffset & 0x1FF)) >= SCREEN_WIDTH || (screenY + screenYOffset & 0xFF) >= SCREEN_HEIGHT) {
-                            continue;
-                        }
-                        uint32_t colour;
-                        uint32_t tileAddress = 0;
-                        
+        for(int32_t x = -halfWidth; x < halfWidth; x++) {
+            
+            int32_t screenX = x + screenXOffset + halfWidth;
 
-                        if(colorMode) {
-                            // 8 bpp
-                            uint32_t tileNum = oneDimMapping ? base + (y * width + x) * 2 :
-                                        base + (y * 32 + x) * 2;
-
-                            tileNum &= 0x3FF;
-                            tileAddress = 0x10000 + tileNum * 0x20; 
-                        } else {
-                            // 4 bpp
-                            uint32_t tileNum = oneDimMapping ? base + ((spriteCoords.y / 8) * width + (spriteCoords.x / 8)):
-                                        base + (y * 32 + x);
-
-                            tileNum &= 0x3FF;
-                            tileAddress = 0x10000 + tileNum * 0x20; 
-                        }    
-                        if(colorMode) {
-                            colour = indexObjPalette8Bpp(bus->vRam[tileAddress + spriteCoords.y + spriteCoords.x]);
-                        } else {
-                            if((spriteCoords.y % 8) % 2) {
-                                colour = indexObjPalette4Bpp(((bus->vRam[tileAddress + (((spriteCoords.y % 8) * 8 + (spriteCoords.x % 8)) >> 1)] & 0xF0) >> 4) | paletteBank); 
-                            } else {
-                                colour = indexObjPalette4Bpp((bus->vRam[tileAddress + (((spriteCoords.y % 8) * 8 + (spriteCoords.x % 8)) >> 1)] & 0xF) | paletteBank);
-                            }
-                        }
-                        if(colour != transparentColour) {
-                            spriteBuffer[priorityOffset + (screenY + screenYOffset & 0xFF) * SCREEN_WIDTH + screenX + (screenXOffset & 0x1FF)] = colour | drawMode;
-                        }
-                    }
-                    if((screenY + screenYOffset & 0xFF) == scanline) {break;} 
-                }
-                //if(screenY == scanline) {break;} 
+            if(screenX >= SCREEN_WIDTH) {
+                continue;
             }
+    
+            uint32_t colour;
+            uint32_t tileAddress = 0;
+
+            int32_t textureX = ((pa * x + pb * y) >> 8) + (width / 2);
+            int32_t textureY = ((pc * x + pd * y) >> 8) + (height / 2);
+
+            if(textureX < 0 || width <= textureX ||  
+               textureY < 0 || height <= textureY) {
+                continue;
+            }
+
+            if(colorMode) {
+
+                // 8 bpp
+                uint32_t tileNum = oneDimMapping ? base + ((textureY / 8) * dim.width + (textureX / 8)) * 2 :
+                            base + ((textureY / 8) * 32 + (textureX / 8)) * 2;
+
+                tileNum &= 0x3FF;
+                tileAddress = 0x10000 + tileNum * 0x20; 
+            } else {
+
+                // 4 bpp
+                uint32_t tileNum = oneDimMapping ? base + ((textureY / 8) * dim.width + (textureX / 8)):
+                            base + ((textureY / 8) * 32 + (textureX / 8));
+
+                tileNum &= 0x3FF;
+                tileAddress = 0x10000 + tileNum * 0x20; 
+            }    
+
+
+            if(colorMode) {
+                colour = indexObjPalette8Bpp(bus->vRam[tileAddress + (textureY % 8) * 8 + (textureX % 8)]);
+            } else {
+                if(textureX % 2) {
+                    colour = indexObjPalette4Bpp(((bus->vRam[tileAddress + (((textureY % 8) * 8 + (textureX % 8)) >> 1)] & 0xF0) >> 4) | paletteBank); 
+                } else {
+                    colour = indexObjPalette4Bpp((bus->vRam[tileAddress + (((textureY % 8) * 8 + (textureX % 8)) >> 1)] & 0xF) | paletteBank);
+                }
+            }
+
+            if(colour != transparentColour) {
+                spriteBuffer[priorityOffset + screenY * SCREEN_WIDTH + screenX] = colour | drawMode;
+            }
+        
         }
     }
 
@@ -497,7 +488,7 @@ bool PPU::isTransparent(uint32_t pixelData) {
     return pixelData & transparentColour;
 }
 
-PPU::Coords PPU::convertScreenCoordsToSpriteCoords(uint32_t screenX, uint32_t screenY, int16_t pa, int16_t pb, int16_t pc, int16_t pd, uint32_t xRotCentre, uint32_t yRotCentre) {
+PPU::Coords PPU::convertScreenCoordsToSpriteCoords(int32_t screenX, int32_t screenY, int16_t pa, int16_t pb, int16_t pc, int16_t pd, int32_t xRotCentre, int32_t yRotCentre) {
 
     // float paScale = (float)(pa) / 256.0;
     // float pbScale = (float)(pb) / 256.0;
@@ -511,8 +502,8 @@ PPU::Coords PPU::convertScreenCoordsToSpriteCoords(uint32_t screenX, uint32_t sc
     // uint32_t spriteX = (paScale * (float)((int32_t)screenX ) + pbScale * (float)((int32_t)screenY) );
     // uint32_t spriteY = (pcScale * (float)((int32_t)screenX ) + pdScale * (float)((int32_t)screenY) );
 
-    // DEBUGWARN(spriteX << " spriteX\n");
-    // DEBUGWARN(spriteX << " spriteY\n");
+    DEBUGWARN(spriteX << " spriteX\n");
+    DEBUGWARN(spriteX << " spriteY\n");
 
     return {spriteX, spriteY};
 }
@@ -529,7 +520,6 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
     bgPriorities.push_back({(bgBuffer[3 * SCREEN_WIDTH * SCREEN_HEIGHT] & 0x30000) >> 16, 3});
     std::sort(bgPriorities.begin(), bgPriorities.end());
     // because going from lowest (3) to highest (0) prioirty
-
     // In case that the 'Priority relative to BG' is the same than the priority of one of the background layers, 
     // then the OBJ becomes higher priority and is displayed on top of that BG layer.   
 
@@ -570,7 +560,8 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
         for(int x = 0; x < SCREEN_WIDTH; x++) {
             pixelBuffer[y * SCREEN_WIDTH + x] = scanlineBackDropColours[y];
 
-            for(int priority = 3; priority >= 0; priority-- ) {
+            for(int priority = 3; priority >= 0; priority--) {
+                int spriteRelativePrio = bgPriorities[priority].first;
                 uint32_t spriteOffset = (bgPriorities[priority].first) * SCREEN_HEIGHT * SCREEN_WIDTH;
                 uint32_t bgOffset = (bgPriorities[priority].second) * SCREEN_HEIGHT * SCREEN_WIDTH;
 
@@ -598,9 +589,14 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                     } 
                     if(windowBgMask & 0x10) {
                         // obj enable
-                        if(!isTransparent(spritePixel)) {
-                            pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
-                        } 
+                        for(int priority = spriteRelativePrio; priority >= 0; priority--) {
+                             uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
+                             uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                             if(!isTransparent(spritePixel)) {
+                                 pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
+
+                             }
+                         }
                     }
                     // TODO: sprite window
 
@@ -608,15 +604,19 @@ std::array<uint16_t, PPU::SCREEN_WIDTH * PPU::SCREEN_HEIGHT>& PPU::renderCurrent
                    if(!isTransparent(bgPixel)) {
                         pixelBuffer[y * SCREEN_WIDTH + x] = bgPixel & 0xFFFF;
                     } 
-                    if(!isTransparent(spritePixel)) {
-                        pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;
-                    } 
+                    for(int priority = spriteRelativePrio; priority >= 0; priority--) {
+                         uint32_t spriteOffset = priority * SCREEN_HEIGHT * SCREEN_WIDTH;
+                         uint32_t spritePixel = spriteBuffer[spriteOffset + y * SCREEN_WIDTH + x];
+                         if(!isTransparent(spritePixel)) {
+                             pixelBuffer[y * SCREEN_WIDTH + x] = spritePixel & 0xFFFF;        
+                         }
+                     }
                 }
 
             }
         }
     }
-    bgBuffer.fill(transparentColour);
+    bgBuffer.fill(transparentColour | lowestPrio);
     spriteBuffer.fill(transparentColour);
     for(auto& windowData : scanlineBgWindowData) {
         windowData.enabled = false;

@@ -49,6 +49,7 @@ class PPU {
         uint16_t getBackdropColour();   
 
         const uint32_t transparentColour = 0x00040000;
+        const uint32_t lowestPrio = 0x00030000;
         bool isTransparent(uint32_t pixelData);
 
         // each element of array: bits 0-15: colour, bit 16-17: drawMode, bit 18: transparent,
@@ -127,7 +128,7 @@ class PPU {
             {64, 64}
         };
 
-        Coords convertScreenCoordsToSpriteCoords(uint32_t x, uint32_t y, int16_t pa, int16_t pb, int16_t pc, int16_t pd, uint32_t xRotCentre, uint32_t yRotCentre);
+        Coords convertScreenCoordsToSpriteCoords(int32_t x, int32_t y, int16_t pa, int16_t pb, int16_t pc, int16_t pd, int32_t xRotCentre, int32_t yRotCentre);
 
 
 };
