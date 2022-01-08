@@ -3,7 +3,7 @@
 gba-mu is a WIP Game Boy Advance emulator. It is written in C++ with an object-oriented design. There's still a lot of work to be done on it
 
 ## Upcoming Features and TODOs:
-- [ ] Miscellaneous bugs (There are many in the PPU, hopefully less in the CPU)
+- [ ] Miscellaneous bugs
 - [ ] All PPU modes and features
 - [ ] Sound controller
 - [ ] Optimizations
