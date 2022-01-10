@@ -61,7 +61,7 @@ class Scheduler {
 
             If eventCondition != NONE, returned event is guaranteed to be one of [DMA0 - DMA3]
         */
-        Event* getNextEvent(uint64_t currentCycle, EventCondition eventCondition);
+        Event* getNextEvent(uint64_t currentCycle);
 
         Event* peekNextEvent();
 

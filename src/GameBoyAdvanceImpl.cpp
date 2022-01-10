@@ -130,7 +130,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
             }
         }
 
-        Scheduler::Event* nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
+        Scheduler::Event* nextEvent = scheduler->getNextEvent(cyclesSinceStart);
         
         while(nextEvent != nullptr) {
             uint64_t eventCycles = 0;
@@ -270,7 +270,7 @@ void GameBoyAdvanceImpl::enterMainLoop() {
                     //assert(false);
                 }
             }
-            nextEvent = scheduler->getNextEvent(cyclesSinceStart, Scheduler::EventCondition::NULL_CONDITION);
+            nextEvent = scheduler->getNextEvent(cyclesSinceStart);
         }
         
     }

@@ -95,7 +95,7 @@ void Scheduler::removeNode(EventNode* eventNode) {
     eventNode->next = nullptr;
 }
 
-Scheduler::Event* Scheduler::getNextEvent(uint64_t currentCycle, EventCondition eventCondition) {
+Scheduler::Event* Scheduler::getNextEvent(uint64_t currentCycle) {
     Event* toReturn = nullptr;
 
     if(startNode != nullptr && startNode->event.startCycle <= currentCycle) {
